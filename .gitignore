@@ -1,0 +1,46 @@
+node_modules/ 
+.DS_Store 
+# Installers
+*.exe
+
+# Personal/office docs
+*.docx
+*.doc
+*.lnk
+*.crdownload
+
+# Zips (may contain secrets)
+*.zip
+
+# All tracker HTML versions except the live index.html
+OGDCL_Expenditure_Invoice_Tracker*.html
+OGDCL_report_*.html
+OGDCL_Tracker_Backup_*.json
+
+# Supabase files — verify no secrets before ever tracking
+OGDCL_Supabase_Setup.sql
+Your part-Supabase.docx
+
+# Folders
+Ikram New/
+Ikram-Previous/
+
+Save and close.
+
+3. Confirm what git will track now
+
+cmd
+git status
+
+You should see only .gitignore and index.html (plus maybe node_modules/ line, harmless).
+
+4. Commit and push
+
+cmd
+git add .
+git commit -m "Initial commit - latest invoice tracker as index.html"
+git push -u origin main
+
+Once pushed, go set up Netlify (Part 2 from earlier) pointing at this repo, publish directory . — it'll auto-serve index.html.
+
+One flag: that file's ~2.5MB, which is large for a single HTML file (likely embedded data/images/base64). That's fine for git and Netlify, just slower to load in browser — not something to fix now, just worth knowing.
