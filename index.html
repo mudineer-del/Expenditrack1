@@ -1463,7 +1463,7 @@ const state = {
   page: 'dashboard',
   filters: { q:'', vendor:'', service:'', status:'', region:'', year:'', qtr:'', contract:'' },
   reportMode: 'contract',   // 'contract' = single-contract report, 'compare' = contract comparison, 'period' = period view
-  reportFilters: { contract:'', vendor:'', service:'', type:'', region:'', status:'', year:'', qtr:'', from:'', to:'', groupBy:'contract' },
+  reportFilters: { contract:'', vendor:'', service:'', type:'', region:'', status:'', well:'', year:'', qtr:'', from:'', to:'', groupBy:'contract' },
   reportCompare: [],        // contractNos selected for comparison
   sort: { key:'srNo', dir:'asc' },
   pageNum: 1,
@@ -3247,15 +3247,20 @@ function turnaround(r){ return daysBetween(r.receivingDate, r.clearanceDate); }
 function isCleared(r){ return (r.status||'').toLowerCase().includes('cleared'); }
 
 // Apply the report filter set (independent of the Invoices-tab filters).
+// Trimmed, case-insensitive compare — the source data has inconsistent
+// casing and stray trailing spaces (e.g. "Transportation " vs
+// "Transportation"), which made exact-match filters silently return nothing.
+function normStr(v){ return String(v==null?'':v).trim().toLowerCase(); }
 function reportRows(){
   const f = state.reportFilters;
   let rows = state.invoices.slice();
   if(f.contract) rows = rows.filter(r=>normContract(r.contractNo)===normContract(f.contract));
-  if(f.vendor)  rows = rows.filter(r=>r.vendor===f.vendor);
-  if(f.service) rows = rows.filter(r=>r.service===f.service);
-  if(f.type)    rows = rows.filter(r=>r.type===f.type);
-  if(f.region)  rows = rows.filter(r=>r.region===f.region);
-  if(f.status)  rows = rows.filter(r=>r.status===f.status);
+  if(f.vendor)  rows = rows.filter(r=>normStr(r.vendor)===normStr(f.vendor));
+  if(f.service) rows = rows.filter(r=>normStr(r.service)===normStr(f.service));
+  if(f.type)    rows = rows.filter(r=>normStr(r.type)===normStr(f.type));
+  if(f.region)  rows = rows.filter(r=>normStr(r.region)===normStr(f.region));
+  if(f.status)  rows = rows.filter(r=>normStr(r.status)===normStr(f.status));
+  if(f.well)    rows = rows.filter(r=>normStr(r.wellName)===normStr(f.well));
   if(f.year)    rows = rows.filter(r=>String(r.year)===String(f.year) || String(r.yr)===String(f.year));
   if(f.qtr)     rows = rows.filter(r=>r.qtr===f.qtr);
   if(f.from)    rows = rows.filter(r=>{ const d=r.invoiceDate||r.receivingDate; return d && d>=f.from; });
@@ -3298,6 +3303,7 @@ function groupRows(rows, groupBy){
       case 'type':     key = r.type||'Unspecified'; break;
       case 'region':   key = r.region||'Unspecified'; break;
       case 'status':   key = r.status||'Unspecified'; break;
+      case 'well':     key = r.wellName||'Unspecified'; break;
       case 'year':     key = r.year||r.yr||'—'; break;
       case 'quarter':  key = ((r.year||r.yr)?((r.year||r.yr)+' '):'')+(r.qtr||'—'); break;
       case 'month':    key = (r.invoiceDate&&/^\d{4}-\d{2}/.test(r.invoiceDate))? r.invoiceDate.slice(0,7):'Undated'; break;
@@ -3311,7 +3317,7 @@ function groupRows(rows, groupBy){
 
 function reportGroupLabel(g){
   return {contract:'Contract', vendor:'Contractor', service:'Service', type:'Type', region:'Region',
-          status:'Status', month:'Month', quarter:'Quarter', year:'Year'}[g] || 'Group';
+          status:'Status', well:'Well', month:'Month', quarter:'Quarter', year:'Year'}[g] || 'Group';
 }
 function taBadge(days){
   if(days===null||days===undefined) return '<span class="ta-badge ta-na">—</span>';
@@ -3368,7 +3374,7 @@ function renderReportFilters(){
       <div class="rf-field">
         <label>Group by</label>
         <select id="rf_groupBy">
-          ${['month','quarter','year','contract','vendor','service','type','region','status'].map(g=>`<option value="${g}" ${f.groupBy===g?'selected':''}>${reportGroupLabel(g)}</option>`).join('')}
+          ${['month','quarter','year','contract','vendor','service','type','region','status','well'].map(g=>`<option value="${g}" ${f.groupBy===g?'selected':''}>${reportGroupLabel(g)}</option>`).join('')}
         </select>
       </div>` : '';
   return `
@@ -3380,6 +3386,7 @@ function renderReportFilters(){
       <div class="rf-field"><label>Type</label><select id="rf_type">${selOpts(REF.types, f.type)}</select></div>
       <div class="rf-field"><label>Region</label><select id="rf_region">${selOpts(REF.regions, f.region)}</select></div>
       <div class="rf-field"><label>Status</label><select id="rf_status">${selOpts(REF.statuses, f.status)}</select></div>
+      <div class="rf-field"><label>Well</label><select id="rf_well">${selOpts(REF.wells, f.well)}</select></div>
       <div class="rf-field"><label>Year</label><select id="rf_year">${selOpts(years, f.year)}</select></div>
       <div class="rf-field"><label>Quarter</label><select id="rf_qtr">${selOpts(REF.quarters, f.qtr)}</select></div>
       <div class="rf-field"><label>From (date)</label><input type="date" id="rf_from" value="${f.from||''}"/></div>
@@ -4052,11 +4059,11 @@ function bindReportsPage(){
   const bindSel = (id, key)=>{ const e=el(id); if(e) e.addEventListener('change',ev=>{ state.reportFilters[key]=ev.target.value; render(); }); };
   bindSel('rf_contract','contract'); bindSel('rf_vendor','vendor'); bindSel('rf_service','service');
   bindSel('rf_type','type');
-  bindSel('rf_region','region'); bindSel('rf_status','status'); bindSel('rf_year','year');
+  bindSel('rf_region','region'); bindSel('rf_status','status'); bindSel('rf_well','well'); bindSel('rf_year','year');
   bindSel('rf_qtr','qtr'); bindSel('rf_from','from'); bindSel('rf_to','to'); bindSel('rf_groupBy','groupBy');
 
   const clr=el('rf_clear');
-  if(clr) clr.addEventListener('click',()=>{ state.reportFilters={ contract: state.reportMode==='contract'?state.reportFilters.contract:'', vendor:'',service:'',type:'',region:'',status:'',year:'',qtr:'',from:'',to:'',groupBy:state.reportFilters.groupBy||'month' }; render(); });
+  if(clr) clr.addEventListener('click',()=>{ state.reportFilters={ contract: state.reportMode==='contract'?state.reportFilters.contract:'', vendor:'',service:'',type:'',region:'',status:'',well:'',year:'',qtr:'',from:'',to:'',groupBy:state.reportFilters.groupBy||'month' }; render(); });
 
   const eb=el('rf_exportBtn'), em=el('rf_exportMenu');
   if(eb&&em){
