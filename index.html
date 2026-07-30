@@ -867,6 +867,14 @@ function updateSaveBanner(){
    If no project is configured the app runs exactly as before, on local storage.
    ============================================================ */
 const SB = { url:'', anonKey:'', token:'', refresh:'', user:null, connected:false, lastError:'' };
+// Built-in default project connection so every browser/device works out of the
+// box without anyone touching Settings → Cloud Sync. The anon key is meant to
+// be public in client-side code — real protection comes from Row Level
+// Security policies on the Supabase tables, not from hiding this key.
+const SB_DEFAULT = {
+  url: 'https://mwgzyguymlqyvroivhsf.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13Z3p5Z3V5bWxxeXZyb2l2aHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NzQ1NjksImV4cCI6MjEwMDQ1MDU2OX0.seJUeVuOr1E3-pDQPIkhF6di8_gF0sty87sZp3dvEDg'
+};
 
 function sbConfigured(){ return !!(SB.url && SB.anonKey); }
 function sbReady(){ return sbConfigured() && !!SB.token; }
@@ -980,6 +988,7 @@ async function checkContractNotifications(){
 async function sbLoadConfig(){
   const cfg = await storeGet('sbConfig', true);
   if(cfg && cfg.url && cfg.anonKey){ SB.url = cfg.url; SB.anonKey = cfg.anonKey; }
+  else if(SB_DEFAULT.url && SB_DEFAULT.anonKey){ SB.url = SB_DEFAULT.url; SB.anonKey = SB_DEFAULT.anonKey; }
   const sess = await storeGet('sbSession', false);
   if(sess && sess.token){ SB.token = sess.token; SB.refresh = sess.refresh||''; SB.user = sess.user||null; }
 }
