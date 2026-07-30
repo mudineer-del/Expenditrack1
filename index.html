@@ -1129,6 +1129,50 @@ async function sbDeleteInvoice(id){
   });
   return r.ok ? {ok:true} : {ok:false, error:r.error};
 }
+// List just the ids currently in the cloud table (for stale-row cleanup).
+async function sbListInvoiceIds(){
+  const all = [];
+  const pageSize = 1000;
+  for(let from=0; ; from+=pageSize){
+    const r = await sbFetch('/rest/v1/invoices?select=id', {
+      headers:{'Range-Unit':'items','Range': from+'-'+(from+pageSize-1)}
+    });
+    if(!r.ok) return {ok:false, error:r.error};
+    const batch = Array.isArray(r.data) ? r.data : [];
+    all.push(...batch.map(x=>String(x.id)));
+    if(batch.length < pageSize) break;
+  }
+  return {ok:true, ids: all};
+}
+// Delete invoices from the cloud by id, in chunks.
+async function sbDeleteInvoicesByIds(ids){
+  const chunk = 100;
+  for(let i=0;i<ids.length;i+=chunk){
+    const batch = ids.slice(i,i+chunk);
+    const filter = 'id=in.(' + batch.map(id=>encodeURIComponent(id)).join(',') + ')';
+    const r = await sbFetch('/rest/v1/invoices?'+filter, {
+      method:'DELETE', headers:{'Prefer':'return=minimal'}
+    });
+    if(!r.ok) return {ok:false, error:r.error, deleted:i};
+  }
+  return {ok:true, count:ids.length};
+}
+// Push local invoices as the source of truth: upsert local rows, then remove
+// any cloud row whose id is not present locally (fixes stale/orphaned rows
+// left behind by older upsert-only pushes).
+async function sbReplaceInvoices(localInvoices, onProgress){
+  const idsRes = await sbListInvoiceIds();
+  if(!idsRes.ok) return {ok:false, error:idsRes.error};
+  const up = await sbUpsertInvoices(localInvoices, onProgress);
+  if(!up.ok) return up;
+  const localIds = new Set(localInvoices.map(inv=>String(inv.id)));
+  const stale = idsRes.ids.filter(id=>!localIds.has(id));
+  if(stale.length){
+    const del = await sbDeleteInvoicesByIds(stale);
+    if(!del.ok) return {ok:false, error:'Uploaded, but failed to remove '+stale.length+' stale cloud rows: '+del.error};
+  }
+  return {ok:true, count:localInvoices.length, removed:stale.length};
+}
 async function sbCountInvoices(){
   const r = await sbFetch('/rest/v1/invoices?select=id', {headers:{'Prefer':'count=exact','Range':'0-0'}});
   if(!r.ok) return {ok:false, error:r.error};
@@ -4984,18 +5028,20 @@ function bindSettingsPage(){
 
   const sbPush = el('sbPushBtn');
   if(sbPush) sbPush.addEventListener('click', async ()=>{
+    if(!confirm('This will upload your local invoices to the cloud and REMOVE any cloud invoices that are not in your local list (so both sides match exactly). Continue?')) return;
     const prog = el('sbProgress');
     if(prog){ prog.style.display='block'; prog.textContent='Uploading…'; }
-    const r = await sbUpsertInvoices(state.invoices, (done,total)=>{
+    const r = await sbReplaceInvoices(state.invoices, (done,total)=>{
       if(prog) prog.textContent = `Uploading invoices… ${done} of ${total}`;
     });
     if(!r.ok){ if(prog) prog.textContent='Upload failed: '+r.error; toast('Upload failed: '+r.error,'err'); return; }
     await sbUpsertContracts(state.contracts||[]);
     state.cloudSyncedAt = new Date().toISOString();
     await storeSet('cloudSyncedAt', state.cloudSyncedAt, true);
-    if(prog) prog.textContent = `Uploaded ${r.count} invoices and ${(state.contracts||[]).length} contracts.`;
-    await logActivity('Cloud', `Uploaded ${r.count} invoices to cloud`, {});
-    toast('Upload complete.','ok');
+    const removedMsg = r.removed ? ` Removed ${r.removed} stale cloud row${r.removed!==1?'s':''}.` : '';
+    if(prog) prog.textContent = `Uploaded ${r.count} invoices and ${(state.contracts||[]).length} contracts.${removedMsg}`;
+    await logActivity('Cloud', `Uploaded ${r.count} invoices to cloud (removed ${r.removed||0} stale)`, {});
+    toast('Upload complete.'+removedMsg,'ok');
   });
   const sbPull = el('sbPullBtn');
   if(sbPull) sbPull.addEventListener('click', async ()=>{
