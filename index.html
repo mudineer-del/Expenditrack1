@@ -50,32 +50,37 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 </script>
 <style>
 :root{
+  /* Brand — single primary (navy) + single accent (teal). Orange/indigo retired from
+     structural UI and aliased below so every existing var(--accent)/var(--indigo) call
+     now resolves to the disciplined palette without touching thousands of call sites. */
   --navy-950:#071b2e;
-  --navy-900:#23221e;
-  --navy-800:#3a3833;
+  --navy-900:#16283a;
+  --navy-800:#22384c;
   --navy-700:#154270;
   --teal-600:#0e8a8c;
   --teal-500:#14a3a6;
   --teal-100:#dff4f3;
-  --accent:#E8611A;
-  --accent-bg:#fdeadd;
-  --indigo:#3538CD;
-  --indigo-bg:#eef0fc;
-  --bg:#f7f6f2;
+  --accent:#0e8a8c;
+  --accent-bg:#dff4f3;
+  --indigo:#154270;
+  --indigo-bg:#e7eef6;
+  --bg:#f6f7f8;
   --card:#ffffff;
-  --ink:#2b2a26;
-  --muted:#7d7a72;
-  --border:#e6e2da;
-  --border-soft:#efece5;
-  --amber:#c8781c;
+  --ink:#20242a;
+  --muted:#5b6270;
+  --border:#dde1e6;
+  --border-soft:#e8eaed;
+  --amber:#a3620a;
   --amber-bg:#fdf1e2;
-  --green:#1c8a4b;
+  --green:#166a3f;
   --green-bg:#e6f6ec;
-  --red:#c23b3b;
+  --red:#b3261e;
   --red-bg:#fbe9e9;
   --blue-bg:#e7eef6;
   --radius:10px;
-  --shadow:0 1px 2px rgba(10,37,64,.06), 0 4px 16px rgba(10,37,64,.05);
+  --shadow:0 1px 2px rgba(16,28,43,.05), 0 2px 8px rgba(16,28,43,.05);
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-8:32px;
 }
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;height:100%;}
@@ -100,7 +105,7 @@ input,select,textarea{font-family:inherit;}
   min-height:100vh;
   display:flex;
   align-items:stretch;
-  background:#0A86C8;
+  background:var(--navy-950);
 }
 .login-left{
   flex:1.15;
@@ -114,15 +119,12 @@ input,select,textarea{font-family:inherit;}
 }
 .login-left::before{
   content:"";
-  position:absolute; right:-190px; top:-230px;
-  width:560px;height:560px;border-radius:50%;
-  border:110px solid #49BFAC;
+  position:absolute; right:-40px; top:0; bottom:0;
+  width:1px;
+  background:rgba(255,255,255,.08);
 }
 .login-left::after{
-  content:"";
-  position:absolute; right:-130px; bottom:-260px;
-  width:520px;height:520px;border-radius:50%;
-  border:100px solid #49BFAC;
+  content:none;
 }
 .brand-ring{
   height:72px;
@@ -198,9 +200,9 @@ input,select,textarea{font-family:inherit;}
 .sidebar .brand .ring{width:auto;height:26px; display:flex;align-items:center;justify-content:flex-start;}
 .sidebar .brand .ring img{height:100%; width:auto;}
 .sidebar .brand .txt b{display:block; font-size:13.5px; color:#2f2d28; letter-spacing:.3px;}
-.sidebar .brand .txt span{font-size:10.5px; color:#a09c92;}
+.sidebar .brand .txt span{font-size:11px; color:#5f5c54;}
 .nav-group{padding:6px 12px;}
-.nav-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.8px; color:#b3ada1; padding:14px 10px 6px; font-weight:700;}
+.nav-label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:#5f5c54; padding:14px 10px 6px; font-weight:700;}
 .nav-item{
   display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; font-size:13.5px;
   color:#4a4843; margin-bottom:2px; font-weight:500; cursor:pointer;
@@ -214,7 +216,7 @@ input,select,textarea{font-family:inherit;}
 .nav-contracts{margin-top:8px; padding-top:4px; border-top:1px solid #eceae4; overflow-y:auto; max-height:32vh;}
 .nav-contract{
   display:flex; align-items:center; gap:9px; padding:7px 12px; border-radius:7px; font-size:11.5px;
-  color:#7c786e; margin-bottom:1px; cursor:pointer;
+  color:#5f5c54; margin-bottom:1px; cursor:pointer;
   transition:background .18s ease, color .18s ease, padding-left .18s ease;
 }
 .nav-contract:hover{background:#f1ede5; color:#1f1e1a; padding-left:15px;}
@@ -228,24 +230,32 @@ input,select,textarea{font-family:inherit;}
 .logout-btn{display:flex; align-items:center; justify-content:center; gap:7px;}
 .user-chip .av{width:34px;height:34px;border-radius:50%; background:var(--accent); color:#fff; display:flex;align-items:center;justify-content:center; font-weight:700; font-size:13px; flex-shrink:0;}
 .user-chip .who b{display:block; font-size:12.5px; color:#2f2d28;}
-.user-chip .who span{font-size:10.5px; color:#a09c92;}
+.user-chip .who span{font-size:11px; color:#5f5c54;}
 .logout-btn{width:100%; margin-top:12px; background:#fff; color:#55524b; border:1px solid #e2ded6; border-radius:7px; padding:8px; font-size:12px; font-weight:600; transition:background .18s ease;}
 .logout-btn:hover{background:#f4f1ea;}
 
+.pin-toggle{
+  margin-left:auto; width:26px; height:26px; border-radius:7px; border:1px solid var(--border);
+  background:#fff; color:var(--muted); display:flex; align-items:center; justify-content:center;
+  cursor:pointer; flex-shrink:0; transition:background .15s ease, color .15s ease, transform .15s ease;
+}
+.pin-toggle:hover{background:var(--bg); color:var(--navy-900);}
+.pin-toggle.is-pinned{color:var(--accent); background:var(--accent-bg); border-color:transparent;}
 @media (min-width:961px){
+  /* Default: collapsed rail with a hover preview (quick glance, doesn't commit to a layout shift). */
   .sidebar{position:fixed; top:0; left:0; height:100vh; width:72px; transition:width .2s ease; overflow:hidden; z-index:40;}
   .sidebar:hover{width:236px; box-shadow:6px 0 24px rgba(20,18,12,.14);}
-  .main{margin-left:72px;}
+  .main{margin-left:72px; transition:margin-left .2s ease;}
   .sidebar .brand{overflow:hidden;}
   .sidebar .brand .ring{flex-shrink:0;}
   .sidebar .nav-item{overflow:hidden;}
   .sidebar .nav-item .ic{flex-shrink:0;}
   .sidebar .nav-txt, .sidebar .nav-label, .sidebar .brand .txt, .sidebar .nc-txt,
-  .sidebar .user-chip .who, .sidebar .logout-btn .lo-txt, .sidebar .chip-gear{
+  .sidebar .user-chip .who, .sidebar .logout-btn .lo-txt, .sidebar .chip-gear, .sidebar .pin-toggle{
     opacity:0; white-space:nowrap; transition:opacity .1s ease;
   }
   .sidebar:hover .nav-txt, .sidebar:hover .nav-label, .sidebar:hover .brand .txt, .sidebar:hover .nc-txt,
-  .sidebar:hover .user-chip .who, .sidebar:hover .logout-btn .lo-txt, .sidebar:hover .chip-gear{
+  .sidebar:hover .user-chip .who, .sidebar:hover .logout-btn .lo-txt, .sidebar:hover .chip-gear, .sidebar:hover .pin-toggle{
     opacity:1; transition:opacity .2s ease .08s;
   }
   .sidebar .nav-contract{overflow:hidden;}
@@ -253,6 +263,15 @@ input,select,textarea{font-family:inherit;}
   .sidebar .user-chip{overflow:hidden;}
   .sidebar .user-chip .av{flex-shrink:0;}
   .sidebar .logout-btn{display:flex; align-items:center; justify-content:center; gap:6px; overflow:hidden; white-space:nowrap;}
+
+  /* Pinned: explicit, click-driven, no accidental hover expand/collapse. Persists across the session. */
+  .shell.pinned .sidebar{width:236px; box-shadow:none;}
+  .shell.pinned .main{margin-left:236px;}
+  .shell.pinned .sidebar .nav-txt, .shell.pinned .sidebar .nav-label, .shell.pinned .sidebar .brand .txt,
+  .shell.pinned .sidebar .nc-txt, .shell.pinned .sidebar .user-chip .who, .shell.pinned .sidebar .logout-btn .lo-txt,
+  .shell.pinned .sidebar .chip-gear, .shell.pinned .sidebar .pin-toggle{
+    opacity:1;
+  }
 }
 
 .main{flex:1; min-width:0; display:flex; flex-direction:column;}
@@ -266,10 +285,10 @@ input,select,textarea{font-family:inherit;}
 .global-search input{width:100%; padding:9px 12px 9px 34px; border:1px solid #e2ded6; border-radius:8px; background:#f7f5f0; font-size:13px; transition:border-color .18s ease, background .18s ease;}
 .global-search input:focus{outline:none; border-color:var(--indigo); background:#fff;}
 .global-search svg{position:absolute; left:11px; top:50%; transform:translateY(-50%); opacity:.4;}
-.app-foot{padding:16px; text-align:center; font-size:11.5px; color:#a29e94; border-top:1px solid #eceae4; background:#fff;}
+.app-foot{padding:16px; text-align:center; font-size:12px; color:#5f5c54; border-top:1px solid #eceae4; background:#fff;}
 .topbar .crumb{font-size:12px; color:var(--muted); margin-top:2px;}
 .topbar-right{display:flex; align-items:center; gap:12px;}
-.role-badge{font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:.4px;}
+.role-badge{font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:.4px;}
 .role-admin{background:var(--blue-bg); color:var(--navy-800);}
 .role-editor{background:var(--teal-100); color:var(--teal-600);}
 .role-viewer{background:var(--bg); color:var(--muted);}
@@ -301,19 +320,19 @@ input,select,textarea{font-family:inherit;}
 .cp-row{display:flex; justify-content:space-between; font-size:12px; padding:5px 0; border-bottom:1px solid var(--border-soft);}
 .cp-row:last-of-type{border-bottom:none;}
 .cp-row b{font-variant-numeric:tabular-nums; color:var(--navy-900);}
-.cp-hint{font-size:10.5px; color:var(--accent); margin-top:10px; font-weight:600; text-align:center;}
+.cp-hint{font-size:11px; color:var(--accent); margin-top:10px; font-weight:600; text-align:center;}
 .cp-bar{height:6px; background:var(--border-soft); border-radius:4px; margin-top:10px; overflow:hidden;}
 .cp-bar-fill{height:100%; border-radius:4px;}
-/* 3D perspective buttons */
-.btn{box-shadow:0 2px 0 rgba(35,34,30,.14), 0 3px 8px rgba(35,34,30,.10); transform:translateY(0);}
-.btn:hover{box-shadow:0 3px 0 rgba(35,34,30,.16), 0 6px 14px rgba(35,34,30,.14); transform:translateY(-1px);}
-.btn:active{box-shadow:0 1px 0 rgba(35,34,30,.18); transform:translateY(1px);}
-.vendor-btn{box-shadow:0 2px 0 color-mix(in srgb, var(--vc) 30%, transparent);}
-.vendor-btn:hover{transform:translateY(-1px);}
-.vendor-btn:active{transform:translateY(1px); box-shadow:0 1px 0 color-mix(in srgb, var(--vc) 30%, transparent);}
-.vendor-btn.active{box-shadow:0 3px 0 color-mix(in srgb, var(--vc) 45%, black), 0 5px 12px color-mix(in srgb, var(--vc) 30%, transparent);}
-.icon-btn{box-shadow:0 1px 2px rgba(35,34,30,.08);}
-.icon-btn:active{transform:translateY(1px);}
+/* Flat, restrained button styling (enterprise-clean, not skeuomorphic) */
+.btn{box-shadow:0 1px 2px rgba(16,28,43,.08); transition:background .15s ease, box-shadow .15s ease, border-color .15s ease;}
+.btn:hover{box-shadow:0 2px 6px rgba(16,28,43,.12);}
+.btn:active{box-shadow:0 1px 1px rgba(16,28,43,.10);}
+.vendor-btn{box-shadow:none;}
+.vendor-btn:hover{box-shadow:0 1px 4px color-mix(in srgb, var(--vc) 25%, transparent);}
+.vendor-btn:active{box-shadow:none;}
+.vendor-btn.active{box-shadow:0 1px 4px color-mix(in srgb, var(--vc) 35%, transparent);}
+.icon-btn{box-shadow:none; border:1px solid var(--border);}
+.icon-btn:active{background:var(--bg);}
 .ref-add-btn{
   display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px;
   border-radius:50%; border:none; background:var(--accent); color:#fff; font-size:13px; line-height:1;
@@ -328,11 +347,11 @@ input,select,textarea{font-family:inherit;}
 .cs-body{padding:20px 24px; max-height:60vh; overflow-y:auto;}
 .cs-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
 .cs-stat{background:#faf9f6; border:1px solid var(--border-soft); border-radius:9px; padding:11px 13px; display:flex; flex-direction:column; gap:3px;}
-.cs-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700;}
+.cs-label{font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700;}
 .cs-stat b{font-size:15px; color:var(--navy-900); font-variant-numeric:tabular-nums;}
 .cs-util{margin:16px 0 4px;}
 .cs-util-head{display:flex; justify-content:space-between; font-size:12.5px; font-weight:700; color:var(--navy-900);}
-.cs-chips-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700; margin:16px 0 8px;}
+.cs-chips-label{font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700; margin:16px 0 8px;}
 .cs-foot{display:flex; justify-content:space-between; gap:10px; padding:16px 24px; border-top:1px solid var(--border-soft); background:#fafaf8;}
 @media (max-width:560px){ .cs-grid{grid-template-columns:repeat(2,1fr);} }
 /* Settings */
@@ -343,7 +362,7 @@ input,select,textarea{font-family:inherit;}
 .set-tab:hover{background:#f1ede5; color:#23221e; padding-left:16px;}
 .set-tab.active{background:var(--accent-bg); color:var(--accent);}
 .set-tab.active .ic{opacity:1;}
-.admin-tag{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; background:var(--accent-bg); color:var(--accent); padding:3px 9px; border-radius:20px;}
+.admin-tag{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; background:var(--accent-bg); color:var(--accent); padding:3px 9px; border-radius:20px;}
 .profile-hero{display:flex; align-items:center; gap:16px;}
 .profile-av{width:64px; height:64px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700;}
 .profile-name{font-size:19px; font-weight:700; color:var(--navy-900);}
@@ -390,7 +409,7 @@ input,select,textarea{font-family:inherit;}
 .inv-toolbar .search svg{position:absolute; left:11px; top:50%; transform:translateY(-50%); opacity:.4;}
 .inv-filters{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 .cell-vendor{display:flex; align-items:center; gap:9px; font-weight:600; color:var(--navy-900);}
-.v-avatar{width:26px; height:26px; border-radius:7px; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; letter-spacing:.3px;}
+.v-avatar{width:26px; height:26px; border-radius:7px; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; letter-spacing:.3px;}
 .td-sr{color:var(--muted); font-variant-numeric:tabular-nums;}
 .td-inv{font-weight:600; color:var(--navy-900);}
 .td-date{color:var(--muted); font-size:12.5px;}
@@ -402,7 +421,7 @@ input,select,textarea{font-family:inherit;}
 .export-menu.show{display:block; animation:pageIn .16s ease;}
 .export-menu button{display:block; width:100%; text-align:left; border:none; background:transparent; padding:9px 12px; border-radius:7px; font-size:13px; color:var(--navy-900); cursor:pointer; transition:background .14s ease;}
 .export-menu button:hover{background:var(--accent-bg); color:var(--accent);}
-.export-menu .menu-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); font-weight:700; padding:6px 12px 4px;}
+.export-menu .menu-label{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); font-weight:700; padding:6px 12px 4px;}
 .export-menu .menu-sep{height:1px; background:var(--border-soft); margin:5px 6px;}
 .act-stats{display:flex; flex-wrap:wrap; gap:10px 18px; margin:14px 0 18px; padding:14px 16px; background:var(--surface); border:1px solid var(--border-soft); border-radius:12px;}
 .act-stat{font-size:13px; color:var(--navy-800); display:flex; align-items:center; gap:7px;}
@@ -431,7 +450,7 @@ input,select,textarea{font-family:inherit;}
 .vc-share-bar{height:6px; background:var(--border-soft); border-radius:4px; margin:10px 0 10px; overflow:hidden;}
 .vc-share-fill{height:100%; border-radius:4px; transition:width .4s ease;}
 .vc-meta{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); font-weight:600;}
-.ctr-line-head{display:grid; grid-template-columns:var(--ctr-grid, 2.4fr 1fr 1fr .8fr .6fr 1.4fr 1.1fr .8fr); gap:14px; padding:10px 16px 10px 20px; font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700; border-bottom:1px solid var(--border-soft); position:relative;}
+.ctr-line-head{display:grid; grid-template-columns:var(--ctr-grid, 2.4fr 1fr 1fr .8fr .6fr 1.4fr 1.1fr .8fr); gap:14px; padding:10px 16px 10px 20px; font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700; border-bottom:1px solid var(--border-soft); position:relative;}
 .ctr-line{display:grid; grid-template-columns:var(--ctr-grid, 2.4fr 1fr 1fr .8fr .6fr 1.4fr 1.1fr .8fr); gap:14px; align-items:center; padding:13px 16px 13px 20px; border-bottom:1px solid var(--border-soft); position:relative; transition:background .14s ease;}
 .ctr-line-head > div{position:relative; overflow:hidden;}
 .ctr-line:last-child{border-bottom:none;}
@@ -474,7 +493,7 @@ input,select,textarea{font-family:inherit;}
 .ct-vendor-name{font-size:14.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .ct-nums{display:flex; gap:16px; flex-wrap:wrap;}
 .ct-nums > div{display:flex; flex-direction:column;}
-.ct-label{font-size:10px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700;}
+.ct-label{font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); font-weight:700;}
 .ct-nums b{font-size:13.5px; color:var(--navy-900); font-variant-numeric:tabular-nums;}
 .ct-util{font-size:11px; color:var(--muted); margin-top:6px;}
 .kpi-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px; margin-bottom:22px;}
@@ -503,19 +522,45 @@ input,select,textarea{font-family:inherit;}
 
 /* ---------- Table ---------- */
 .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); background:var(--card);}
-table{width:100%; border-collapse:collapse; font-size:13px; min-width:1100px;}
+table{width:100%; border-collapse:collapse; font-size:13px; min-width:1100px; line-height:1.5;}
 thead th{
-  background:#faf9f6; color:#75726a; text-align:left; padding:11px 14px; font-size:11.5px;
+  background:#faf9f6; color:#75726a; text-align:left; padding:12px 14px; font-size:11.5px;
   letter-spacing:.2px; font-weight:700; white-space:nowrap; cursor:pointer; user-select:none;
-  position:sticky; top:0; border-bottom:1px solid var(--border);
+  position:sticky; top:0; border-bottom:1px solid var(--border); line-height:1.4;
 }
 thead th:hover{background:#f3f0e9; color:#3a3833;}
-thead th .arrow{opacity:.5; font-size:10px; margin-left:3px;}
-tbody td{padding:11px 14px; border-bottom:1px solid var(--border-soft); white-space:nowrap; color:var(--ink);}
+thead th .arrow{opacity:.5; font-size:11px; margin-left:3px;}
+tbody td{padding:13px 14px; border-bottom:1px solid var(--border-soft); white-space:nowrap; color:var(--ink); line-height:1.5;}
 tbody tr{transition:background .14s ease;}
 tbody tr:hover{background:#f7fafc;}
 tbody tr:last-child td{border-bottom:none;}
 .mono{font-variant-numeric:tabular-nums;}
+
+/* ---------- Filters / Sort controls ---------- */
+.filter-count{display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px; padding:0 4px; border-radius:8px; background:var(--accent); color:#fff; font-size:10px; font-weight:700; margin-left:4px;}
+#sortMenu button.is-active{background:var(--accent-bg); color:var(--accent); font-weight:700;}
+.fmt-filter-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; margin-bottom:6px;}
+@media (max-width:520px){ .fmt-filter-grid{grid-template-columns:1fr;} }
+
+/* ---------- Format dialog ---------- */
+.fmt-dialog{width:480px;}
+.fmt-preview{margin:0 0 18px; padding:20px; border:1px dashed var(--border); border-radius:10px; background:#faf9f6; text-align:center; min-height:60px; display:flex; align-items:center; justify-content:center;}
+.fmt-preview span{font-size:18px; font-weight:600; color:var(--navy-900);}
+.fmt-style-toggles{display:flex; gap:8px;}
+.fmt-toggle-btn{width:38px; height:34px; border:1.5px solid var(--border); border-radius:8px; background:#fff; font-size:14px; cursor:pointer; transition:all .15s ease;}
+.fmt-toggle-btn:hover{border-color:var(--accent);}
+.fmt-toggle-btn.is-active{background:var(--accent); color:#fff; border-color:var(--accent);}
+.fmt-swatch-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.fmt-swatch{width:26px; height:26px; border-radius:50%; border:2px solid var(--border); cursor:pointer; padding:0; transition:transform .12s ease, border-color .12s ease;}
+.fmt-swatch:hover{transform:scale(1.1);}
+.fmt-swatch.active{border-color:var(--navy-900); box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--navy-900);}
+.fmt-swatch-none{background:repeating-conic-gradient(#e6e2da 0% 25%, #fff 0% 50%) 50%/10px 10px;}
+.fmt-swatch-row input[type="color"]{width:26px; height:26px; border:none; border-radius:50%; padding:0; cursor:pointer; overflow:hidden;}
+.fmt-field-row{display:flex; align-items:center; gap:8px;}
+.fmt-field-row .fmt-field-input{flex:1;}
+.fmt-launch-inline{white-space:nowrap; flex-shrink:0;}
+.fmt-launch-btn{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:#fff; color:var(--muted); border-radius:7px; padding:6px 11px; font-size:12px; font-weight:600; cursor:pointer; margin-left:12px; transition:border-color .15s ease, color .15s ease;}
+.fmt-launch-btn:hover{border-color:var(--accent); color:var(--accent);}
 .status-pill{display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap;}
 .st-cleared, .st-received{background:var(--green-bg); color:var(--green);}
 .st-under, .st-sent, .st-budgeting{background:var(--amber-bg); color:var(--amber);}
@@ -541,7 +586,10 @@ body.col-resizing-active *{cursor:col-resize !important; user-select:none !impor
 .icon-btn:hover{transform:translateY(-1px);}
 .icon-btn:hover{background:var(--bg);}
 .icon-btn.danger:hover{background:var(--red-bg); border-color:var(--red);}
-.pagination{display:flex; align-items:center; justify-content:space-between; padding:14px 4px; font-size:12.5px; color:var(--muted);}
+.pagination{display:flex; align-items:center; justify-content:space-between; padding:14px 4px; font-size:12.5px; color:var(--muted); gap:16px; flex-wrap:wrap;}
+.page-size-picker{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted);}
+.page-size-picker label{white-space:nowrap;}
+.page-size-picker select{padding:6px 8px; min-width:64px; font-size:12.5px;}
 .page-btns{display:flex; gap:6px;}
 .page-btns button{width:30px;height:30px;border-radius:6px;border:1px solid var(--border); background:#fff; font-size:12.5px;}
 .page-btns button.active{background:var(--navy-900); color:#fff; border-color:var(--navy-900);}
@@ -627,7 +675,7 @@ body.col-resizing-active *{cursor:col-resize !important; user-select:none !impor
 .rpt-contract-no{font-size:16px; font-weight:700; color:var(--navy-900); word-break:break-all;}
 .rpt-contract-sub{font-size:12.5px; color:var(--muted); margin-top:3px;}
 .rpt-contract-banner{display:flex; flex-direction:column; gap:7px; padding-bottom:4px;}
-.rpt-contract-tag{display:inline-flex; align-items:center; gap:6px; align-self:flex-start; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--brand-blue,#0A86C8); background:#e6f2fb; padding:4px 11px; border-radius:20px;}
+.rpt-contract-tag{display:inline-flex; align-items:center; gap:6px; align-self:flex-start; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--brand-blue,#0A86C8); background:#e6f2fb; padding:4px 11px; border-radius:20px;}
 .rpt-contract-tag svg{width:13px; height:13px;}
 .rpt-contract-no-full{font-size:20px; font-weight:700; color:var(--navy-900); line-height:1.25; word-break:break-word; letter-spacing:-.2px;}
 .rpt-contract-meta{display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; margin-top:1px;}
@@ -673,7 +721,7 @@ body.col-resizing-active *{cursor:col-resize !important; user-select:none !impor
 .dd-sub{font-size:12.5px; color:var(--muted); margin-top:3px;}
 .dd-stats{display:flex; flex-wrap:wrap; gap:8px 10px; padding:14px 22px; background:var(--surface); border-bottom:1px solid var(--border-soft);}
 .dd-stat{flex:1; min-width:96px; display:flex; flex-direction:column; gap:3px; padding:8px 12px; background:#fff; border:1px solid var(--border-soft); border-radius:9px;}
-.dd-stat span{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.3px; font-weight:600;}
+.dd-stat span{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.3px; font-weight:600;}
 .dd-stat b{font-size:15px; color:var(--navy-900);}
 .dd-tablewrap{flex:1; overflow:auto; padding:0;}
 .dd-tablewrap table{width:100%;}
@@ -1444,6 +1492,38 @@ function applyTheme(t){
   if(t.sidebar){ r.setProperty('--sidebar-bg', t.sidebar); }
 }
 function lbl(key, dflt){ return (state.labels && state.labels[key]) || dflt; }
+/* ---------- Title/Label formatting (font, size, weight, color, background) ---------- */
+const FORMAT_TARGET_LABELS = {
+  brand_title:'Sidebar Brand Title', brand_subtitle:'Sidebar Brand Subtitle',
+  login_title:'Login Screen Title', login_sub:'Login Screen Subtitle',
+  title_dashboard:'Dashboard Title', title_invoices:'Invoices Title', title_vendors:'Vendors & Contracts Title',
+  heading_overview:'Contractor Overview Heading'
+};
+function getLabelStyle(key){
+  try{ return JSON.parse((state.labels && state.labels[key+'__style']) || '{}'); }
+  catch(e){ return {}; }
+}
+function labelStyleCSSFromObj(s){
+  s = s || {};
+  let css = '';
+  if(s.font) css += `font-family:${s.font};`;
+  if(s.size) css += `font-size:${s.size}px;`;
+  css += `font-weight:${s.weight==='700'?'700':'inherit'};`;
+  if(s.italic) css += 'font-style:italic;';
+  if(s.underline) css += 'text-decoration:underline;';
+  if(s.color) css += `color:${s.color};`;
+  if(s.bg && s.bg!=='transparent'){ css += `background:${s.bg};padding:3px 10px;border-radius:6px;`; }
+  return css;
+}
+function labelStyleAttr(key){
+  const css = labelStyleCSSFromObj(getLabelStyle(key));
+  return css ? ` style="${css}"` : '';
+}
+function openFormatDialog(key){
+  state.formatDialogKey = key;
+  state.formatDraft = Object.assign({}, getLabelStyle(key));
+  render();
+}
 
 /* ---------------- App State ---------------- */
 const state = {
@@ -1451,6 +1531,11 @@ const state = {
   invoices: [],
   contracts: [],
   currentUser: null,
+  sidebarPinned: false,
+  formatDialogKey: null,
+  formatDraft: null,
+  filtersDialogOpen: false,
+  sortMenuOpen: false,
   dashVendor: 'ALL',
   contractDrawerOpen: false,
   confirmDeleteContract: null,
@@ -2141,8 +2226,8 @@ function renderLogin(){
   <div class="login-wrap">
     <div class="login-left">
       <div class="brand-ring"><img src="${OGDCL_LOGO}" alt="OGDCL"/></div>
-      <h1>${lbl('login_title','Drilling Fluids<br/>Expenditure & Invoice Tracker')}</h1>
-      <p class="sub">${lbl('login_sub','Centralized log for vendor invoices, drilling waste management costs, and pit restoration expenditures across OGDCL operating regions.')}</p>
+      <h1${labelStyleAttr('login_title')}>${lbl('login_title','Drilling Fluids<br/>Expenditure & Invoice Tracker')}</h1>
+      <p class="sub"${labelStyleAttr('login_sub')}>${lbl('login_sub','Centralized log for vendor invoices, drilling waste management costs, and pit restoration expenditures across OGDCL operating regions.')}</p>
       <div class="login-stats">
         <div class="login-stat"><b>${state.invoices.length}</b><span>INVOICE RECORDS</span></div>
         <div class="login-stat"><b>${new Set(state.invoices.map(r=>r.vendor)).size}</b><span>ACTIVE VENDORS</span></div>
@@ -2157,7 +2242,7 @@ function renderLogin(){
         ${err}${notice}
         <form id="loginForm">
           <div class="field"><label>Email</label><input id="loginUser" type="email" autocomplete="username" placeholder="you@ogdcl.com" required/></div>
-          <div class="field"><label>Password</label><div class="pw-wrap"><input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••" required/><button type="button" class="pw-toggle" data-pwtoggle="loginPass">${ICONS.eye}</button></div></div>
+          <div class="field"><label>Password</label><div class="pw-wrap"><input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••" required/><button type="button" class="pw-toggle" data-pwtoggle="loginPass" aria-label="Show or hide password">${ICONS.eye}</button></div></div>
           <div class="login-row"><button type="button" class="link-btn" id="forgotLink">Forgot password?</button></div>
           <button class="btn btn-primary" type="submit">Sign In</button>
         </form>
@@ -2179,7 +2264,7 @@ function renderLogin(){
         <form id="signupForm">
           <div class="field"><label>Full Name</label><input id="suName" placeholder="Your name" required/></div>
           <div class="field"><label>Email</label><input id="suEmail" type="email" autocomplete="username" placeholder="you@ogdcl.com" required/></div>
-          <div class="field"><label>Password</label><div class="pw-wrap"><input id="suPass" type="password" autocomplete="new-password" placeholder="At least 6 characters" required/><button type="button" class="pw-toggle" data-pwtoggle="suPass">${ICONS.eye}</button></div></div>
+          <div class="field"><label>Password</label><div class="pw-wrap"><input id="suPass" type="password" autocomplete="new-password" placeholder="At least 6 characters" required/><button type="button" class="pw-toggle" data-pwtoggle="suPass" aria-label="Show or hide password">${ICONS.eye}</button></div></div>
           <button class="btn btn-primary" type="submit">Create Account</button>
         </form>
         <p class="hint" style="margin-top:14px;">Already have an account? <button type="button" class="link-btn" id="toSignin">Sign in</button></p>
@@ -2261,8 +2346,8 @@ async function handleAuthRecoveryHash(){
         <h2>Set a new password</h2>
         <p class="hint">Choose a new password for your account.</p>
         <div id="recMsg" class="fp-msg"></div>
-        <div class="field"><label>New Password</label><div class="pw-wrap"><input id="recNew" type="password" placeholder="At least 6 characters"/><button type="button" class="pw-toggle" data-pwtoggle="recNew">${ICONS.eye}</button></div></div>
-        <div class="field"><label>Confirm Password</label><div class="pw-wrap"><input id="recConfirm" type="password" placeholder="Re-enter password"/><button type="button" class="pw-toggle" data-pwtoggle="recConfirm">${ICONS.eye}</button></div></div>
+        <div class="field"><label>New Password</label><div class="pw-wrap"><input id="recNew" type="password" placeholder="At least 6 characters"/><button type="button" class="pw-toggle" data-pwtoggle="recNew" aria-label="Show or hide password">${ICONS.eye}</button></div></div>
+        <div class="field"><label>Confirm Password</label><div class="pw-wrap"><input id="recConfirm" type="password" placeholder="Re-enter password"/><button type="button" class="pw-toggle" data-pwtoggle="recConfirm" aria-label="Show or hide password">${ICONS.eye}</button></div></div>
         <button class="btn btn-primary" id="recSubmit" type="button">Update Password</button>
       </div>
     </div></div>`;
@@ -2294,6 +2379,9 @@ const NAV = [
   {key:'settings', label:'Settings', icon:'gear'},
 ];
 const ICONS = {
+  filter:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 4 21 4 14 13 14 20 10 22 10 13 3 4"/></svg>',
+  sort:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M6 12h12M10 17h4"/></svg>',
+  pin:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l1 6 3 3v2H5v-2l3-3z"/></svg>',
   grid:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
   list:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>',
   building:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="1"/><line x1="9" y1="8" x2="9" y2="8"/><line x1="15" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>',
@@ -2333,11 +2421,14 @@ function renderShell(){
     </div>`).join('');
 
   return `
-  <div class="shell">
+  <div class="shell ${state.sidebarPinned?'pinned':''}">
     <aside class="sidebar ${state.sidebarOpen?'open':''}">
       <div class="brand">
         <div class="ring"><img src="${OGDCL_LOGO_DARK}" alt="OGDCL"/></div>
-        <div class="txt"><b>${lbl('brand_title','OGDCL DF')}</b><span>${lbl('brand_subtitle','Expenditure Tracker')}</span></div>
+        <div class="txt"><b${labelStyleAttr('brand_title')}>${lbl('brand_title','OGDCL DF')}</b><span${labelStyleAttr('brand_subtitle')}>${lbl('brand_subtitle','Expenditure Tracker')}</span></div>
+        <button type="button" class="pin-toggle ${state.sidebarPinned?'is-pinned':''}" id="sidebarPinToggle"
+          title="${state.sidebarPinned?'Unpin sidebar':'Pin sidebar open'}" aria-pressed="${state.sidebarPinned}"
+          aria-label="${state.sidebarPinned?'Unpin sidebar':'Pin sidebar open'}">${ICONS.pin || '📌'}</button>
       </div>
       <div class="nav-group">
         <div class="nav-label">Menu</div>
@@ -2360,13 +2451,14 @@ function renderShell(){
           <div class="who"><b>${u.name}</b><span>${u.role}</span></div>
           <span class="chip-gear">${ICONS.gear}</span>
         </div>
-        <button class="logout-btn" id="logoutBtn" title="Sign out">${ICONS.logout} <span class="lo-txt">Sign out</span></button>
+        <button class="logout-btn" id="logoutBtn" title="Sign out" aria-label="Sign out">${ICONS.logout} <span class="lo-txt">Sign out</span></button>
       </div>
     </aside>
     <div class="main">
       <div class="topbar">
         <div class="topbar-left">
-          <h1>${pageTitle()}</h1>
+          <h1${labelStyleAttr(pageTitleLabelKey())}>${pageTitle()}</h1>
+          ${(u.role==='Admin' && pageTitleLabelKey()) ? `<button type="button" class="fmt-launch-btn" data-openformat="${pageTitleLabelKey()}" title="Format this title">${ICONS.palette} <span class="fmt-launch-txt">Format</span></button>` : ''}
           <div class="global-search">${ICONS.search}<input id="globalSearch" placeholder="Search invoices, vendors, wells, contracts…" value="${(state.filters.q||'').replace(/"/g,'&quot;')}"/></div>
         </div>
         <div class="topbar-right">
@@ -2384,8 +2476,13 @@ function renderShell(){
   ${renderDetailDrawer()}
   ${renderImportPreview()}
   ${renderDuplicateFinder()}
+  ${renderFormatDialog()}
+  ${renderFiltersDialog()}
   ${renderToasts()}
   `;
+}
+function pageTitleLabelKey(){
+  return {dashboard:'title_dashboard', invoices:'title_invoices', vendors:'title_vendors'}[state.page] || null;
 }
 function pageTitle(){
   const base = {dashboard:lbl('title_dashboard','Dashboard'), invoices:lbl('title_invoices','Invoices'), vendors:lbl('title_vendors','Vendors & Contracts'), activity:'Activity Log', users:'User Management', settings:'Settings'}[state.page] || '';
@@ -2555,7 +2652,7 @@ function renderContractTiles(){
   }).join('');
   return `
   <div class="panel" style="margin-bottom:22px;">
-    <div class="panel-head"><h3>${lbl('heading_overview','Contractor Expenditure Overview')}</h3><button class="btn btn-ghost btn-sm" data-nav="vendors">Manage contracts</button></div>
+    <div class="panel-head"><h3${labelStyleAttr('heading_overview')}>${lbl('heading_overview','Contractor Expenditure Overview')}</h3><button class="btn btn-ghost btn-sm" data-nav="vendors">Manage contracts</button></div>
     <div class="panel-body"><div class="two-col-cards">${tiles}</div></div>
   </div>`;
 }
@@ -2703,8 +2800,8 @@ function renderInvoices(){
       <td><span class="status-pill ${statusClass(r.status)}">${r.status??'—'}</span></td>
       <td>
         <div class="row-actions">
-          <button class="icon-btn" data-view="${r.id}" title="View">${ICONS.eye}</button>
-          ${can('edit')?`<button class="icon-btn" data-edit="${r.id}" title="Edit">${ICONS.edit}</button>`:''}
+          <button class="icon-btn" data-view="${r.id}" title="View" aria-label="View">${ICONS.eye}</button>
+          ${can('edit')?`<button class="icon-btn" data-edit="${r.id}" title="Edit" aria-label="Edit">${ICONS.edit}</button>`:''}
           ${can('delete')?`<button class="icon-btn danger" data-del="${r.id}" title="Delete">${ICONS.trash}</button>`:''}
         </div>
       </td>
@@ -2722,12 +2819,19 @@ function renderInvoices(){
     <div class="inv-toolbar">
       <div class="search">${ICONS.search}<input id="searchInput" placeholder="Search invoice no., vendor, description, location…" value="${f.q}"/></div>
       <div class="inv-filters">
-        <select class="select-sm" id="fVendor"><option value="">All Vendors</option>${REF.vendors.map(v=>`<option ${f.vendor===v?'selected':''}>${v}</option>`).join('')}</select>
-        <select class="select-sm" id="fService"><option value="">All Services</option>${REF.services.map(v=>`<option ${f.service===v?'selected':''}>${v}</option>`).join('')}</select>
-        <select class="select-sm" id="fContract" style="max-width:200px;"><option value="">All Contracts</option>${contractOptions(f.contract)}</select>
-        <select class="select-sm" id="fStatus"><option value="">All Status</option>${REF.statuses.map(v=>`<option ${f.status===v?'selected':''}>${v}</option>`).join('')}</select>
-        <select class="select-sm" id="fRegion"><option value="">All Regions</option>${REF.regions.map(v=>`<option ${f.region===v?'selected':''}>${v}</option>`).join('')}</select>
-        <select class="select-sm" id="fYear"><option value="">All Years</option>${yearOpts.map(v=>`<option ${String(f.year)===String(v)?'selected':''}>${v}</option>`).join('')}</select>
+        <button type="button" class="btn btn-ghost btn-sm" id="openFiltersBtn">${ICONS.filter||'▤'} Filters${(()=>{ const n=['vendor','service','contract','status','region','year'].filter(k=>f[k]).length; return n?` <span class="filter-count">${n}</span>`:''; })()}</button>
+        <div class="export-wrap">
+          <button class="btn btn-ghost btn-sm" id="sortBtn">${ICONS.sort||'⇅'} Sort ${sortArrow(state.sort.key)||''}</button>
+          <div class="export-menu" id="sortMenu">
+            <div class="menu-label">Sort by</div>
+            ${[['srNo','Sr#'],['vendor','Vendor'],['invoiceNo','Invoice No.'],['wellName','Well Name'],['service','Service'],['region','Region'],['invoiceDate','Invoice Date'],['amountExclTax','Excl. Tax'],['amountInclTax','Incl. Tax'],['amountPaid','Paid'],['status','Status']]
+              .map(([k,l])=>`<button data-sortkey="${k}" class="${state.sort.key===k?'is-active':''}">${l} ${state.sort.key===k?(state.sort.dir==='asc'?'▲':'▼'):''}</button>`).join('')}
+            <div class="menu-sep"></div>
+            <div class="menu-label">Order</div>
+            <button data-sortdir="asc" class="${state.sort.dir==='asc'?'is-active':''}">Ascending</button>
+            <button data-sortdir="desc" class="${state.sort.dir==='desc'?'is-active':''}">Descending</button>
+          </div>
+        </div>
         ${hasFilter?`<button class="btn btn-ghost btn-sm" id="clearFilters">Clear</button>`:''}
         <button class="btn btn-ghost btn-sm" id="dupFinderBtn" title="Find invoices with the same vendor &amp; invoice no.">${ICONS.copy} Find Duplicates</button>
         <div class="export-wrap">
@@ -2789,6 +2893,12 @@ function renderInvoices(){
     </div>
     <div class="pagination">
       <span>Showing ${rows.length? (startIdx+1):0}–${Math.min(startIdx+state.pageSize, rows.length)} of ${rows.length.toLocaleString()}</span>
+      <div class="page-size-picker">
+        <label for="pageSizeSelect">Rows per page</label>
+        <select class="select-sm" id="pageSizeSelect">
+          ${[25,50,75,100].map(n=>`<option value="${n}" ${state.pageSize===n?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </div>
       <div class="page-btns">
         <button ${state.pageNum<=1?'disabled':''} data-page="${state.pageNum-1}">‹</button>
         ${pageButtons(state.pageNum, totalPages)}
@@ -2907,6 +3017,73 @@ function toDateInput(d){
 }
 
 /* ---------- Confirm Delete Modal ---------- */
+function renderFormatDialog(){
+  if(!state.formatDialogKey) return '';
+  const key = state.formatDialogKey;
+  const s = state.formatDraft || {};
+  const fonts = [
+    {v:"'Inter',sans-serif", l:'Inter (Default)'},
+    {v:"'Georgia',serif", l:'Georgia'},
+    {v:"'Times New Roman',serif", l:'Times New Roman'},
+    {v:"'Arial',sans-serif", l:'Arial'},
+    {v:"'Verdana',sans-serif", l:'Verdana'},
+    {v:"'Courier New',monospace", l:'Courier New'},
+    {v:"'Trebuchet MS',sans-serif", l:'Trebuchet MS'}
+  ];
+  const colorSwatches = ['#16283a','#0e8a8c','#154270','#a3620a','#166a3f','#b3261e','#20242a','#5b6270','#ffffff'];
+  const bgSwatches = [
+    {v:'transparent', l:'None'},{v:'#dff4f3', l:'Teal tint'},{v:'#e7eef6', l:'Navy tint'},
+    {v:'#fdf1e2', l:'Amber tint'},{v:'#16283a', l:'Navy solid'},{v:'#0e8a8c', l:'Teal solid'}
+  ];
+  const previewText = (FORMAT_TARGET_LABELS[key]||key).replace(/Title|Heading|Subtitle/g,'').trim() || 'Sample Title Text';
+  return `
+  <div class="modal-center" id="formatDialogOverlay">
+    <div class="modal-box fmt-dialog" onclick="event.stopPropagation()">
+      <h3>Format — ${FORMAT_TARGET_LABELS[key]||key}</h3>
+      <p style="margin:2px 0 16px; font-size:12.5px; color:var(--muted);">Changes apply only to this title. Preview updates live below.</p>
+      <div class="fmt-preview"><span id="fmtPreviewText"${labelStyleAttrFromObj(s)}>${previewText || 'Preview Text'}</span></div>
+
+      <div class="field"><label>Font Family</label>
+        <select id="fmtFont">${fonts.map(f=>`<option value="${f.v}" ${s.font===f.v?'selected':''}>${f.l}</option>`).join('')}</select>
+      </div>
+      <div class="field">
+        <label>Font Size — <span id="fmtSizeVal">${s.size||18}px</span></label>
+        <input type="range" id="fmtSize" min="12" max="40" step="1" value="${s.size||18}"/>
+      </div>
+      <div class="field">
+        <label>Style</label>
+        <div class="fmt-style-toggles">
+          <button type="button" class="fmt-toggle-btn ${s.weight==='700'?'is-active':''}" id="fmtBold"><b>B</b></button>
+          <button type="button" class="fmt-toggle-btn ${s.italic?'is-active':''}" id="fmtItalic"><i>I</i></button>
+          <button type="button" class="fmt-toggle-btn ${s.underline?'is-active':''}" id="fmtUnderline"><u>U</u></button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Text Color</label>
+        <div class="fmt-swatch-row">
+          ${colorSwatches.map(c=>`<button type="button" class="fmt-swatch ${s.color===c?'active':''}" data-fmtcolor="${c}" style="background:${c};" title="${c}"></button>`).join('')}
+          <input type="color" id="fmtColorCustom" value="${s.color||'#16283a'}" title="Custom color"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Background Scheme</label>
+        <div class="fmt-swatch-row">
+          ${bgSwatches.map(b=>`<button type="button" class="fmt-swatch ${s.bg===b.v?'active':''} ${b.v==='transparent'?'fmt-swatch-none':''}" data-fmtbg="${b.v}" style="${b.v==='transparent'?'':'background:'+b.v+';'}" title="${b.l}"></button>`).join('')}
+          <input type="color" id="fmtBgCustom" value="${(s.bg&&s.bg!=='transparent')?s.bg:'#ffffff'}" title="Custom background"/>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="fmtReset">Reset to default</button>
+        <div style="flex:1;"></div>
+        <button type="button" class="btn btn-ghost" id="fmtCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="fmtApply">${ICONS.check} Apply</button>
+      </div>
+    </div>
+  </div>`;
+}
+function labelStyleAttrFromObj(s){ const css = labelStyleCSSFromObj(s); return css ? ` style="${css}"` : ''; }
+
 function renderConfirm(){
   if(!state.confirmDelete) return '';
   const inv = state.invoices.find(r=>r.id===state.confirmDelete);
@@ -3073,7 +3250,7 @@ function renderDuplicateFinder(){
                     <td class="mono">${fmtMoney(r.amountInclTax)}</td>
                     <td><span class="status-pill ${statusClass(r.status)}">${r.status??'—'}</span></td>
                     <td style="text-align:right; white-space:nowrap;">
-                      <button class="icon-btn" data-dupview="${r.id}" title="View">${ICONS.eye}</button>
+                      <button class="icon-btn" data-dupview="${r.id}" title="View" aria-label="View">${ICONS.eye}</button>
                       ${can('delete')?`<button class="icon-btn danger" data-dupdel="${r.id}" title="Delete">${ICONS.trash}</button>`:''}
                     </td>
                   </tr>`).join('')}
@@ -3153,7 +3330,7 @@ function renderVendors(){
       </div>
       <div class="ctr-line-status"><span class="status-pill ${contractStatusClass(c.status)}">${c.status||'—'}</span></div>
       <div class="ctr-line-actions">
-        ${can('edit')?`<button class="icon-btn" data-editcontract="${c.id}" title="Edit">${ICONS.edit}</button>`:''}
+        ${can('edit')?`<button class="icon-btn" data-editcontract="${c.id}" title="Edit" aria-label="Edit">${ICONS.edit}</button>`:''}
         ${can('delete')?`<button class="icon-btn danger" data-delcontract="${c.id}" title="Delete">${ICONS.trash}</button>`:''}
       </div>
     </div>`;
@@ -3755,10 +3932,10 @@ function openDetailInNewTab(title, subtitle, rows, accent){
   .sub{color:#7d7a72; font-size:13px;}
   .stats{display:flex; flex-wrap:wrap; gap:14px 22px; margin-bottom:24px;}
   .stat{background:#fff; border:1px solid #e7e3da; border-radius:9px; padding:12px 16px; min-width:130px;}
-  .stat span{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; color:#7d7a72; font-weight:700; margin-bottom:3px;}
+  .stat span{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.3px; color:#7d7a72; font-weight:700; margin-bottom:3px;}
   .stat b{font-size:18px; color:#23221e; font-variant-numeric:tabular-nums;}
   table{width:100%; border-collapse:collapse; font-size:13px; background:#fff; border:1px solid #e7e3da; border-radius:9px; overflow:hidden;}
-  th{background:#f3f0e9; text-align:left; padding:10px 12px; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; color:#75726a; white-space:nowrap;}
+  th{background:#f3f0e9; text-align:left; padding:10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.3px; color:#75726a; white-space:nowrap;}
   td{padding:9px 12px; border-top:1px solid #efece4; white-space:nowrap;}
   .note{color:#7d7a72; font-size:12px; margin-top:10px;}
   @media print{ body{padding:12px;} }
@@ -4238,12 +4415,12 @@ function renderSettingsTab(tab, isAdmin){
       <div class="panel-head"><h3>Change Password</h3></div>
       <div class="panel-body">
         <form id="passwordForm" style="max-width:420px;">
-          <div class="field" style="margin-bottom:14px;"><label>Current Password</label><div class="pw-wrap"><input name="current" type="password" required id="pwCurrent"/><button type="button" class="pw-toggle" data-pwtoggle="pwCurrent">${ICONS.eye}</button></div></div>
-          <div class="field" style="margin-bottom:14px;"><label>New Password</label><div class="pw-wrap"><input name="next" type="password" required id="newPass"/><button type="button" class="pw-toggle" data-pwtoggle="newPass">${ICONS.eye}</button></div>
+          <div class="field" style="margin-bottom:14px;"><label>Current Password</label><div class="pw-wrap"><input name="current" type="password" required id="pwCurrent"/><button type="button" class="pw-toggle" data-pwtoggle="pwCurrent" aria-label="Show or hide password">${ICONS.eye}</button></div></div>
+          <div class="field" style="margin-bottom:14px;"><label>New Password</label><div class="pw-wrap"><input name="next" type="password" required id="newPass"/><button type="button" class="pw-toggle" data-pwtoggle="newPass" aria-label="Show or hide password">${ICONS.eye}</button></div>
             <div class="pw-meter"><div class="pw-meter-fill" id="pwFill"></div></div>
             <div class="pw-hint" id="pwHint">Use at least 8 characters with a mix of letters and numbers.</div>
           </div>
-          <div class="field" style="margin-bottom:18px;"><label>Confirm New Password</label><div class="pw-wrap"><input name="confirm" type="password" required id="pwConfirm"/><button type="button" class="pw-toggle" data-pwtoggle="pwConfirm">${ICONS.eye}</button></div></div>
+          <div class="field" style="margin-bottom:18px;"><label>Confirm New Password</label><div class="pw-wrap"><input name="confirm" type="password" required id="pwConfirm"/><button type="button" class="pw-toggle" data-pwtoggle="pwConfirm" aria-label="Show or hide password">${ICONS.eye}</button></div></div>
           <button class="btn btn-primary" type="submit" style="width:auto;">${ICONS.key} Update Password</button>
         </form>
       </div>
@@ -4455,26 +4632,35 @@ function renderSettingsTab(tab, isAdmin){
     </div>`;
   }
   if(tab==='labels' && isAdmin){
-    const fmtBar = (id)=>`<div class="fmt-toolbar" data-fmttarget="${id}">
-      <button type="button" data-fmt="b" title="Bold"><b>B</b></button>
-      <button type="button" data-fmt="i" title="Italic"><i>I</i></button>
-      <button type="button" data-fmt="u" title="Underline"><u>U</u></button>
-      <button type="button" data-fmt="br" title="Insert line break">&#8629; Line break</button>
-    </div>`;
+    const fieldRow = (labelText, key, dflt, opts)=>{
+      opts = opts || {};
+      const val = lbl(key, dflt);
+      const isArea = opts.area;
+      const control = isArea
+        ? `<textarea id="lbl_${key}" name="${key}" rows="2" class="fmt-field-input" style="resize:vertical;">${val}</textarea>`
+        : `<input id="lbl_${key}" name="${key}" class="fmt-field-input" value="${String(val).replace(/"/g,'&quot;')}"/>`;
+      return `<div class="field ${opts.full?'full':''}">
+        <label>${labelText}</label>
+        <div class="fmt-field-row">
+          ${control}
+          <button type="button" class="btn btn-ghost btn-sm fmt-launch-inline" data-openformat="${key}" title="Font, size, color &amp; background">${ICONS.palette} Format</button>
+        </div>
+      </div>`;
+    };
     return `
     <div class="panel">
       <div class="panel-head"><h3>Page Titles &amp; Labels</h3><span class="admin-tag">Admin</span></div>
       <div class="panel-body">
-        <p style="font-size:13px; color:var(--muted); margin:0 0 18px;">Customize the titles shown across the application. Use the formatting buttons to add <b>bold</b>, <i>italic</i>, <u>underline</u> or line breaks — selected text gets wrapped, or the tag is inserted at the cursor.</p>
-        <form id="labelsForm" class="form-grid" style="max-width:560px;">
-          <div class="field full"><label>Sidebar Brand Title</label>${fmtBar('lbl_brand_title')}<input id="lbl_brand_title" name="brand_title" value="${lbl('brand_title','OGDCL DF').replace(/"/g,'&quot;')}"/></div>
-          <div class="field full"><label>Sidebar Brand Subtitle</label>${fmtBar('lbl_brand_subtitle')}<input id="lbl_brand_subtitle" name="brand_subtitle" value="${lbl('brand_subtitle','Expenditure Tracker').replace(/"/g,'&quot;')}"/></div>
-          <div class="field full"><label>Login Screen Title</label>${fmtBar('lbl_login_title')}<input id="lbl_login_title" name="login_title" value="${lbl('login_title','Drilling Fluids<br/>Expenditure & Invoice Tracker').replace(/"/g,'&quot;')}"/></div>
-          <div class="field full"><label>Login Screen Subtitle</label>${fmtBar('lbl_login_sub')}<textarea id="lbl_login_sub" name="login_sub" rows="2" style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; resize:vertical;">${lbl('login_sub','Centralized log for vendor invoices, drilling waste management costs, and pit restoration expenditures across OGDCL operating regions.')}</textarea></div>
-          <div class="field"><label>Dashboard Title</label>${fmtBar('lbl_title_dashboard')}<input id="lbl_title_dashboard" name="title_dashboard" value="${lbl('title_dashboard','Dashboard')}"/></div>
-          <div class="field"><label>Invoices Title</label>${fmtBar('lbl_title_invoices')}<input id="lbl_title_invoices" name="title_invoices" value="${lbl('title_invoices','Invoices')}"/></div>
-          <div class="field full"><label>Vendors &amp; Contracts Title</label>${fmtBar('lbl_title_vendors')}<input id="lbl_title_vendors" name="title_vendors" value="${lbl('title_vendors','Vendors & Contracts')}"/></div>
-          <div class="field full"><label>Dashboard — Contractor Overview Heading</label>${fmtBar('lbl_heading_overview')}<input id="lbl_heading_overview" name="heading_overview" value="${lbl('heading_overview','Contractor Expenditure Overview')}"/></div>
+        <p style="font-size:13px; color:var(--muted); margin:0 0 18px;">Customize the wording shown across the app. Click <b>Format</b> next to any field to open a dialog with fonts, sizes, colors and background schemes — changes preview live before you apply them.</p>
+        <form id="labelsForm" class="form-grid" style="max-width:620px;">
+          ${fieldRow('Sidebar Brand Title', 'brand_title', 'OGDCL DF', {full:true})}
+          ${fieldRow('Sidebar Brand Subtitle', 'brand_subtitle', 'Expenditure Tracker', {full:true})}
+          ${fieldRow('Login Screen Title', 'login_title', 'Drilling Fluids<br/>Expenditure & Invoice Tracker', {full:true})}
+          ${fieldRow('Login Screen Subtitle', 'login_sub', 'Centralized log for vendor invoices, drilling waste management costs, and pit restoration expenditures across OGDCL operating regions.', {full:true, area:true})}
+          ${fieldRow('Dashboard Title', 'title_dashboard', 'Dashboard')}
+          ${fieldRow('Invoices Title', 'title_invoices', 'Invoices')}
+          ${fieldRow('Vendors &amp; Contracts Title', 'title_vendors', 'Vendors & Contracts', {full:true})}
+          ${fieldRow('Dashboard — Contractor Overview Heading', 'heading_overview', 'Contractor Expenditure Overview', {full:true})}
           <div class="full"><button class="btn btn-primary" type="submit" style="width:auto;">${ICONS.check} Save Labels</button></div>
         </form>
       </div>
@@ -4587,6 +4773,8 @@ function enableColumnResize(){
 }
 
 function bindShell(){
+  const pinBtn = el('sidebarPinToggle');
+  if(pinBtn) pinBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.sidebarPinned = !state.sidebarPinned; render(); });
   document.querySelectorAll('[data-nav]').forEach(n=>n.addEventListener('click', ()=>{ state.page=n.dataset.nav; state.pageNum=1; render(); }));
   document.querySelectorAll('[data-navcontract]').forEach(n=>{
     n.addEventListener('click', ()=>{
@@ -4608,6 +4796,11 @@ function bindShell(){
     }, 250));
   }
 
+  document.querySelectorAll('[data-openformat]').forEach(b=>b.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    openFormatDialog(b.dataset.openformat);
+  }));
+
   if(state.page==='dashboard'){ bindDashboard(); setTimeout(drawCharts, 0); }
   if(state.page==='invoices') bindInvoicesPage();
   if(state.page==='vendors') bindVendorsPage();
@@ -4623,6 +4816,8 @@ function bindShell(){
   bindImportPreview();
   bindDuplicateFinder();
   bindPwToggles();
+  bindFormatDialog();
+  bindFiltersDialog();
   enableColumnResize();
 }
 
@@ -4692,8 +4887,34 @@ function bindDashboard(){
 function bindInvoicesPage(){
   const s = el('searchInput');
   if(s) s.addEventListener('input', debounce(e=>{ state.filters.q = e.target.value; state.pageNum=1; render(); }, 300));
-  ['fVendor','vendor','fService','service','fStatus','status','fRegion','region','fYear','year'].forEach(()=>{});
-  bindSel('fVendor','vendor'); bindSel('fService','service'); bindSel('fStatus','status'); bindSel('fRegion','region'); bindSel('fYear','year'); bindSel('fContract','contract');
+
+  const openFiltersBtn = el('openFiltersBtn');
+  if(openFiltersBtn) openFiltersBtn.addEventListener('click', ()=>{ state.filtersDialogOpen = true; render(); });
+
+  const sortBtn = el('sortBtn'), sortMenu = el('sortMenu');
+  if(sortBtn && sortMenu){
+    sortBtn.addEventListener('click', (e)=>{ e.stopPropagation(); sortMenu.classList.toggle('show'); });
+    sortMenu.querySelectorAll('[data-sortkey]').forEach(b=>b.addEventListener('click', ()=>{
+      const k = b.dataset.sortkey;
+      if(state.sort.key===k) state.sort.dir = state.sort.dir==='asc'?'desc':'asc';
+      else state.sort.key = k;
+      sortMenu.classList.remove('show');
+      render();
+    }));
+    sortMenu.querySelectorAll('[data-sortdir]').forEach(b=>b.addEventListener('click', ()=>{
+      state.sort.dir = b.dataset.sortdir;
+      sortMenu.classList.remove('show');
+      render();
+    }));
+    document.addEventListener('click', ()=>sortMenu.classList.remove('show'), {once:true});
+  }
+
+  const pageSizeSelect = el('pageSizeSelect');
+  if(pageSizeSelect) pageSizeSelect.addEventListener('change', e=>{
+    state.pageSize = Number(e.target.value) || 25;
+    state.pageNum = 1;
+    render();
+  });
 
   document.querySelectorAll('[data-sort]').forEach(th=>th.addEventListener('click', ()=>{
     const k = th.dataset.sort;
@@ -5024,6 +5245,133 @@ function bindDrawer(){
 }
 function closeDrawer(){ state.drawerOpen=false; state.editingInvoice=null; render(); }
 
+function bindFormatDialog(){
+  const overlay = el('formatDialogOverlay');
+  if(!overlay) return;
+  const closeDialog = ()=>{ state.formatDialogKey=null; state.formatDraft=null; render(); };
+  overlay.addEventListener('click', closeDialog);
+  const cancel = el('fmtCancel'); if(cancel) cancel.addEventListener('click', closeDialog);
+
+  const draft = ()=> state.formatDraft = state.formatDraft || {};
+  const refreshPreview = ()=>{
+    const p = el('fmtPreviewText');
+    if(p) p.setAttribute('style', labelStyleCSSFromObj(state.formatDraft));
+  };
+
+  const fontSel = el('fmtFont');
+  if(fontSel) fontSel.addEventListener('change', e=>{ draft().font=e.target.value; refreshPreview(); });
+
+  const sizeInput = el('fmtSize');
+  if(sizeInput) sizeInput.addEventListener('input', e=>{
+    draft().size = Number(e.target.value);
+    const v = el('fmtSizeVal'); if(v) v.textContent = e.target.value+'px';
+    refreshPreview();
+  });
+
+  const boldBtn = el('fmtBold');
+  if(boldBtn) boldBtn.addEventListener('click', ()=>{
+    draft().weight = draft().weight==='700' ? '400' : '700';
+    boldBtn.classList.toggle('is-active', draft().weight==='700');
+    refreshPreview();
+  });
+  const italicBtn = el('fmtItalic');
+  if(italicBtn) italicBtn.addEventListener('click', ()=>{
+    draft().italic = !draft().italic;
+    italicBtn.classList.toggle('is-active', !!draft().italic);
+    refreshPreview();
+  });
+  const underlineBtn = el('fmtUnderline');
+  if(underlineBtn) underlineBtn.addEventListener('click', ()=>{
+    draft().underline = !draft().underline;
+    underlineBtn.classList.toggle('is-active', !!draft().underline);
+    refreshPreview();
+  });
+
+  document.querySelectorAll('[data-fmtcolor]').forEach(b=>b.addEventListener('click', ()=>{
+    draft().color = b.dataset.fmtcolor;
+    document.querySelectorAll('[data-fmtcolor]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    refreshPreview();
+  }));
+  const colorCustom = el('fmtColorCustom');
+  if(colorCustom) colorCustom.addEventListener('input', e=>{
+    draft().color = e.target.value;
+    document.querySelectorAll('[data-fmtcolor]').forEach(x=>x.classList.remove('active'));
+    refreshPreview();
+  });
+
+  document.querySelectorAll('[data-fmtbg]').forEach(b=>b.addEventListener('click', ()=>{
+    draft().bg = b.dataset.fmtbg;
+    document.querySelectorAll('[data-fmtbg]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    refreshPreview();
+  }));
+  const bgCustom = el('fmtBgCustom');
+  if(bgCustom) bgCustom.addEventListener('input', e=>{
+    draft().bg = e.target.value;
+    document.querySelectorAll('[data-fmtbg]').forEach(x=>x.classList.remove('active'));
+    refreshPreview();
+  });
+
+  const resetBtn = el('fmtReset');
+  if(resetBtn) resetBtn.addEventListener('click', ()=>{ state.formatDraft = {}; render(); });
+
+  const applyBtn = el('fmtApply');
+  if(applyBtn) applyBtn.addEventListener('click', async ()=>{
+    const key = state.formatDialogKey;
+    state.labels = state.labels || {};
+    state.labels[key+'__style'] = JSON.stringify(state.formatDraft || {});
+    state.formatDialogKey = null;
+    state.formatDraft = null;
+    await storeSet('appLabels', state.labels, true);
+    render();
+    toast('Formatting applied.');
+  });
+}
+function renderFiltersDialog(){
+  if(!state.filtersDialogOpen) return '';
+  const f = state.filters;
+  const yearOpts = Array.from(new Set(state.invoices.map(r=>r.year).filter(Boolean))).sort();
+  return `
+  <div class="modal-center" id="filtersDialogOverlay">
+    <div class="modal-box" style="width:520px;max-width:94vw;" onclick="event.stopPropagation()">
+      <h3>Filter Invoices</h3>
+      <p style="margin:2px 0 16px; font-size:12.5px; color:var(--muted);">Filters apply immediately as you choose them.</p>
+      <div class="fmt-filter-grid">
+        <div class="field"><label>Vendor</label><select class="select-sm" id="dfVendor" style="width:100%;"><option value="">All Vendors</option>${REF.vendors.map(v=>`<option ${f.vendor===v?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="field"><label>Service</label><select class="select-sm" id="dfService" style="width:100%;"><option value="">All Services</option>${REF.services.map(v=>`<option ${f.service===v?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="field"><label>Contract</label><select class="select-sm" id="dfContract" style="width:100%;"><option value="">All Contracts</option>${contractOptions(f.contract)}</select></div>
+        <div class="field"><label>Status</label><select class="select-sm" id="dfStatus" style="width:100%;"><option value="">All Status</option>${REF.statuses.map(v=>`<option ${f.status===v?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="field"><label>Region</label><select class="select-sm" id="dfRegion" style="width:100%;"><option value="">All Regions</option>${REF.regions.map(v=>`<option ${f.region===v?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div class="field"><label>Year</label><select class="select-sm" id="dfYear" style="width:100%;"><option value="">All Years</option>${yearOpts.map(v=>`<option ${String(f.year)===String(v)?'selected':''}>${v}</option>`).join('')}</select></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="dfClearAll">Clear all filters</button>
+        <div style="flex:1;"></div>
+        <button type="button" class="btn btn-primary" id="dfDone">Done</button>
+      </div>
+    </div>
+  </div>`;
+}
+function bindFiltersDialog(){
+  const overlay = el('filtersDialogOverlay');
+  if(!overlay) return;
+  const close = ()=>{ state.filtersDialogOpen=false; render(); };
+  overlay.addEventListener('click', close);
+  const done = el('dfDone'); if(done) done.addEventListener('click', close);
+  const bind = (id, key)=>{
+    const elx = el(id);
+    if(elx) elx.addEventListener('change', e=>{ state.filters[key]=e.target.value; state.pageNum=1; render(); });
+  };
+  bind('dfVendor','vendor'); bind('dfService','service'); bind('dfContract','contract');
+  bind('dfStatus','status'); bind('dfRegion','region'); bind('dfYear','year');
+  const clearAll = el('dfClearAll');
+  if(clearAll) clearAll.addEventListener('click', ()=>{
+    state.filters = Object.assign(state.filters, {vendor:'',service:'',contract:'',status:'',region:'',year:''});
+    state.pageNum = 1;
+    render();
+  });
+}
 function bindConfirm(){
   const overlay = el('confirmOverlay');
   if(!overlay) return;
@@ -5078,26 +5426,6 @@ function bindActivityPage(){
 
 function bindSettingsPage(){
   document.querySelectorAll('[data-settab]').forEach(t=>t.addEventListener('click', ()=>{ state.settingsTab=t.dataset.settab; render(); }));
-
-  // Titles & Labels formatting toolbar
-  document.querySelectorAll('.fmt-toolbar button[data-fmt]').forEach(b=>b.addEventListener('click', ()=>{
-    const toolbar = b.closest('.fmt-toolbar');
-    const field = document.getElementById(toolbar.dataset.fmttarget);
-    if(!field) return;
-    const tag = b.dataset.fmt;
-    const start = field.selectionStart ?? field.value.length;
-    const end = field.selectionEnd ?? field.value.length;
-    const val = field.value;
-    if(tag==='br'){
-      field.value = val.slice(0,start) + '<br/>' + val.slice(end);
-      field.focus(); field.setSelectionRange(start+5, start+5);
-    } else {
-      const selected = val.slice(start,end) || 'text';
-      const open = '<'+tag+'>', close = '</'+tag+'>';
-      field.value = val.slice(0,start) + open + selected + close + val.slice(end);
-      field.focus(); field.setSelectionRange(start+open.length, start+open.length+selected.length);
-    }
-  }));
 
   // Notification preferences + EmailJS config
   document.querySelectorAll('[data-notifypref]').forEach(cb=>cb.addEventListener('change', async ()=>{
