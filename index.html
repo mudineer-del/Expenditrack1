@@ -442,6 +442,13 @@ input,select,textarea{font-family:inherit;}
 .act-body{flex:1; min-width:0;}
 .act-detail{font-size:13.5px; color:var(--navy-900); line-height:1.35;}
 .act-meta{font-size:11.5px; color:var(--muted); margin-top:3px;}
+.act-check{flex:none; width:16px; display:flex; align-items:center; padding-top:2px;}
+.act-check input{width:15px; height:15px; accent-color:var(--accent); cursor:pointer;}
+.act-select-bar{display:flex; align-items:center; gap:14px; padding:10px 14px; margin-bottom:10px; background:var(--surface); border:1px solid var(--border-soft); border-radius:10px; font-size:12.5px;}
+.act-selectall{display:flex; align-items:center; gap:7px; cursor:pointer; color:var(--navy-800); font-weight:600;}
+.act-selectall input{width:15px; height:15px; accent-color:var(--accent); cursor:pointer;}
+.act-selcount{color:var(--navy-900); margin-left:auto;}
+.act-selcount b{font-variant-numeric:tabular-nums;}
 .page-sub{font-size:13px; color:var(--muted); margin:2px 0 0;}
 .import-modal-cols{max-height:160px; overflow-y:auto; background:#faf9f6; border:1px solid var(--border-soft); border-radius:8px; padding:10px 12px; margin:12px 0; font-size:12px;}
 
@@ -1594,6 +1601,8 @@ const state = {
   notifiedContracts: {},
   selectedInvoices: new Set(),
   confirmBulkDelete: false,
+  selectedLogIds: new Set(),
+  confirmUndo: null,
 };
 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -1621,24 +1630,66 @@ async function logActivity(action, detail, meta){
 
 // Capture a snapshot of invoices BEFORE a mutation so it can be reverted.
 function pushUndo(label){
-  state.undoStack.push({
+  const entry = {
     id: uid(),
     ts: Date.now(),
     label,
     snapshot: JSON.parse(JSON.stringify(state.invoices))
-  });
+  };
+  state.undoStack.push(entry);
   if(state.undoStack.length > MAX_UNDO) state.undoStack.shift();
+  return entry;
+}
+
+// Revert state.invoices back to just before a specific undo-stack entry, discarding
+// that entry and every entry layered on top of it (undo is a linear chain of
+// snapshots — you can't selectively remove one action from the middle without also
+// rewinding anything done after it).
+async function doUndoTo(undoId){
+  const idx = state.undoStack.findIndex(e=>e.id===undoId);
+  if(idx===-1) return null;
+  const target = state.undoStack[idx];
+  const discarded = state.undoStack.splice(idx); // removes idx..end (target included)
+  state.invoices = target.snapshot;
+  await storeSet('invoices', state.invoices, true);
+  return {target, discardedCount: discarded.length};
 }
 
 // Revert the most recent mutation.
 async function doUndo(){
   if(!state.undoStack.length){ toast('Nothing to undo.', 'err'); return; }
-  const last = state.undoStack.pop();
-  state.invoices = last.snapshot;
-  await storeSet('invoices', state.invoices, true);
-  await logActivity('Undo', 'Reverted: ' + last.label);
+  const last = state.undoStack[state.undoStack.length-1];
+  const r = await doUndoTo(last.id);
+  if(!r) return;
+  await logActivity('Undo', 'Reverted: ' + r.target.label);
   render();
-  toast('Undone: ' + last.label);
+  toast('Undone: ' + r.target.label);
+}
+
+// Revert a set of selected Activity Log entries (identified by log entry id). Because
+// undo is a linear chain, this rewinds back through the OLDEST selected entry still on
+// the stack — which necessarily also reverts any more recent actions layered on top,
+// selected or not.
+async function doUndoSelected(logIds){
+  if(!logIds || !logIds.size){ toast('Select at least one change to undo.', 'err'); return; }
+  const log = state.activityLog || [];
+  const undoIds = new Set();
+  log.forEach(e=>{ if(logIds.has(e.id) && e.meta && e.meta.undoId) undoIds.add(e.meta.undoId); });
+  let earliest = null;
+  for(const entry of state.undoStack){ // oldest -> newest
+    if(undoIds.has(entry.id)){ earliest = entry; break; }
+  }
+  if(!earliest){ toast('None of the selected changes can still be undone.', 'err'); return; }
+  const r = await doUndoTo(earliest.id);
+  if(!r) return;
+  const summary = r.discardedCount>1
+    ? (r.discardedCount+' changes back through: '+r.target.label)
+    : r.target.label;
+  await logActivity('Undo', 'Reverted '+summary);
+  state.selectedLogIds.clear();
+  state.confirmUndo = null;
+  render();
+  toast('Reverted '+r.discardedCount+' change'+(r.discardedCount!==1?'s':'')+'.');
 }
 
 function toast(msg, type){
@@ -2500,6 +2551,7 @@ function renderShell(){
   ${renderDrawer()}
   ${renderConfirm()}
   ${renderBulkDeleteConfirm()}
+  ${renderUndoConfirm()}
   ${renderContractSummary()}
   ${renderDetailDrawer()}
   ${renderImportPreview()}
@@ -3149,6 +3201,45 @@ function renderBulkDeleteConfirm(){
       <div class="modal-actions">
         <button class="btn btn-ghost" id="bulkConfirmCancel">Cancel</button>
         <button class="btn btn-danger" id="bulkConfirmOk">Delete ${selected.length}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- Undo confirmation (Activity Log multi-select) ---------- */
+function renderUndoConfirm(){
+  const ids = state.confirmUndo;
+  if(!ids || !ids.size) return '';
+  const log = state.activityLog || [];
+  const undoIds = new Set();
+  log.forEach(e=>{ if(ids.has(e.id) && e.meta && e.meta.undoId) undoIds.add(e.meta.undoId); });
+  let earliest = null;
+  for(const entry of state.undoStack){ if(undoIds.has(entry.id)){ earliest = entry; break; } }
+  if(!earliest){
+    return `
+    <div class="modal-center" id="undoConfirmOverlay">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <h3>Nothing to undo</h3>
+        <p>None of the selected changes can still be undone — they may already have been reverted, or pushed off the undo history (only the last ${MAX_UNDO} changes are kept).</p>
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="undoConfirmCancel">Close</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  const idx = state.undoStack.findIndex(e=>e.id===earliest.id);
+  const discardedCount = state.undoStack.length - idx;
+  const cascadeCount = discardedCount - 1;
+  return `
+  <div class="modal-center" id="undoConfirmOverlay">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <h3>Undo ${discardedCount>1?discardedCount+' changes':'this change'}?</h3>
+      <p>${cascadeCount>0
+        ? `Undo can only rewind in order, so this will revert <b>${discardedCount}</b> changes in total — your selection plus <b>${cascadeCount}</b> more recent change${cascadeCount!==1?'s':''} made afterward — back to just before: <b>${escapeHtml(earliest.label)}</b>.`
+        : `This will revert: <b>${escapeHtml(earliest.label)}</b>.`}</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="undoConfirmCancel">Cancel</button>
+        <button class="btn btn-danger" id="undoConfirmOk">Undo ${discardedCount>1?discardedCount:''}</button>
       </div>
     </div>
   </div>`;
@@ -4330,9 +4421,17 @@ function bindReportsPage(){
 function renderActivity(){
   const log = state.activityLog || [];
   const undoLabel = state.undoStack.length ? state.undoStack[state.undoStack.length-1].label : '';
+  const undoableIds = new Set(state.undoStack.map(u=>u.id));
+  const selectable = can('add');
+  const selected = state.selectedLogIds;
+  const undoableLog = log.filter(e=>e.meta && e.meta.undoId && undoableIds.has(e.meta.undoId));
+
   const rows = log.length ? log.map(e=>{
     const col = actionColor(e.action);
+    const undoId = e.meta && e.meta.undoId;
+    const isUndoable = selectable && undoId && undoableIds.has(undoId);
     return `<div class="act-row">
+      ${selectable ? `<span class="act-check">${isUndoable ? `<input type="checkbox" data-logsel="${e.id}" ${selected.has(e.id)?'checked':''}/>` : ''}</span>` : ''}
       <span class="act-badge" style="background:${col};">${e.action}</span>
       <div class="act-body">
         <div class="act-detail">${escapeHtml(e.detail)}</div>
@@ -4340,6 +4439,9 @@ function renderActivity(){
       </div>
     </div>`;
   }).join('') : '<div class="empty" style="padding:40px;"><h4>No activity yet</h4><p>Imports, additions, edits and deletions will appear here.</p></div>';
+
+  const selCount = selected.size;
+  const allSelected = undoableLog.length>0 && selCount===undoableLog.length;
 
   return `
   <div class="section-head">
@@ -4355,6 +4457,14 @@ function renderActivity(){
       return `<div class="act-stat"><span class="act-dot" style="background:${actionColor(a)};"></span><b>${c}</b> ${a}${c===1?'':'s'}</div>`;
     }).join('')}
   </div>
+  ${(selectable && undoableLog.length) ? `
+  <div class="act-select-bar">
+    <label class="act-selectall"><input type="checkbox" id="logSelectAll" ${allSelected?'checked':''}/> Select all undoable (${undoableLog.length})</label>
+    ${selCount ? `
+    <span class="act-selcount"><b>${selCount}</b> selected</span>
+    <button class="btn btn-ghost btn-sm" id="logClearSel">Clear</button>
+    <button class="btn btn-danger btn-sm" id="logUndoSelBtn">${ICONS.undo} Undo Selected</button>` : ''}
+  </div>` : ''}
   <div class="act-list">${rows}</div>`;
 }
 function escapeHtml(s){
@@ -5171,7 +5281,7 @@ async function confirmImport(){
   const p = state.importPreview;
   if(!p) return;
   const dupCount = (p.duplicates||[]).length;
-  pushUndo('Import of '+p.records.length+' invoice'+(p.records.length>1?'s':'')+(p.fileName?(' from '+p.fileName):''));
+  const _undo = pushUndo('Import of '+p.records.length+' invoice'+(p.records.length>1?'s':'')+(p.fileName?(' from '+p.fileName):''));
   const maxSr = {v: state.invoices.reduce((m,r)=>Math.max(m,Number(r.srNo)||0),0)};
   const finalized = p.records.map(r=>finalizeImported(r, maxSr));
   state.invoices = finalized.concat(state.invoices);
@@ -5209,7 +5319,7 @@ async function confirmImport(){
     if(!up.ok) toast('Imported locally, but cloud upload failed: '+up.error, 'err');
   }
   const n = finalized.length;
-  await logActivity('Import', 'Imported '+n+' invoice'+(n>1?'s':'')+(p.fileName?(' from '+p.fileName):'')+(dupCount?(', skipped '+dupCount+' duplicate'+(dupCount!==1?'s':'')):'')+(newContractCount?(', auto-created '+newContractCount+' contract'+(newContractCount!==1?'s':'')):''), {count:n, file:p.fileName||'', duplicatesSkipped:dupCount, contractsCreated:newContractCount});
+  await logActivity('Import', 'Imported '+n+' invoice'+(n>1?'s':'')+(p.fileName?(' from '+p.fileName):'')+(dupCount?(', skipped '+dupCount+' duplicate'+(dupCount!==1?'s':'')):'')+(newContractCount?(', auto-created '+newContractCount+' contract'+(newContractCount!==1?'s':'')):''), {count:n, file:p.fileName||'', duplicatesSkipped:dupCount, contractsCreated:newContractCount, undoId:_undo.id});
   state.importPreview = null;
   render();
   toast('Imported '+n+' invoice'+(n>1?'s':'')+' successfully.'+(dupCount?(' Skipped '+dupCount+' duplicate'+(dupCount!==1?'s':'')+'.'):'')+(newContractCount?(' Added '+newContractCount+' new contract'+(newContractCount!==1?'s':'')+'.'):''));
@@ -5270,7 +5380,7 @@ function bindDrawer(){
         amountExclTax:a, gstPst:g, tax:tax, amountInclTax:total, amountPaid:parseFloat(obj.amountPaid)||0, status:obj.status
       };
       const wasEdit = !!state.editingInvoice;
-      pushUndo(wasEdit ? ('Edit of invoice '+(record.invoiceNo||record.srNo)) : ('Add of invoice '+(record.invoiceNo||record.srNo)));
+      const _undo = pushUndo(wasEdit ? ('Edit of invoice '+(record.invoiceNo||record.srNo)) : ('Add of invoice '+(record.invoiceNo||record.srNo)));
       if(state.editingInvoice){
         const idx = state.invoices.findIndex(r=>r.id===record.id);
         state.invoices[idx] = record;
@@ -5279,7 +5389,7 @@ function bindDrawer(){
       }
       const ok = await storeSet('invoices', state.invoices, true);
       await cloudSaveInvoice(record);
-      await logActivity(wasEdit?'Edit':'Add', (wasEdit?'Edited':'Added')+' invoice '+(record.invoiceNo||('#'+record.srNo))+(record.vendor?(' ('+record.vendor+')'):''), {invoiceNo:record.invoiceNo, vendor:record.vendor});
+      await logActivity(wasEdit?'Edit':'Add', (wasEdit?'Edited':'Added')+' invoice '+(record.invoiceNo||('#'+record.srNo))+(record.vendor?(' ('+record.vendor+')'):''), {invoiceNo:record.invoiceNo, vendor:record.vendor, undoId:_undo.id});
       if(!wasEdit) notifyNewInvoice(record).catch(e=>console.error('New-invoice notification failed:', e));
       state.drawerOpen=false; state.editingInvoice=null;
       render();
@@ -5424,12 +5534,12 @@ function bindConfirm(){
   const ok = el('confirmOk');
   if(ok) ok.addEventListener('click', async ()=>{
     const victim = state.invoices.find(r=>r.id===state.confirmDelete);
-    pushUndo('Delete of invoice '+((victim&&(victim.invoiceNo||('#'+victim.srNo)))||''));
+    const _undo = pushUndo('Delete of invoice '+((victim&&(victim.invoiceNo||('#'+victim.srNo)))||''));
     state.invoices = state.invoices.filter(r=>r.id!==state.confirmDelete);
     state.confirmDelete = null;
     const ok2 = await storeSet('invoices', state.invoices, true);
     if(victim) await cloudDeleteInvoice(victim.id);
-    if(victim) await logActivity('Delete', 'Deleted invoice '+(victim.invoiceNo||('#'+victim.srNo))+(victim.vendor?(' ('+victim.vendor+')'):''), {invoiceNo:victim.invoiceNo, vendor:victim.vendor});
+    if(victim) await logActivity('Delete', 'Deleted invoice '+(victim.invoiceNo||('#'+victim.srNo))+(victim.vendor?(' ('+victim.vendor+')'):''), {invoiceNo:victim.invoiceNo, vendor:victim.vendor, undoId:_undo.id});
     render();
     toast(ok2 ? 'Invoice deleted.' : 'Deleted locally — storage sync failed.', ok2?'ok':'err');
   });
@@ -5443,14 +5553,14 @@ function bindBulkConfirm(){
   if(ok) ok.addEventListener('click', async ()=>{
     const victims = state.invoices.filter(r=>state.selectedInvoices.has(r.id));
     if(!victims.length){ state.confirmBulkDelete=false; render(); return; }
-    pushUndo('Bulk delete of '+victims.length+' invoice'+(victims.length!==1?'s':''));
+    const _undo = pushUndo('Bulk delete of '+victims.length+' invoice'+(victims.length!==1?'s':''));
     const victimIds = new Set(victims.map(v=>v.id));
     state.invoices = state.invoices.filter(r=>!victimIds.has(r.id));
     state.confirmBulkDelete = false;
     state.selectedInvoices.clear();
     const ok2 = await storeSet('invoices', state.invoices, true);
     for(const v of victims) await cloudDeleteInvoice(v.id);
-    await logActivity('Delete', 'Bulk deleted '+victims.length+' invoice'+(victims.length!==1?'s':'')+' ('+fmtMoney(victims.reduce((s,r)=>s+(Number(r.amountInclTax)||0),0))+')', {count:victims.length});
+    await logActivity('Delete', 'Bulk deleted '+victims.length+' invoice'+(victims.length!==1?'s':'')+' ('+fmtMoney(victims.reduce((s,r)=>s+(Number(r.amountInclTax)||0),0))+')', {count:victims.length, undoId:_undo.id});
     render();
     toast(ok2 ? victims.length+' invoice'+(victims.length!==1?'s':'')+' deleted.' : 'Deleted locally — storage sync failed.', ok2?'ok':'err');
   });
@@ -5466,6 +5576,35 @@ function bindActivityPage(){
     render();
     toast('Activity log cleared.');
   });
+
+  document.querySelectorAll('[data-logsel]').forEach(cb=>cb.addEventListener('change', ()=>{
+    const id = cb.dataset.logsel;
+    if(cb.checked) state.selectedLogIds.add(id); else state.selectedLogIds.delete(id);
+    render();
+  }));
+  const selectAll = el('logSelectAll');
+  if(selectAll) selectAll.addEventListener('change', ()=>{
+    const log = state.activityLog || [];
+    const undoableIds = new Set(state.undoStack.map(x=>x.id));
+    const undoableLogIds = log.filter(e=>e.meta && e.meta.undoId && undoableIds.has(e.meta.undoId)).map(e=>e.id);
+    if(selectAll.checked) undoableLogIds.forEach(id=>state.selectedLogIds.add(id));
+    else state.selectedLogIds.clear();
+    render();
+  });
+  const clearSel = el('logClearSel');
+  if(clearSel) clearSel.addEventListener('click', ()=>{ state.selectedLogIds.clear(); render(); });
+  const undoSelBtn = el('logUndoSelBtn');
+  if(undoSelBtn) undoSelBtn.addEventListener('click', ()=>{
+    state.confirmUndo = new Set(state.selectedLogIds);
+    render();
+  });
+
+  const undoConfirmOverlay = el('undoConfirmOverlay');
+  if(undoConfirmOverlay) undoConfirmOverlay.addEventListener('click', ()=>{ state.confirmUndo=null; render(); });
+  const undoConfirmCancel = el('undoConfirmCancel');
+  if(undoConfirmCancel) undoConfirmCancel.addEventListener('click', ()=>{ state.confirmUndo=null; render(); });
+  const undoConfirmOk = el('undoConfirmOk');
+  if(undoConfirmOk) undoConfirmOk.addEventListener('click', async ()=>{ await doUndoSelected(state.confirmUndo); });
 }
 
 function bindSettingsPage(){
