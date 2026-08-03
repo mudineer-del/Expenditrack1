@@ -522,15 +522,15 @@ input,select,textarea{font-family:inherit;}
 
 /* ---------- Table ---------- */
 .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); background:var(--card);}
-table{width:100%; border-collapse:collapse; font-size:13px; min-width:1100px; line-height:1.5;}
+table{width:100%; border-collapse:collapse; font-size:12.5px; min-width:1100px; line-height:1.3;}
 thead th{
-  background:#faf9f6; color:#75726a; text-align:left; padding:12px 14px; font-size:11.5px;
+  background:#faf9f6; color:#75726a; text-align:left; padding:9px 14px; font-size:11px;
   letter-spacing:.2px; font-weight:700; white-space:nowrap; cursor:pointer; user-select:none;
-  position:sticky; top:0; border-bottom:1px solid var(--border); line-height:1.4;
+  position:sticky; top:0; border-bottom:1px solid var(--border); line-height:1.3;
 }
 thead th:hover{background:#f3f0e9; color:#3a3833;}
 thead th .arrow{opacity:.5; font-size:11px; margin-left:3px;}
-tbody td{padding:13px 14px; border-bottom:1px solid var(--border-soft); white-space:nowrap; color:var(--ink); line-height:1.5;}
+tbody td{padding:8px 14px; border-bottom:1px solid var(--border-soft); white-space:nowrap; color:var(--ink); line-height:1.3;}
 tbody tr{transition:background .14s ease;}
 tbody tr:hover{background:#f7fafc;}
 tbody tr:last-child td{border-bottom:none;}
@@ -561,7 +561,7 @@ tbody tr:last-child td{border-bottom:none;}
 .fmt-launch-inline{white-space:nowrap; flex-shrink:0;}
 .fmt-launch-btn{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border); background:#fff; color:var(--muted); border-radius:7px; padding:6px 11px; font-size:12px; font-weight:600; cursor:pointer; margin-left:12px; transition:border-color .15s ease, color .15s ease;}
 .fmt-launch-btn:hover{border-color:var(--accent); color:var(--accent);}
-.status-pill{display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap;}
+.status-pill{display:inline-block; padding:3px 9px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap;}
 .st-cleared, .st-received{background:var(--green-bg); color:var(--green);}
 .st-under, .st-sent, .st-budgeting{background:var(--amber-bg); color:var(--amber);}
 .st-returned, .st-not{background:var(--red-bg); color:var(--red);}
@@ -582,7 +582,7 @@ table.col-resizable{table-layout:fixed;}
 table.col-resizable td{overflow:hidden; text-overflow:ellipsis;}
 body.col-resizing-active{cursor:col-resize !important; user-select:none !important;}
 body.col-resizing-active *{cursor:col-resize !important; user-select:none !important;}
-.icon-btn{width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:#fff; display:flex; align-items:center; justify-content:center; transition:background .15s ease, border-color .15s ease, transform .12s ease;}
+.icon-btn{width:26px; height:26px; border-radius:6px; border:1px solid var(--border); background:#fff; display:flex; align-items:center; justify-content:center; transition:background .15s ease, border-color .15s ease, transform .12s ease;}
 .icon-btn:hover{transform:translateY(-1px);}
 .icon-btn:hover{background:var(--bg);}
 .icon-btn.danger:hover{background:var(--red-bg); border-color:var(--red);}
@@ -703,6 +703,21 @@ body.col-resizing-active *{cursor:col-resize !important; user-select:none !impor
 .chip-btn{border:1px solid var(--border); background:#fff; padding:6px 13px; border-radius:20px; font-size:12.5px; font-weight:600; color:var(--navy-800); cursor:pointer; transition:all .14s ease;}
 .chip-btn:hover{border-color:var(--accent); color:var(--accent);}
 .chip-btn.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+/* Compact pill action buttons — same DNA as the Expenditure Analysis contractor filters */
+.util-pill{
+  border:1.5px solid var(--border); background:#fff; color:var(--navy-800);
+  border-radius:16px; padding:6px 14px; font-size:12px; font-weight:700; letter-spacing:.2px;
+  cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+  transition:background .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .12s ease;
+}
+.util-pill .ic{width:14px; height:14px; display:flex; align-items:center; justify-content:center;}
+.util-pill:hover{background:var(--bg);}
+.util-pill:active{transform:scale(.96);}
+.util-pill.primary{border-color:var(--indigo); color:var(--indigo);}
+.util-pill.primary:hover{background:var(--indigo-bg);}
+.util-pill.danger{border-color:var(--red); color:var(--red);}
+.util-pill.danger:hover{background:var(--red-bg);}
 .ct-check-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:8px;}
 .ct-check{display:flex; align-items:center; gap:9px; padding:9px 12px; border:1px solid var(--border-soft); border-radius:9px; cursor:pointer; transition:all .14s ease; background:#fff;}
 .ct-check:hover{border-color:var(--border);}
@@ -3569,9 +3584,9 @@ function renderReportFilters(){
       <div class="rf-field"><label>From (date)</label><input type="date" id="rf_from" value="${f.from||''}"/></div>
       <div class="rf-field"><label>To (date)</label><input type="date" id="rf_to" value="${f.to||''}"/></div>
       <div class="rf-actions">
-        <button class="btn ghost" id="rf_clear">Clear filters</button>
+        <button class="btn btn-ghost btn-sm" id="rf_clear">Clear filters</button>
         <div class="export-wrap">
-          <button class="btn" id="rf_exportBtn">${ICONS.download||''} Export ▾</button>
+          <button class="btn btn-ghost btn-sm" id="rf_exportBtn">${ICONS.download||''} Export ▾</button>
           <div class="export-menu" id="rf_exportMenu" style="display:none;">
             <button data-rexp="csv">CSV (.csv)</button>
             <button data-rexp="xls">Excel (.xls)</button>
@@ -4469,9 +4484,9 @@ function renderSettingsTab(tab, isAdmin){
           <div class="field full"><label>Notify this address</label><input id="njToEmail" type="email" placeholder="you@ogdcl.com.pk" value="${escapeHtml(NOTIFY.toEmail||'')}"/></div>
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" id="njSaveBtn">${ICONS.check} Save configuration</button>
-          <button class="btn btn-ghost" id="njTestBtn">Send test email</button>
-          <button class="btn btn-ghost" id="njCheckBtn">Check contracts now</button>
+          <button class="util-pill primary" id="njSaveBtn">${ICONS.check} Save configuration</button>
+          <button class="util-pill" id="njTestBtn">Send test email</button>
+          <button class="util-pill" id="njCheckBtn">Check contracts now</button>
         </div>
         ${NOTIFY.lastError?`<div class="perm-note" style="margin-top:12px;border-color:#e6b0aa;color:#C0392B;">${escapeHtml(NOTIFY.lastError)}</div>`:''}
         ${NOTIFY.lastSentAt?`<div class="muted" style="font-size:12px;margin-top:8px;">Last email sent: ${fmtDateTime(new Date(NOTIFY.lastSentAt).getTime())}</div>`:''}
@@ -4520,8 +4535,8 @@ function renderSettingsTab(tab, isAdmin){
             <input id="sbKey" placeholder="eyJhbGciOi..." value="${escapeHtml(SB.anonKey||'')}"/></div>
         </div>
         <div class="form-actions">
-          <button class="btn primary" id="sbSaveCfg">Save &amp; test connection</button>
-          ${configured?`<button class="btn danger-ghost" id="sbClearCfg">Disconnect</button>`:''}
+          <button class="util-pill primary" id="sbSaveCfg">Save &amp; test connection</button>
+          ${configured?`<button class="util-pill danger" id="sbClearCfg">Disconnect</button>`:''}
         </div>
       </div>
     </div>
@@ -4535,9 +4550,9 @@ function renderSettingsTab(tab, isAdmin){
           <div class="field"><label>Password</label><input id="sbPass" type="password" placeholder="••••••••"/></div>
         </div>
         <div class="form-actions">
-          <button class="btn primary" id="sbSignInBtn">Sign in</button>
-          <button class="btn" id="sbSignUpBtn">Create account</button>
-          ${signedIn?`<button class="btn danger-ghost" id="sbSignOutBtn">Sign out</button>`:''}
+          <button class="util-pill primary" id="sbSignInBtn">Sign in</button>
+          <button class="util-pill" id="sbSignUpBtn">Create account</button>
+          ${signedIn?`<button class="util-pill danger" id="sbSignOutBtn">Sign out</button>`:''}
         </div>
         <div class="perm-note" style="margin-top:6px;">Accounts are managed by Supabase Auth. Team members each create their own account and see the same shared data.</div>`}
       </div>
@@ -4549,11 +4564,11 @@ function renderSettingsTab(tab, isAdmin){
         ${!signedIn?`<div class="perm-note">Sign in to sync data.</div>`:`
         <div class="sec-row">
           <div><b>Upload current data to cloud</b><div class="muted" style="font-size:12px;">Sends all ${state.invoices.length} invoices and contracts. Existing cloud records with the same id are updated, not duplicated.</div></div>
-          <button class="btn primary" id="sbPushBtn">Upload to cloud</button>
+          <button class="util-pill primary" id="sbPushBtn">Upload to cloud</button>
         </div>
         <div class="sec-row">
           <div><b>Download from cloud</b><div class="muted" style="font-size:12px;">Replaces what is shown here with the shared cloud data.</div></div>
-          <button class="btn" id="sbPullBtn">Pull from cloud</button>
+          <button class="util-pill" id="sbPullBtn">Pull from cloud</button>
         </div>
         <div id="sbProgress" class="perm-note" style="margin-top:12px;display:none;"></div>`}
       </div>
@@ -4588,15 +4603,15 @@ function renderSettingsTab(tab, isAdmin){
       <div class="panel-body">
         <div class="sec-row">
           <div><b>Download a full backup</b><div class="muted" style="font-size:12px;">All invoices, contracts, users, reference lists, settings and activity log in one file.</div></div>
-          <button class="btn primary" id="backupBtn"><span class="ic">${ICONS.download}</span> Download backup</button>
+          <button class="util-pill primary" id="backupBtn"><span class="ic">${ICONS.download}</span> Download backup</button>
         </div>
         <div class="sec-row">
           <div><b>Save a working copy as HTML</b><div class="muted" style="font-size:12px;">Bakes today's data into this tracker file. In Chrome/Edge you'll be asked to pick a file once — pick your existing tracker file to overwrite it in place — and later saves reuse that same file. Other browsers download a new timestamped copy instead.</div></div>
-          <button class="btn primary" id="saveHtmlBtn"><span class="ic">${ICONS.download}</span> Save to File</button>
+          <button class="util-pill primary" id="saveHtmlBtn"><span class="ic">${ICONS.download}</span> Save to File</button>
         </div>
         <div class="sec-row">
           <div><b>Restore from a backup</b><div class="muted" style="font-size:12px;">Replaces all current data with the contents of the backup file. You can undo this straight after.</div></div>
-          <button class="btn" id="restoreBtn">Choose backup file…</button>
+          <button class="util-pill" id="restoreBtn">Choose backup file…</button>
           <input type="file" id="restoreFile" accept="application/json,.json" style="display:none"/>
         </div>
         <div class="perm-note" style="margin-top:14px;">
