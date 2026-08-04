@@ -212,14 +212,15 @@ input,select,textarea{font-family:inherit;}
 .nav-group{padding:6px 12px;}
 .nav-label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:#5f5c54; padding:14px 10px 6px; font-weight:700;}
 .nav-item{
-  display:flex; align-items:center; gap:11px; padding:9px 14px; border-radius:999px; font-size:13.5px;
-  color:#4a4843; margin-bottom:3px; font-weight:500; cursor:pointer;
+  display:flex; align-items:center; gap:11px; padding:8px 14px; border-radius:999px; font-size:13.5px;
+  color:#4a4843; margin-bottom:4px; font-weight:500; cursor:pointer;
   position:relative; transition:background .18s ease, color .18s ease;
 }
-.nav-item .ic{width:18px; height:18px; flex-shrink:0; display:flex;align-items:center;justify-content:center; transition:transform .18s ease;}
+.nav-item .ic{width:30px; height:30px; flex-shrink:0; display:flex;align-items:center;justify-content:center; border-radius:50%; transition:background .18s ease, transform .18s ease;}
 .nav-item:hover{background:#f1ede5; color:#1f1e1a;}
-.nav-item:hover .ic{transform:scale(1.08);}
+.nav-item:hover .ic{background:#e6e2d8;}
 .nav-item.active{background:var(--accent-bg); color:var(--accent); font-weight:700;}
+.nav-item.active .ic{background:var(--accent); color:#fff;}
 .nav-contracts{margin-top:8px; padding-top:4px; border-top:1px solid #eceae4; overflow-y:auto; max-height:32vh;}
 .nav-contract{
   display:flex; align-items:center; gap:9px; padding:7px 14px; border-radius:999px; font-size:11.5px;
@@ -288,6 +289,9 @@ input,select,textarea{font-family:inherit;}
   display:flex; align-items:center; justify-content:space-between; padding:0 28px; position:sticky; top:0; z-index:20;
 }
 .topbar-left{display:flex; align-items:center; gap:22px; flex:1; min-width:0;}
+.menu-toggle{display:none; width:36px; height:36px; flex-shrink:0; align-items:center; justify-content:center; border:1px solid var(--border); background:#fff; border-radius:8px; color:var(--navy-800); cursor:pointer;}
+.menu-toggle:hover{background:var(--bg);}
+.sidebar-backdrop{display:none;}
 .topbar h1{font-size:16.5px; margin:0; color:#23221e; font-weight:700; letter-spacing:-.2px; white-space:nowrap;}
 .global-search{position:relative; flex:0 1 340px; min-width:160px;}
 .global-search input{width:100%; padding:9px 12px 9px 34px; border:1px solid #e2ded6; border-radius:999px; background:#f7f5f0; font-size:13px; transition:border-color .18s ease, background .18s ease;}
@@ -315,6 +319,23 @@ input,select,textarea{font-family:inherit;}
 .vendor-btn:hover{background:color-mix(in srgb, var(--vc) 10%, white);}
 .vendor-btn.active{background:var(--vc); color:#fff; box-shadow:0 2px 8px color-mix(in srgb, var(--vc) 35%, transparent);}
 .chart-title{font-size:12.5px; font-weight:700; color:var(--navy-900); margin-bottom:8px; letter-spacing:.2px;}
+.gauge-legend{display:flex; justify-content:space-between; gap:10px; padding-top:6px; margin-top:-4px;}
+.gauge-legend-item{display:flex; flex-direction:column; gap:2px; font-size:11.5px; color:var(--muted);}
+.gauge-legend-item .gl-dot{width:8px; height:8px; border-radius:2px; display:inline-block; margin-bottom:2px;}
+.gauge-legend-item .gl-label{font-size:11px; color:var(--muted);}
+.gauge-legend-item .gl-value{font-size:13px; font-weight:700; color:var(--navy-900);}
+.gauge-legend-item .gl-value b{font-weight:600; color:var(--muted); font-size:11px; margin-left:2px;}
+.fin-report{display:flex; flex-direction:column;}
+.fr-row{display:grid; grid-template-columns:1fr 110px 110px; align-items:center; padding:9px 4px; border-bottom:1px solid var(--border-soft); font-size:12.5px; cursor:pointer; transition:background .14s ease;}
+.fr-row:hover{background:var(--bg);}
+.fr-row:last-child{border-bottom:none;}
+.fr-head{color:var(--muted); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; cursor:default;}
+.fr-head:hover{background:transparent;}
+.fr-cat{color:var(--navy-900); font-weight:600;}
+.fr-amt{font-variant-numeric:tabular-nums; color:var(--navy-900);}
+.fr-delta{font-weight:700; font-size:12px;}
+.fr-delta.up{color:var(--green);}
+.fr-delta.down{color:var(--red);}
 /* Sidebar contract hover popover */
 .nav-contract{position:relative;}
 .contract-pop{
@@ -680,11 +701,49 @@ body.col-resizing-active *{cursor:col-resize !important; user-select:none !impor
 .perm-note{font-size:12px; color:var(--muted); background:var(--bg); border:1px dashed var(--border); border-radius:8px; padding:10px 12px; margin-bottom:16px;}
 
 @media (max-width:960px){
-  .sidebar{position:fixed; z-index:50; transform:translateX(-100%); transition:transform .2s;}
-  .sidebar.open{transform:translateX(0);}
+  .menu-toggle{display:flex;}
+  .main{margin-left:0 !important;}
+  .sidebar{position:fixed; top:0; left:0; width:260px; max-width:82vw; z-index:70; transform:translateX(-100%); transition:transform .22s ease; box-shadow:none;}
+  .sidebar.open{transform:translateX(0); box-shadow:10px 0 30px rgba(0,0,0,.2);}
+  .sidebar-backdrop.show{display:block; position:fixed; inset:0; background:rgba(7,27,46,.5); z-index:60; animation:fadeIn .15s ease;}
+  @keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
   .grid-2{grid-template-columns:1fr;}
   .form-grid{grid-template-columns:1fr;}
   .login-left{display:none;}
+  .topbar{padding:0 14px; gap:10px;}
+  .topbar-left{gap:10px;}
+  .global-search{flex:1 1 auto; min-width:0;}
+  .content{padding:16px 14px 44px;}
+  .two-col-cards{grid-template-columns:1fr;}
+  .fmt-launch-txt{display:none;}
+  .report-filters{gap:10px;}
+  .rf-field{min-width:0; flex:1 1 140px;}
+  .rf-actions{margin-left:0; width:100%; justify-content:flex-start;}
+  .drawer{width:100%; max-width:100vw;}
+  .drawer-head{padding:16px 16px;}
+  .drawer-body{padding:16px 16px 32px;}
+  .modal-box{width:100%; padding:18px;}
+  .icon-btn{width:34px; height:34px;}
+  .page-btns button{width:34px; height:34px;}
+}
+@media (max-width:600px){
+  .topbar{height:56px;}
+  .topbar h1{font-size:14.5px;}
+  .content{padding:12px 10px 40px;}
+  .toolbar{gap:8px;}
+  .toolbar > *{flex:1 1 auto;}
+  .table-wrap{border-radius:10px;}
+  table{font-size:12.5px;}
+  .pagination{flex-direction:column; align-items:stretch; gap:10px;}
+  .page-size-picker{justify-content:space-between;}
+  .page-btns{justify-content:center; flex-wrap:wrap;}
+  .field input, .field select, .rf-field input, .rf-field select, .global-search input{font-size:16px;}
+  .form-actions{flex-direction:column;}
+  .form-actions .btn{width:100%;}
+  .seg{width:100%; overflow-x:auto;}
+  .rpt-contract-no-full{font-size:17px;}
+  .login-card{padding:0 6px;}
+  .login-right{padding:24px 18px;}
 }
 /* ---- Financial Reports ---- */
 .seg{display:inline-flex; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px;}
@@ -2475,6 +2534,7 @@ const ICONS = {
   filter:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 4 21 4 14 13 14 20 10 22 10 13 3 4"/></svg>',
   sort:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M6 12h12M10 17h4"/></svg>',
   pin:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l1 6 3 3v2H5v-2l3-3z"/></svg>',
+  menu:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>',
   grid:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
   list:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>',
   building:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="1"/><line x1="9" y1="8" x2="9" y2="8"/><line x1="15" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>',
@@ -2515,6 +2575,7 @@ function renderShell(){
 
   return `
   <div class="shell ${state.sidebarPinned?'pinned':''}">
+    <div class="sidebar-backdrop ${state.sidebarOpen?'show':''}" id="sidebarBackdrop"></div>
     <aside class="sidebar ${state.sidebarOpen?'open':''}">
       <div class="brand">
         <div class="ring"><img src="${OGDCL_LOGO_DARK}" alt="OGDCL"/></div>
@@ -2550,6 +2611,7 @@ function renderShell(){
     <div class="main">
       <div class="topbar">
         <div class="topbar-left">
+          <button type="button" class="menu-toggle" id="menuToggle" aria-label="Open menu" title="Menu">${ICONS.menu || '☰'}</button>
           <h1${labelStyleAttr(pageTitleLabelKey())}>${pageTitle()}</h1>
           ${(u.role==='Admin' && pageTitleLabelKey()) ? `<button type="button" class="fmt-launch-btn" data-openformat="${pageTitleLabelKey()}" title="Format this title">${ICONS.palette} <span class="fmt-launch-txt">Format</span></button>` : ''}
           <div class="global-search">${ICONS.search}<input id="globalSearch" placeholder="Search invoices, vendors, wells, contracts…" value="${(state.filters.q||'').replace(/"/g,'&quot;')}"/></div>
@@ -2703,10 +2765,17 @@ function renderDashboard(){
           <div class="chart-box"><canvas id="vendorChart"></canvas></div>
         </div>
         <div>
-          <div class="chart-title">Status Distribution</div>
-          <div class="chart-box"><canvas id="statusChart"></canvas></div>
+          <div class="chart-title">Invoice Status</div>
+          <div class="chart-box" style="height:190px;"><canvas id="statusChart"></canvas></div>
+          <div id="statusLegend" class="gauge-legend"></div>
         </div>
       </div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-head"><h3>Financial Report</h3><span class="chart-hint" id="finReportPeriod"></span></div>
+    <div class="panel-body" style="padding-top:10px;">
+      <div id="finReportBody" class="fin-report"></div>
     </div>
   </div>
   <div class="panel">
@@ -2835,24 +2904,83 @@ function drawCharts(){
     vCanvas.parentElement.innerHTML = '<div class="empty" style="padding:30px;"><h4>No invoices in scope</h4></div>';
   }
 
-  // --- Status distribution ---
+  // --- Status distribution (gauge) ---
   const byStatus = {};
   rows.forEach(r=>{ const s=r.status||'Unspecified'; byStatus[s]=(byStatus[s]||0)+1; });
-  const sLabels = Object.keys(byStatus);
-  const sData = sLabels.map(l=>byStatus[l]);
+  const sPairs = Object.entries(byStatus).sort((a,b)=>b[1]-a[1]);
+  const sLabels = sPairs.map(p=>p[0]);
+  const sData = sPairs.map(p=>p[1]);
+  const sTotal = sData.reduce((a,b)=>a+b,0);
   const palette = [BRAND_BLUE, BRAND_TEAL, '#c8781c','#1c8a4b','#c23b3b',NAVY,'#5b7086','#8fb4c9','#d9a441','#7fb69b','#9c7fc9','#c98f9c'];
   const sCanvas = el('statusChart');
+  const sLegendEl = el('statusLegend');
   if(sCanvas && sLabels.length){
+    if(sLegendEl){
+      sLegendEl.innerHTML = sLabels.slice(0,3).map((l,i)=>`
+        <div class="gauge-legend-item">
+          <span class="gl-dot" style="background:${palette[i%palette.length]};"></span>
+          <span class="gl-label">${l}</span>
+          <span class="gl-value">${((sData[i]/sTotal)*100).toFixed(0)}% <b>${sData[i]}</b></span>
+        </div>`).join('');
+    }
     new Chart(sCanvas, {
       type:'doughnut',
-      data:{ labels:sLabels, datasets:[{ data:sData, backgroundColor: sLabels.map((_,i)=>palette[i%palette.length]), borderWidth:2, borderColor:'#fff' }]},
-      options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', onClick: chartClickHandler(
+      data:{ labels:sLabels, datasets:[{ data:sData, backgroundColor: sLabels.map((_,i)=>palette[i%palette.length]), borderWidth:3, borderColor:'#fff' }]},
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'74%', circumference:180, rotation:270, onClick: chartClickHandler(
           i=>rows.filter(r=>(r.status||'Unspecified')===sLabels[i]),
           i=>'Status: '+sLabels[i], i=>palette[i%palette.length]),
-        plugins:{ legend:{ position:'right', labels:{ boxWidth:9, font:{size:10}, padding:8 } } } }
+        plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>' '+c.label+': '+c.raw } } } },
+      plugins:[{
+        id:'gaugeCenterText',
+        afterDraw(c){
+          const {ctx, chartArea:{width,height,top}} = c;
+          ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.font='700 22px sans-serif'; ctx.fillStyle = NAVY;
+          ctx.fillText(sTotal.toLocaleString(), width/2, top+height*0.78);
+          ctx.font='600 10.5px sans-serif'; ctx.fillStyle = '#8a8880';
+          ctx.fillText('invoices', width/2, top+height*0.78+18);
+          ctx.restore();
+        }
+      }]
     });
   } else if(sCanvas){
     sCanvas.parentElement.innerHTML = '<div class="empty" style="padding:30px;"><h4>No invoices in scope</h4></div>';
+  }
+
+  // --- Financial Report: category spend, this month vs last ---
+  const latestMonth = mKeys[mKeys.length-1];
+  const prevMonth = mKeys[mKeys.length-2];
+  const byCatLatest = {}, byCatPrev = {};
+  rows.forEach(r=>{
+    const d = r.invoiceDate; if(!d || !/^\d{4}-\d{2}/.test(d)) return;
+    const mk = d.slice(0,7);
+    const cat = r.service || 'Unspecified';
+    if(mk===latestMonth) byCatLatest[cat] = (byCatLatest[cat]||0) + (Number(r.amountInclTax)||0);
+    if(mk===prevMonth) byCatPrev[cat] = (byCatPrev[cat]||0) + (Number(r.amountInclTax)||0);
+  });
+  const frCats = Object.keys(byCatLatest).sort((a,b)=>byCatLatest[b]-byCatLatest[a]).slice(0,6);
+  const finReportEl = el('finReportBody');
+  const finPeriodEl = el('finReportPeriod');
+  if(finPeriodEl){
+    finPeriodEl.textContent = latestMonth ? (REF.months[Number(latestMonth.split('-')[1])-1]+' '+latestMonth.split('-')[0]+' vs prior month') : '';
+  }
+  if(finReportEl){
+    if(!latestMonth || !frCats.length){
+      finReportEl.innerHTML = '<div class="empty" style="padding:20px;"><h4>No dated invoices yet</h4><p>Month-over-month comparison appears once invoices have dates.</p></div>';
+    } else {
+      finReportEl.innerHTML = `
+        <div class="fr-row fr-head"><span>Category</span><span>Amount</span><span>vs prior month</span></div>
+        ${frCats.map(c=>{
+          const cur = byCatLatest[c]||0, prev = byCatPrev[c]||0;
+          const delta = prev>0 ? ((cur-prev)/prev*100) : (cur>0?100:0);
+          const up = delta>=0;
+          return `<div class="fr-row" data-navservice="${c.replace(/"/g,'&quot;')}">
+            <span class="fr-cat">${c}</span>
+            <span class="fr-amt">${fmtMoney(cur)}</span>
+            <span class="fr-delta ${up?'up':'down'}">${up?'+':''}${delta.toFixed(0)}%</span>
+          </div>`;
+        }).join('')}`;
+    }
   }
 }
 
@@ -4958,11 +5086,16 @@ function enableColumnResize(){
 function bindShell(){
   const pinBtn = el('sidebarPinToggle');
   if(pinBtn) pinBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.sidebarPinned = !state.sidebarPinned; render(); });
-  document.querySelectorAll('[data-nav]').forEach(n=>n.addEventListener('click', ()=>{ state.page=n.dataset.nav; state.pageNum=1; render(); }));
+  document.querySelectorAll('[data-nav]').forEach(n=>n.addEventListener('click', ()=>{ state.page=n.dataset.nav; state.pageNum=1; state.sidebarOpen=false; render(); }));
+  const menuToggleBtn = el('menuToggle');
+  if(menuToggleBtn) menuToggleBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.sidebarOpen=!state.sidebarOpen; render(); });
+  const sidebarBackdrop = el('sidebarBackdrop');
+  if(sidebarBackdrop) sidebarBackdrop.addEventListener('click', ()=>{ state.sidebarOpen=false; render(); });
   document.querySelectorAll('[data-navcontract]').forEach(n=>{
     n.addEventListener('click', ()=>{
       hideContractPop();
       state.contractSummary = n.dataset.navcontract;
+      state.sidebarOpen = false;
       render();
     });
     n.addEventListener('mouseenter', (e)=> showContractPop(n.dataset.navcontract, e.currentTarget));
@@ -5076,6 +5209,15 @@ function bindDashboard(){
     state.page = 'invoices';
     render();
   }));
+  const finReportBody = el('finReportBody');
+  if(finReportBody) finReportBody.addEventListener('click', (e)=>{
+    const row = e.target.closest('[data-navservice]');
+    if(!row) return;
+    state.filters = Object.assign(state.filters, {q:'',vendor:'',service:row.dataset.navservice,status:'',statusBucket:'',region:'',year:'',qtr:'',contract:''});
+    state.pageNum = 1;
+    state.page = 'invoices';
+    render();
+  });
 }
 
 function bindInvoicesPage(){
