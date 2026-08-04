@@ -77,7 +77,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   --red:#b3261e;
   --red-bg:#fbe9e9;
   --blue-bg:#e7eef6;
-  --radius:10px;
+  --radius:14px;
   --shadow:0 1px 2px rgba(16,28,43,.05), 0 2px 8px rgba(16,28,43,.05);
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
   --space-5:20px; --space-6:24px; --space-8:32px;
@@ -494,6 +494,16 @@ input,select,textarea{font-family:inherit;}
 .m-value{font-size:22px; font-weight:700; color:var(--indigo); letter-spacing:-.3px; font-variant-numeric:tabular-nums;}
 .m-sub{font-size:11.5px; color:#9b988f;}
 .metric-util{padding:0 22px 16px;}
+.kpi-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:16px;}
+.kpi-tile{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 18px; cursor:pointer; transition:box-shadow .15s ease, transform .15s ease, border-color .15s ease; position:relative;}
+.kpi-tile:hover{box-shadow:0 4px 16px rgba(10,37,64,.08); transform:translateY(-2px); border-color:var(--border-strong);}
+.kpi-tile:active{transform:translateY(0); box-shadow:0 1px 4px rgba(10,37,64,.06);}
+.kpi-tile-icon{width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;}
+.kpi-tile-label{font-size:11.5px; color:var(--muted); font-weight:600;}
+.kpi-tile-value{font-size:21px; font-weight:700; color:var(--navy-900); margin-top:3px; font-variant-numeric:tabular-nums;}
+.kpi-tile-sub{font-size:11px; color:var(--muted); margin-top:4px; display:flex; align-items:center; gap:4px;}
+.kpi-tile-arrow{position:absolute; top:16px; right:16px; opacity:0; transition:opacity .15s ease; color:var(--muted);}
+.kpi-tile:hover .kpi-tile-arrow{opacity:1;}
 .chart-box{position:relative; height:230px; width:100%;}
 @media (max-width:960px){ .chart-box{height:200px;} }
 .util-bar{height:7px; background:var(--border-soft); border-radius:4px; margin-top:10px; overflow:hidden;}
@@ -1583,7 +1593,7 @@ const state = {
   labels: {},
   settingsTab: 'profile',
   page: 'dashboard',
-  filters: { q:'', vendor:'', service:'', status:'', region:'', year:'', qtr:'', contract:'' },
+  filters: { q:'', vendor:'', service:'', status:'', statusBucket:'', region:'', year:'', qtr:'', contract:'' },
   reportMode: 'contract',   // 'contract' = single-contract report, 'compare' = contract comparison, 'period' = period view
   reportFilters: { contract:'', vendor:'', service:'', type:'', region:'', status:'', well:'', year:'', qtr:'', from:'', to:'', groupBy:'contract' },
   reportCompare: [],        // contractNos selected for comparison
@@ -1994,6 +2004,8 @@ function filteredInvoices(){
   if(f.vendor) rows = rows.filter(r=>r.vendor===f.vendor);
   if(f.service) rows = rows.filter(r=>r.service===f.service);
   if(f.status) rows = rows.filter(r=>r.status===f.status);
+  if(f.statusBucket==='cleared') rows = rows.filter(r=>(r.status||'').toLowerCase().includes('cleared'));
+  if(f.statusBucket==='pending') rows = rows.filter(r=>{const s=(r.status||'').toLowerCase(); return s.includes('under')||s.includes('sent')||s.includes('budget');});
   if(f.region) rows = rows.filter(r=>r.region===f.region);
   if(f.contract) rows = rows.filter(r=>normContract(r.contractNo)===normContract(f.contract));
   if(f.year) rows = rows.filter(r=>String(r.year)===String(f.year) || String(r.yr)===String(f.year));
@@ -2613,7 +2625,7 @@ function renderDashboard(){
   const selected = state.dashVendor || 'ALL';
 
   // contractor cost metrics (when a specific contractor is selected)
-  let costMetrics = '', utilBar = '';
+  let costTiles = '', utilBar = '';
   if(selected!=='ALL'){
     const cost = vendorContractCost(selected);
     const spent = k.totalIncl;
@@ -2621,48 +2633,53 @@ function renderDashboard(){
       const pct = Math.min(100,(spent/cost)*100);
       const remaining = cost - spent;
       const barColor = pct>=90 ? 'var(--red)' : pct>=70 ? 'var(--amber)' : 'var(--teal-600)';
-      costMetrics = `
-      <div class="metric">
-        <span class="m-label">Contract cost</span>
-        <span class="m-value">${fmtMoney(cost)}</span>
-        <span class="m-sub">All ${selected} contracts</span>
+      costTiles = `
+      <div class="kpi-tile" data-kpi="contract">
+        <div class="kpi-tile-icon" style="background:var(--indigo-bg,#eef0fd); color:var(--indigo);">${ICONS.dollar}</div>
+        <div class="kpi-tile-label">Contract cost</div>
+        <div class="kpi-tile-value">${fmtMoney(cost)}</div>
+        <div class="kpi-tile-sub">All ${selected} contracts</div>
       </div>
-      <div class="metric">
-        <span class="m-label">Remaining</span>
-        <span class="m-value" style="color:${remaining<0?'var(--red)':'var(--green)'};">${fmtMoney(remaining)}</span>
-        <span class="m-sub">${pct.toFixed(1)}% utilized</span>
+      <div class="kpi-tile" data-kpi="remaining">
+        <div class="kpi-tile-icon" style="background:${remaining<0?'var(--red-bg)':'var(--green-bg)'}; color:${remaining<0?'var(--red)':'var(--green)'};">${ICONS.wallet}</div>
+        <div class="kpi-tile-label">Remaining</div>
+        <div class="kpi-tile-value" style="color:${remaining<0?'var(--red)':'var(--green)'};">${fmtMoney(remaining)}</div>
+        <div class="kpi-tile-sub">${pct.toFixed(1)}% utilized</div>
       </div>`;
-      utilBar = `<div class="metric-util"><div class="util-bar" style="margin-top:0;"><div class="util-fill" style="width:${pct.toFixed(1)}%; background:${barColor};"></div></div></div>`;
+      utilBar = `<div class="metric-util" style="padding:0 0 16px;"><div class="util-bar" style="margin-top:0;"><div class="util-fill" style="width:${pct.toFixed(1)}%; background:${barColor};"></div></div></div>`;
     }
   }
 
   return `
-  <div class="panel metric-card">
-    <div class="metric-row">
-      <div class="metric">
-        <span class="m-label">Total invoices</span>
-        <span class="m-value">${k.count.toLocaleString()}</span>
-        <span class="m-sub">${selected==='ALL'?`${new Set(rows.map(r=>r.vendor)).size} contractors`:selected}</span>
-      </div>
-      <div class="metric">
-        <span class="m-label">Total value (incl. tax)</span>
-        <span class="m-value">${fmtMoney(k.totalIncl)}</span>
-        <span class="m-sub">USD</span>
-      </div>
-      <div class="metric">
-        <span class="m-label">Cleared</span>
-        <span class="m-value" style="color:var(--green);">${k.cleared.toLocaleString()}</span>
-        <span class="m-sub">${((k.cleared/k.count)*100||0).toFixed(0)}% of invoices</span>
-      </div>
-      <div class="metric">
-        <span class="m-label">Pending / in process</span>
-        <span class="m-value" style="color:var(--amber);">${k.pending.toLocaleString()}</span>
-        <span class="m-sub">Awaiting clearance</span>
-      </div>
-      ${costMetrics}
+  <div class="kpi-row">
+    <div class="kpi-tile" data-kpi="all">
+      <div class="kpi-tile-icon" style="background:var(--indigo-bg,#eef0fd); color:var(--indigo);">${ICONS.list}</div>
+      <span class="kpi-tile-arrow">${ICONS.chevronRightSmall||'→'}</span>
+      <div class="kpi-tile-label">Total invoices</div>
+      <div class="kpi-tile-value">${k.count.toLocaleString()}</div>
+      <div class="kpi-tile-sub">${selected==='ALL'?`${new Set(rows.map(r=>r.vendor)).size} contractors`:selected}</div>
     </div>
-    ${utilBar}
+    <div class="kpi-tile" data-kpi="all">
+      <div class="kpi-tile-icon" style="background:var(--blue-bg); color:var(--brand-blue,#0A86C8);">${ICONS.wallet}</div>
+      <div class="kpi-tile-label">Total value (incl. tax)</div>
+      <div class="kpi-tile-value">${fmtMoney(k.totalIncl)}</div>
+      <div class="kpi-tile-sub">USD</div>
+    </div>
+    <div class="kpi-tile" data-kpi="cleared">
+      <div class="kpi-tile-icon" style="background:var(--green-bg); color:var(--green);">${ICONS.check}</div>
+      <div class="kpi-tile-label">Cleared</div>
+      <div class="kpi-tile-value" style="color:var(--green);">${k.cleared.toLocaleString()}</div>
+      <div class="kpi-tile-sub">${((k.cleared/k.count)*100||0).toFixed(0)}% of invoices</div>
+    </div>
+    <div class="kpi-tile" data-kpi="pending">
+      <div class="kpi-tile-icon" style="background:var(--amber-bg,#fdf1de); color:var(--amber);">${ICONS.clock}</div>
+      <div class="kpi-tile-label">Pending / in process</div>
+      <div class="kpi-tile-value" style="color:var(--amber);">${k.pending.toLocaleString()}</div>
+      <div class="kpi-tile-sub">Awaiting clearance</div>
+    </div>
+    ${costTiles}
   </div>
+  ${utilBar}
   ${selected==='ALL' ? renderContractTiles() : ''}
   <div class="panel" style="margin-bottom:16px;">
     <div class="panel-head" style="flex-wrap:wrap; gap:10px;">
@@ -2857,7 +2874,7 @@ function renderInvoices(){
   const sumIncl = rows.reduce((s,r)=>s+(Number(r.amountInclTax)||0),0);
   const sumPaid = rows.reduce((s,r)=>s+(Number(r.amountPaid)||0),0);
   const clearedN = rows.filter(r=>(r.status||'').toLowerCase().includes('cleared')).length;
-  const hasFilter = f.q||f.vendor||f.service||f.status||f.region||f.year||f.contract;
+  const hasFilter = f.q||f.vendor||f.service||f.status||f.statusBucket||f.region||f.year||f.contract;
 
   const canBulk = can('delete');
   const pageIds = pageRows.map(r=>r.id);
@@ -5048,6 +5065,17 @@ function bindDashboard(){
     if(t.dataset.vendor) state.dashVendor = t.dataset.vendor;
     render();
   }));
+  document.querySelectorAll('[data-kpi]').forEach(t=>t.addEventListener('click', ()=>{
+    const kind = t.dataset.kpi;
+    state.filters = Object.assign(state.filters, {q:'',vendor:'',service:'',status:'',statusBucket:'',region:'',year:'',qtr:'',contract:''});
+    const vendorSel = state.dashVendor && state.dashVendor!=='ALL' ? state.dashVendor : '';
+    if(vendorSel) state.filters.vendor = vendorSel;
+    if(kind==='cleared') state.filters.statusBucket = 'cleared';
+    if(kind==='pending') state.filters.statusBucket = 'pending';
+    state.pageNum = 1;
+    state.page = 'invoices';
+    render();
+  }));
 }
 
 function bindInvoicesPage(){
@@ -5153,7 +5181,7 @@ function bindInvoicesPage(){
 
   const clearBtn = el('clearFilters');
   if(clearBtn) clearBtn.addEventListener('click', ()=>{
-    state.filters = { q:'', vendor:'', service:'', status:'', region:'', year:'', qtr:'', contract:'' };
+    state.filters = { q:'', vendor:'', service:'', status:'', statusBucket:'', region:'', year:'', qtr:'', contract:'' };
     state.pageNum = 1; render();
   });
 
@@ -5547,7 +5575,7 @@ function bindFiltersDialog(){
   bind('dfStatus','status'); bind('dfRegion','region'); bind('dfYear','year');
   const clearAll = el('dfClearAll');
   if(clearAll) clearAll.addEventListener('click', ()=>{
-    state.filters = Object.assign(state.filters, {vendor:'',service:'',contract:'',status:'',region:'',year:''});
+    state.filters = Object.assign(state.filters, {vendor:'',service:'',contract:'',status:'',statusBucket:'',region:'',year:''});
     state.pageNum = 1;
     render();
   });
