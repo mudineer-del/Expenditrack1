@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="DF Tracker">
+<meta name="format-detection" content="telephone=no">
 <title>OGDCL | Drilling Fluids — Expenditure & Invoice Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>
@@ -859,6 +866,303 @@ body.col-resizing-active *{cursor:col-resize !important; user-select:none !impor
 .rpt-table tbody tr{cursor:default;}
 .rpt-table tbody tr.clickable{cursor:pointer;}
 .rpt-table tbody tr.clickable:hover{background:var(--accent-bg);}
+
+/* ==========================================================================
+   MOBILE BROWSER LAYER
+   Declared last on purpose: every rule here is meant to win over the desktop
+   rules above at equal specificity. Covers small viewports, notched phones
+   (viewport-fit=cover), touch pointers and the mobile URL-bar viewport.
+   ========================================================================== */
+
+/* ---- Dynamic viewport height: the URL bar must not clip the shell ---- */
+@supports (height:100dvh){
+  #app, .shell, .login-wrap, .loading-screen{min-height:100dvh;}
+  .sidebar, .drawer, .dd-panel{height:100dvh;}
+  .cs-body{max-height:60dvh;}
+}
+
+/* ---- Typography / tap behaviour ---- */
+html{-webkit-text-size-adjust:100%;}
+body{-webkit-tap-highlight-color:rgba(20,163,166,.16);}
+button, a, input, select, textarea, label, summary,
+.nav-item, .nav-contract, .kpi-tile, .row-clickable, .contract-tile, .tile-click,
+.set-tab, .chip-btn, .util-pill, .seg-btn, .vendor-btn, .demo-chip, .fr-row, .user-chip{
+  touch-action:manipulation;
+}
+.table-wrap, .rpt-table-wrap, .dd-tablewrap, .nav-contracts, .import-modal-cols,
+.cs-body, .drawer, .export-menu{-webkit-overflow-scrolling:touch;}
+.drawer, .dd-panel, .sidebar, .table-wrap, .rpt-table-wrap, .cs-body{overscroll-behavior:contain;}
+.sidebar-close{display:none;}
+
+/* ---- Touch pointers: no hover affordances, bigger hit areas ---- */
+@media (hover:none){
+  /* :hover latches after a tap on touch — neutralise the motion/emphasis states */
+  .inv-sum-item:hover, .kpi-card:hover, .vendor-card:hover, .contract-tile:hover,
+  .kpi-tile:hover, .tile-click:hover, .icon-btn:hover, .preset-swatch:hover,
+  .fmt-swatch:hover, .ref-add-btn:hover{transform:none;}
+  .set-tab:hover{padding-left:13px;}
+  tbody tr:hover{background:transparent;}
+  .row-clickable:hover{background:transparent !important;}
+  .row-clickable:active{background:#eef6fb !important;}
+  thead th:hover{background:#faf9f6; color:#75726a;}
+  /* Hover-revealed affordances have to be permanently visible */
+  .kpi-tile-arrow{opacity:.55;}
+  .user-chip .chip-gear{opacity:.7;}
+  /* Column drag handles are a mouse affordance and swallow header taps */
+  .col-resize-handle{display:none;}
+  /* Minimum comfortable hit targets */
+  .icon-btn{width:38px; height:38px;}
+  .close-x{width:40px; height:40px; font-size:18px;}
+  .page-btns button{width:40px; height:40px;}
+  .btn-sm{padding:9px 14px; font-size:13px;}
+  .btn{padding:12px 18px;}
+  .chip-x{padding:4px 6px; font-size:18px;}
+  .link-btn{padding:6px 0;}
+  .ref-add-btn{width:22px; height:22px; font-size:15px;}
+  .th-select input, .td-select input, .act-check input, .ct-check input{width:20px; height:20px;}
+  .act-check{width:20px;}
+  .switch{width:50px; height:28px;}
+  .slider:before{height:22px; width:22px;}
+  .switch input:checked + .slider:before{transform:translateX(22px);}
+  .nav-item{padding:11px 14px;}
+  .nav-contract{padding:10px 14px;}
+  .set-tab{padding:12px 13px;}
+  .seg-btn{padding:9px 16px;}
+  .fmt-toolbar button{min-width:32px; height:32px;}
+  .pw-toggle{padding:8px;}
+}
+
+/* ---- Touch tablets: the hover-expand rail can never be expanded, so pin it ---- */
+@media (min-width:961px) and (hover:none){
+  .sidebar{width:236px;}
+  .main{margin-left:236px;}
+  .sidebar .nav-txt, .sidebar .nav-label, .sidebar .brand .txt, .sidebar .nc-txt,
+  .sidebar .user-chip .who, .sidebar .logout-btn .lo-txt, .sidebar .chip-gear{opacity:1;}
+  .pin-toggle{display:none;}
+}
+
+/* ---- Phone / small tablet shell ---- */
+@media (max-width:960px){
+  /* Safe-area insets — the layout now extends under the notch and home indicator */
+  .topbar{padding-left:max(12px, env(safe-area-inset-left)); padding-right:max(12px, env(safe-area-inset-right));}
+  .content{
+    padding-left:max(14px, env(safe-area-inset-left));
+    padding-right:max(14px, env(safe-area-inset-right));
+    padding-bottom:calc(40px + env(safe-area-inset-bottom));
+  }
+  .app-foot{padding-bottom:calc(16px + env(safe-area-inset-bottom));}
+  .sidebar{width:min(300px, 86vw); max-width:none; padding-top:env(safe-area-inset-top); padding-left:env(safe-area-inset-left);}
+  .sidebar-foot{padding-bottom:calc(16px + env(safe-area-inset-bottom));}
+  .nav-contracts{max-height:none;}
+  .toast-wrap{left:12px; right:12px; bottom:calc(16px + env(safe-area-inset-bottom));}
+  .toast{width:100%; justify-content:center;}
+  .drawer-body{padding-bottom:calc(40px + env(safe-area-inset-bottom));}
+  .dd-panel{width:100%; max-width:100%;}
+  .dd-head, .dd-stats{padding-left:16px; padding-right:16px;}
+  .pin-toggle{display:none;}
+  /* Background must not scroll behind an open drawer / sheet */
+  body.scroll-locked{overflow:hidden;}
+  /* In-drawer close affordance for the nav (backdrop taps are not discoverable) */
+  .sidebar-close{
+    display:flex; align-items:center; justify-content:center; margin-left:auto;
+    width:34px; height:34px; flex-shrink:0; border-radius:999px;
+    border:1px solid #e2ded6; background:#fff; color:#55524b; font-size:15px; line-height:1;
+  }
+  /* Centred modals need breathing room and must stay inside the viewport */
+  .modal-center{padding:16px;}
+  .modal-box, .fmt-dialog{width:100%; max-width:100%; max-height:86vh; overflow-y:auto;}
+  .modal-actions{flex-wrap:wrap;}
+  .modal-actions .btn{flex:1 1 auto;}
+  .calc-box{grid-template-columns:1fr;}
+  .cs-head, .cs-body, .cs-foot{padding-left:16px; padding-right:16px;}
+  .cs-foot{flex-wrap:wrap;}
+  .settings-nav{gap:6px;}
+  .set-tab{flex:1 1 auto;}
+}
+
+/* ---- Compact topbar: title truncates, search collapses to an icon ---- */
+@media (max-width:760px){
+  .topbar{height:auto; min-height:56px; padding-top:8px; padding-bottom:8px; gap:8px;}
+  .topbar-left{gap:8px; min-width:0;}
+  .topbar h1{font-size:15px; flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis;}
+  .menu-toggle{width:40px; height:40px;}
+  .global-search{flex:0 0 40px; min-width:40px; transition:flex-basis .18s ease;}
+  .global-search input{padding:10px 8px 10px 32px;}
+  .global-search input::placeholder{color:transparent;}
+  .global-search:focus-within{flex:1 1 100%; min-width:140px;}
+  .global-search:focus-within input::placeholder{color:var(--muted);}
+  .fmt-launch-btn{margin-left:0; padding:8px 10px;}
+  .role-badge{display:none;}
+}
+
+/* ---- Dropdowns become bottom sheets: never clipped, never off-screen ---- */
+@media (max-width:640px){
+  .export-menu{
+    position:fixed; top:auto; left:10px; right:10px;
+    bottom:calc(10px + env(safe-area-inset-bottom));
+    width:auto; min-width:0; max-height:min(70vh, 460px); overflow-y:auto;
+    border-radius:16px; padding:8px; z-index:150;
+    box-shadow:0 -10px 40px rgba(35,34,30,.3);
+  }
+  .export-menu.show{animation:sheetIn .18s ease;}
+  .export-menu button{padding:13px 14px; font-size:14px; border-radius:10px;}
+  .export-menu .menu-label{padding:10px 14px 6px;}
+}
+@keyframes sheetIn{from{transform:translateY(16px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+
+/* ---- Phone layout: two-up stat tiles, roomier toolbars ---- */
+@media (max-width:700px){
+  .inv-summary, .kpi-row, .kpi-grid{grid-template-columns:repeat(2,1fr); gap:10px;}
+  .inv-sum-item{padding:12px; gap:10px;}
+  .inv-sum-item b{font-size:16px;}
+  .inv-sum-item span{font-size:11px;}
+  .isi-ic{width:34px; height:34px;}
+  .kpi-card, .kpi-tile{padding:14px;}
+  .kpi-value{font-size:20px;}
+  .kpi-tile-value{font-size:18px;}
+  .kpi-icon{width:32px; height:32px;}
+  .inv-toolbar{padding:12px; gap:10px;}
+  .inv-toolbar .search{flex:1 1 100%; max-width:none;}
+  .inv-filters{width:100%; gap:8px;}
+  .inv-filters > .btn, .inv-filters > .export-wrap{flex:1 1 calc(50% - 4px);}
+  .inv-filters > .export-wrap > .btn{width:100%;}
+  .section-head{flex-wrap:wrap; gap:10px;}
+  .panel-head{flex-wrap:wrap; gap:8px;}
+  .chart-box{height:210px;}
+  .gauge-legend{flex-wrap:wrap; gap:8px 14px;}
+  .ta-summary{gap:10px 16px;}
+  .ta-num{font-size:18px;}
+  .act-row{padding:10px 12px;}
+  .vendor-btn-bar{gap:6px;}
+  .profile-hero{gap:12px;}
+  .profile-av{width:52px; height:52px; font-size:20px;}
+  .sec-row{flex-wrap:wrap; gap:10px;}
+  .sec-row p{max-width:100%;}
+  .fr-row{grid-template-columns:1fr 92px 74px; font-size:12px; gap:6px;}
+}
+
+/* ---- Never let the mobile keyboard zoom the page (iOS zooms below 16px) ---- */
+@media (max-width:820px){
+  input, select, textarea{font-size:16px !important;}
+  .select-sm, .rf-field select, .rf-field input, .page-size-picker select{padding:10px;}
+}
+
+/* ==========================================================================
+   Wide data tables → stacked cards on phones.
+   Opt-in per table via .mobile-cards (wrapper gets .mobile-cards-wrap), so
+   analytics tables that genuinely need columns keep scrolling horizontally.
+   ========================================================================== */
+@media (max-width:720px){
+  .mobile-cards-wrap{overflow:visible; border:none !important; background:transparent !important; padding:10px 0;}
+  table.mobile-cards{
+    display:block; width:100%; min-width:0 !important;
+    table-layout:auto !important; border-collapse:separate;
+  }
+  table.mobile-cards thead{display:none;}
+  table.mobile-cards tbody{display:block;}
+  table.mobile-cards tbody tr{
+    display:flex; flex-direction:column; position:relative;
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    margin:0 10px 10px; padding:12px 14px; box-shadow:var(--shadow);
+  }
+  table.mobile-cards tbody tr:hover{background:var(--card);}
+  table.mobile-cards tbody tr:last-child{margin-bottom:10px;}
+  table.mobile-cards tbody td{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    width:auto !important; min-width:0 !important; max-width:none !important;
+    padding:5px 0; border:none; text-align:right; white-space:normal;
+    overflow:visible; text-overflow:clip; font-size:12.5px;
+  }
+  table.mobile-cards tbody td[data-label]::before{
+    content:attr(data-label); flex:0 0 auto; text-align:left;
+    font-size:10.5px; font-weight:700; letter-spacing:.5px;
+    text-transform:uppercase; color:var(--muted);
+  }
+  /* Card header: vendor line, then the invoice number */
+  table.mobile-cards tbody td.mc-title{
+    order:-2; display:block; text-align:left; padding:0 30px 0 0;
+    font-size:14.5px; font-weight:700; color:var(--navy-900);
+  }
+  table.mobile-cards tbody td.mc-title .cell-vendor{gap:8px;}
+  table.mobile-cards tbody td.mc-sub{
+    order:-1; display:block; text-align:left;
+    padding:2px 30px 9px 0; margin-bottom:6px; border-bottom:1px solid var(--border-soft);
+    font-size:12.5px; color:var(--muted); font-weight:600;
+  }
+  table.mobile-cards tbody td.mc-actions{
+    order:99; justify-content:flex-end; gap:10px;
+    padding-top:10px; margin-top:6px; border-top:1px solid var(--border-soft);
+  }
+  table.mobile-cards tbody td.mc-actions .row-actions{gap:10px;}
+  table.mobile-cards tbody td.td-select{
+    position:absolute; top:12px; right:12px; padding:0; margin:0; justify-content:flex-end;
+  }
+  table.mobile-cards tbody td.mc-empty{display:block; text-align:center; padding:0;}
+  table.mobile-cards .empty{padding:34px 16px;}
+  table.mobile-cards .status-pill, table.mobile-cards .tag-soft, table.mobile-cards .tag-well{white-space:normal;}
+  /* The bulk-select bar sits above the cards, not inside a table shell */
+  .mobile-cards-wrap .bulk-bar{
+    flex-wrap:wrap; gap:8px 14px; margin:0 10px 10px;
+    border:1px solid var(--border); border-radius:12px;
+  }
+  .mobile-cards-wrap .bulk-bar .btn{flex:1 1 auto;}
+}
+
+/* Analytics tables stay tabular — columns are the point — but they scroll
+   smoothly and advertise the hidden columns with an edge shadow. */
+.scroll-x{overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;}
+@media (max-width:720px){
+  .rpt-table-wrap table, .scroll-x .rpt-table, .dd-tablewrap .rpt-table{min-width:620px;}
+  .rpt-table th, .rpt-table td{padding:9px 10px;}
+  .rpt-ct-cell, .rpt-table td.rpt-ct-cell{max-width:170px;}
+  .scroll-x, .dd-tablewrap, .rpt-table-wrap{
+    background-image:
+      linear-gradient(to right, var(--card), var(--card)),
+      linear-gradient(to right, rgba(35,34,30,.16), rgba(35,34,30,0));
+    background-position:right center, right center;
+    background-repeat:no-repeat;
+    background-size:22px 100%, 12px 100%;
+    background-attachment:local, scroll;
+  }
+}
+
+/* ---- Sign-in on a phone: the hero column is hidden, so carry the brand over ---- */
+.login-mobile-brand{display:none;}
+@media (max-width:960px){
+  .login-wrap{background:var(--card);}
+  .login-right{padding:28px 20px calc(28px + env(safe-area-inset-bottom)); align-items:flex-start;}
+  .login-mobile-brand{
+    display:flex; flex-direction:column; gap:14px; align-items:flex-start;
+    margin-bottom:26px; padding-bottom:20px; border-bottom:1px solid var(--border-soft);
+  }
+  .login-mobile-brand img{height:52px; width:auto;}
+  .login-mobile-brand h1{margin:0; font-size:19px; line-height:1.35; color:var(--navy-900); font-weight:700;}
+  .login-card{max-width:460px; margin:0 auto;}
+  .fp-actions{flex-wrap:wrap;}
+  .fp-actions .btn{flex:1 1 auto;}
+}
+@media (max-width:600px){
+  .login-right{padding-top:20px;}
+  .login-mobile-brand img{height:44px;}
+  .login-mobile-brand h1{font-size:17px;}
+}
+
+/* ---- Landscape phones: reclaim vertical space ---- */
+@media (max-height:480px) and (orientation:landscape){
+  .topbar{min-height:48px; height:auto;}
+  .content{padding-top:12px;}
+  .chart-box{height:180px;}
+  .login-right{align-items:flex-start; padding-top:18px;}
+  .login-mobile-brand{margin-bottom:16px; padding-bottom:12px;}
+}
+
+/* ---- Respect reduced-motion (common on phones for battery/vestibular reasons) ---- */
+@media (prefers-reduced-motion:reduce){
+  *, *::before, *::after{
+    animation-duration:.01ms !important; animation-iteration-count:1 !important;
+    transition-duration:.01ms !important; scroll-behavior:auto !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -2363,10 +2667,12 @@ function render(){
   if(!state.currentUser){
     app.innerHTML = renderLogin();
     bindLogin();
+    syncBodyScrollLock();
     return;
   }
   app.innerHTML = renderShell();
   bindShell();
+  syncBodyScrollLock();
 }
 
 /* ---------- LOGIN ---------- */
@@ -2388,13 +2694,17 @@ function renderLogin(){
     </div>
     <div class="login-right">
       <div class="login-card">
+        <div class="login-mobile-brand">
+          <img src="${OGDCL_LOGO_DARK}" alt="OGDCL"/>
+          <h1${labelStyleAttr('login_title')}>${lbl('login_title','Drilling Fluids<br/>Expenditure & Invoice Tracker')}</h1>
+        </div>
         ${mode==='signin' ? `
         <h2>Sign in</h2>
         <p class="hint">Access the expenditure &amp; invoice tracking system.</p>
         ${err}${notice}
         <form id="loginForm">
-          <div class="field"><label>Email</label><input id="loginUser" type="email" autocomplete="username" placeholder="you@ogdcl.com" required/></div>
-          <div class="field"><label>Password</label><div class="pw-wrap"><input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••" required/><button type="button" class="pw-toggle" data-pwtoggle="loginPass" aria-label="Show or hide password">${ICONS.eye}</button></div></div>
+          <div class="field"><label>Email</label><input id="loginUser" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next" placeholder="you@ogdcl.com" required/></div>
+          <div class="field"><label>Password</label><div class="pw-wrap"><input id="loginPass" type="password" autocomplete="current-password" enterkeyhint="go" placeholder="••••••••" required/><button type="button" class="pw-toggle" data-pwtoggle="loginPass" aria-label="Show or hide password">${ICONS.eye}</button></div></div>
           <div class="login-row"><button type="button" class="link-btn" id="forgotLink">Forgot password?</button></div>
           <button class="btn btn-primary" type="submit">Sign In</button>
         </form>
@@ -2402,7 +2712,7 @@ function renderLogin(){
         <div id="forgotPanel" class="forgot-panel" style="display:none;">
           <h3>Reset your password</h3>
           <p class="hint">Enter your email — if it matches an account, we'll send a reset link.</p>
-          <div class="field"><label>Email</label><input id="fpUser" type="email" placeholder="you@ogdcl.com"/></div>
+          <div class="field"><label>Email</label><input id="fpUser" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="you@ogdcl.com"/></div>
           <div id="fpMsg" class="fp-msg"></div>
           <div class="fp-actions">
             <button type="button" class="btn btn-ghost btn-sm" id="fpCancel">Back to sign in</button>
@@ -2415,7 +2725,7 @@ function renderLogin(){
         ${err}${notice}
         <form id="signupForm">
           <div class="field"><label>Full Name</label><input id="suName" placeholder="Your name" required/></div>
-          <div class="field"><label>Email</label><input id="suEmail" type="email" autocomplete="username" placeholder="you@ogdcl.com" required/></div>
+          <div class="field"><label>Email</label><input id="suEmail" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="you@ogdcl.com" required/></div>
           <div class="field"><label>Password</label><div class="pw-wrap"><input id="suPass" type="password" autocomplete="new-password" placeholder="At least 6 characters" required/><button type="button" class="pw-toggle" data-pwtoggle="suPass" aria-label="Show or hide password">${ICONS.eye}</button></div></div>
           <button class="btn btn-primary" type="submit">Create Account</button>
         </form>
@@ -2576,13 +2886,14 @@ function renderShell(){
   return `
   <div class="shell ${state.sidebarPinned?'pinned':''}">
     <div class="sidebar-backdrop ${state.sidebarOpen?'show':''}" id="sidebarBackdrop"></div>
-    <aside class="sidebar ${state.sidebarOpen?'open':''}">
+    <aside class="sidebar ${state.sidebarOpen?'open':''}" id="appSidebar">
       <div class="brand">
         <div class="ring"><img src="${OGDCL_LOGO_DARK}" alt="OGDCL"/></div>
         <div class="txt"><b${labelStyleAttr('brand_title')}>${lbl('brand_title','OGDCL DF')}</b><span${labelStyleAttr('brand_subtitle')}>${lbl('brand_subtitle','Expenditure Tracker')}</span></div>
         <button type="button" class="pin-toggle ${state.sidebarPinned?'is-pinned':''}" id="sidebarPinToggle"
           title="${state.sidebarPinned?'Unpin sidebar':'Pin sidebar open'}" aria-pressed="${state.sidebarPinned}"
           aria-label="${state.sidebarPinned?'Unpin sidebar':'Pin sidebar open'}">${ICONS.pin || '📌'}</button>
+        <button type="button" class="sidebar-close" id="sidebarClose" title="Close menu" aria-label="Close menu">${ICONS.x || '✕'}</button>
       </div>
       <div class="nav-group">
         <div class="nav-label">Menu</div>
@@ -2611,10 +2922,10 @@ function renderShell(){
     <div class="main">
       <div class="topbar">
         <div class="topbar-left">
-          <button type="button" class="menu-toggle" id="menuToggle" aria-label="Open menu" title="Menu">${ICONS.menu || '☰'}</button>
+          <button type="button" class="menu-toggle" id="menuToggle" aria-label="${state.sidebarOpen?'Close menu':'Open menu'}" aria-expanded="${state.sidebarOpen?'true':'false'}" aria-controls="appSidebar" title="Menu">${ICONS.menu || '☰'}</button>
           <h1${labelStyleAttr(pageTitleLabelKey())}>${pageTitle()}</h1>
           ${(u.role==='Admin' && pageTitleLabelKey()) ? `<button type="button" class="fmt-launch-btn" data-openformat="${pageTitleLabelKey()}" title="Format this title">${ICONS.palette} <span class="fmt-launch-txt">Format</span></button>` : ''}
-          <div class="global-search">${ICONS.search}<input id="globalSearch" placeholder="Search invoices, vendors, wells, contracts…" value="${(state.filters.q||'').replace(/"/g,'&quot;')}"/></div>
+          <div class="global-search">${ICONS.search}<input id="globalSearch" enterkeyhint="search" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Search" placeholder="Search invoices, vendors, wells, contracts…" value="${(state.filters.q||'').replace(/"/g,'&quot;')}"/></div>
         </div>
         <div class="topbar-right">
           <span class="role-badge role-${u.role.toLowerCase()}">${u.role}</span>
@@ -2781,17 +3092,17 @@ function renderDashboard(){
   <div class="panel">
       <div class="panel-head"><h3>Recent Invoices${selected!=='ALL'?' — '+selected:''}</h3><button class="btn btn-ghost btn-sm" data-nav="invoices">View all</button></div>
       <div class="panel-body" style="padding:0;">
-        <div class="table-wrap" style="border:none; border-radius:0;">
-          <table style="min-width:0;">
+        <div class="table-wrap mobile-cards-wrap" style="border:none; border-radius:0;">
+          <table class="mobile-cards" style="min-width:0;">
             <thead><tr><th>Sr#</th><th>Contractor</th><th>Invoice No.</th><th>Contract No.</th><th>Service</th><th>Amount (Incl. Tax)</th><th>Status</th></tr></thead>
             <tbody>
               ${recent.length ? recent.map(r=>`<tr>
-                <td>${r.srNo??''}</td><td>${r.vendor??''}</td><td>${r.invoiceNo??''}</td>
-                <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis;" title="${r.contractNo??''}">${r.contractNo??'—'}</td>
-                <td>${r.service??''}</td>
-                <td class="mono">${fmtMoney(r.amountInclTax)}</td>
-                <td><span class="status-pill ${statusClass(r.status)}">${r.status??'—'}</span></td>
-              </tr>`).join('') : `<tr><td colspan="7"><div class="empty"><h4>No invoices for this contractor yet</h4><p>New entries will appear here.</p></div></td></tr>`}
+                <td data-label="Sr#">${r.srNo??''}</td><td class="mc-title">${r.vendor??''}</td><td class="mc-sub">${r.invoiceNo??''}</td>
+                <td data-label="Contract" style="max-width:200px; overflow:hidden; text-overflow:ellipsis;" title="${r.contractNo??''}">${r.contractNo??'—'}</td>
+                <td data-label="Service">${r.service??''}</td>
+                <td class="mono" data-label="Incl. tax">${fmtMoney(r.amountInclTax)}</td>
+                <td data-label="Status"><span class="status-pill ${statusClass(r.status)}">${r.status??'—'}</span></td>
+              </tr>`).join('') : `<tr><td class="mc-empty" colspan="7"><div class="empty"><h4>No invoices for this contractor yet</h4><p>New entries will appear here.</p></div></td></tr>`}
             </tbody>
           </table>
         </div>
@@ -3014,18 +3325,18 @@ function renderInvoices(){
     return `
     <tr class="row-clickable" data-rowid="${r.id}">
       ${canBulk?`<td class="td-select"><input type="checkbox" class="row-select-cb" data-selectrow="${r.id}" ${state.selectedInvoices.has(r.id)?'checked':''}/></td>`:''}
-      <td class="td-sr">${r.srNo??''}</td>
-      <td><div class="cell-vendor"><span class="v-avatar" style="background:${vendorColor(r.vendor)};">${initials}</span>${r.vendor??''}</div></td>
-      <td class="td-inv">${r.invoiceNo??''}</td>
-      <td>${r.wellName?`<span class="tag-well">${r.wellName}</span>`:'—'}</td>
-      <td>${r.service?`<span class="tag-soft">${r.service}</span>`:'—'}</td>
-      <td>${r.region??'—'}</td>
-      <td class="td-date">${fmtDate(r.invoiceDate)}</td>
-      <td class="mono">${fmtMoney(r.amountExclTax)}</td>
-      <td class="mono td-strong">${fmtMoney(r.amountInclTax)}</td>
-      <td class="mono">${fmtMoney(r.amountPaid)}</td>
-      <td><span class="status-pill ${statusClass(r.status)}">${r.status??'—'}</span></td>
-      <td>
+      <td class="td-sr" data-label="Sr#">${r.srNo??''}</td>
+      <td class="mc-title"><div class="cell-vendor"><span class="v-avatar" style="background:${vendorColor(r.vendor)};">${initials}</span>${r.vendor??''}</div></td>
+      <td class="td-inv mc-sub">${r.invoiceNo??''}</td>
+      <td data-label="Well">${r.wellName?`<span class="tag-well">${r.wellName}</span>`:'—'}</td>
+      <td data-label="Service">${r.service?`<span class="tag-soft">${r.service}</span>`:'—'}</td>
+      <td data-label="Region">${r.region??'—'}</td>
+      <td class="td-date" data-label="Date">${fmtDate(r.invoiceDate)}</td>
+      <td class="mono" data-label="Excl. tax">${fmtMoney(r.amountExclTax)}</td>
+      <td class="mono td-strong" data-label="Incl. tax">${fmtMoney(r.amountInclTax)}</td>
+      <td class="mono" data-label="Paid">${fmtMoney(r.amountPaid)}</td>
+      <td data-label="Status"><span class="status-pill ${statusClass(r.status)}">${r.status??'—'}</span></td>
+      <td class="mc-actions">
         <div class="row-actions">
           <button class="icon-btn" data-view="${r.id}" title="View" aria-label="View">${ICONS.eye}</button>
           ${can('edit')?`<button class="icon-btn" data-edit="${r.id}" title="Edit" aria-label="Edit">${ICONS.edit}</button>`:''}
@@ -3033,7 +3344,7 @@ function renderInvoices(){
         </div>
       </td>
     </tr>`;
-  }).join('') : `<tr><td colspan="${canBulk?13:12}"><div class="empty">${ICONS.list}<h4>No matching invoices</h4><p>Try adjusting your filters or search terms.</p></div></td></tr>`;
+  }).join('') : `<tr><td class="mc-empty" colspan="${canBulk?13:12}"><div class="empty">${ICONS.list}<h4>No matching invoices</h4><p>Try adjusting your filters or search terms.</p></div></td></tr>`;
 
   return `
   <div class="inv-summary">
@@ -3044,7 +3355,7 @@ function renderInvoices(){
   </div>
   <div class="panel inv-panel">
     <div class="inv-toolbar">
-      <div class="search">${ICONS.search}<input id="searchInput" placeholder="Search invoice no., vendor, description, location…" value="${f.q}"/></div>
+      <div class="search">${ICONS.search}<input id="searchInput" enterkeyhint="search" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Search invoices" placeholder="Search invoice no., vendor, description, location…" value="${f.q}"/></div>
       <div class="inv-filters">
         <button type="button" class="btn btn-ghost btn-sm" id="openFiltersBtn">${ICONS.filter||'▤'} Filters${(()=>{ const n=['vendor','service','contract','status','region','year'].filter(k=>f[k]).length; return n?` <span class="filter-count">${n}</span>`:''; })()}</button>
         <div class="export-wrap">
@@ -3090,7 +3401,7 @@ function renderInvoices(){
         ${addBtn}
       </div>
     </div>
-    <div class="table-wrap" style="border:none; border-radius:0;">
+    <div class="table-wrap mobile-cards-wrap" style="border:none; border-radius:0;">
       ${canBulk && state.selectedInvoices.size ? `
       <div class="bulk-bar">
         <span><b>${state.selectedInvoices.size}</b> invoice${state.selectedInvoices.size!==1?'s':''} selected</span>
@@ -3099,7 +3410,7 @@ function renderInvoices(){
         <button class="btn btn-ghost btn-sm" id="clearSelectionBtn">Clear selection</button>
         <button class="btn btn-danger btn-sm" id="bulkDeleteBtn">${ICONS.trash} Delete Selected</button>
       </div>` : ''}
-      <table>
+      <table class="mobile-cards">
         <thead><tr>
           ${canBulk?`<th class="th-select"><input type="checkbox" id="selectAllCb" ${allPageSelected?'checked':''} ${!allPageSelected&&somePageSelected?'data-indeterminate="1"':''}/></th>`:''}
           <th data-sort="srNo">Sr# ${sortArrow('srNo')}</th>
@@ -3197,7 +3508,7 @@ function renderDrawer(){
       <div class="drawer-body">
         <form id="invoiceForm">
           <div class="form-grid">
-            <div class="field"><label>Sr. No.</label><input name="srNo" type="number" value="${inv.srNo??''}" ${dis} required/></div>
+            <div class="field"><label>Sr. No.</label><input name="srNo" type="number" inputmode="numeric" value="${inv.srNo??''}" ${dis} required/></div>
             <div class="field"><label>Vendor</label><select name="vendor" ${dis} required><option value="">Select…</option>${opt(REF.vendors, inv.vendor)}</select></div>
             <div class="field"><label>Invoice No.</label><input name="invoiceNo" value="${inv.invoiceNo??''}" ${dis} required/></div>
             <div class="field"><label>Contract No.</label><select name="contractNo" ${dis}><option value="">— No Contract / Select… —</option>${contractOptions(inv.contractNo)}</select></div>
@@ -3213,12 +3524,12 @@ function renderDrawer(){
             <div class="field"><label>Well Name ${addRefBtn('wells',dis)}</label><input name="wellName" value="${inv.wellName??''}" ${dis} list="wellList"/><datalist id="wellList">${(REF.wells||[]).map(w=>`<option value="${w}">`).join('')}</datalist></div>
             <div class="field"><label>Service Month</label><select name="serviceMonth" ${dis}><option value="">Select…</option>${opt(REF.months, inv.serviceMonth)}</select></div>
             <div class="field"><label>Quarter</label><select name="qtr" ${dis}><option value="">Select…</option>${opt(REF.quarters, inv.qtr)}</select></div>
-            <div class="field"><label>Year</label><input name="year" type="number" value="${inv.year??''}" ${dis}/></div>
+            <div class="field"><label>Year</label><input name="year" type="number" inputmode="numeric" value="${inv.year??''}" ${dis}/></div>
             <div class="field"><label>Status ${addRefBtn('statuses',dis)}</label><select name="status" ${dis}>${opt(REF.statuses, inv.status)}</select></div>
             <div class="field full"><label>Description</label><textarea name="description" rows="2" ${dis} style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; resize:vertical;">${inv.description??''}</textarea></div>
-            <div class="field"><label>Amount Excl. Tax (USD)</label><input name="amountExclTax" type="number" step="0.01" value="${inv.amountExclTax??0}" ${dis} id="fAmtExcl"/></div>
-            <div class="field"><label>GST / PST Rate</label><input name="gstPst" type="number" step="0.01" value="${inv.gstPst??0}" ${dis} id="fGst"/></div>
-            <div class="field"><label>Amount Paid (USD)</label><input name="amountPaid" type="number" step="0.01" value="${inv.amountPaid??0}" ${dis}/></div>
+            <div class="field"><label>Amount Excl. Tax (USD)</label><input name="amountExclTax" type="number" inputmode="decimal" step="0.01" value="${inv.amountExclTax??0}" ${dis} id="fAmtExcl"/></div>
+            <div class="field"><label>GST / PST Rate</label><input name="gstPst" type="number" inputmode="decimal" step="0.01" value="${inv.gstPst??0}" ${dis} id="fGst"/></div>
+            <div class="field"><label>Amount Paid (USD)</label><input name="amountPaid" type="number" inputmode="decimal" step="0.01" value="${inv.amountPaid??0}" ${dis}/></div>
           </div>
           <div class="calc-box" id="calcBox" style="margin-top:16px;">
             <div>Tax (USD): <b id="calcTax">${fmtMoney(inv.tax)}</b></div>
@@ -4029,7 +4340,7 @@ function renderCompareBody(groups, selector, totalIncl){
 
   <div class="panel">
     <div class="panel-head"><h3>Contract Comparison</h3></div>
-    <div class="panel-body" style="padding:0;overflow-x:auto;">
+    <div class="panel-body scroll-x" style="padding:0;">
       <table class="data-table rpt-table">
         <thead><tr>
           <th>Contract</th><th class="num">Inv.</th><th class="num">Excl. Tax</th><th class="num">Incl. Tax</th>
@@ -4095,7 +4406,7 @@ function renderPeriodReport(){
 
   <div class="panel">
     <div class="panel-head"><h3>Breakdown by ${label} (${groups.length})</h3></div>
-    <div class="panel-body" style="padding:0;overflow-x:auto;">
+    <div class="panel-body scroll-x" style="padding:0;">
       <table class="data-table rpt-table">
         <thead><tr>
           <th>${label}</th><th class="num">Invoices</th><th class="num">Excl. Tax</th><th class="num">Tax</th>
@@ -4130,7 +4441,7 @@ function reportTable(rows){
     <td><span class="pill ${statusClass(r.status)}">${esc(r.status)||'—'}</span></td>
   </tr>`).join('');
   const note = rows.length>300 ? `<div class="muted" style="padding:8px 14px;font-size:12px;">Showing first 300 of ${rows.length}. Export for the full set.</div>`:'';
-  return `<div style="overflow-x:auto;"><table class="data-table rpt-table">
+  return `<div class="scroll-x"><table class="data-table rpt-table">
     <thead><tr><th>Sr</th><th>Invoice No</th><th>Contractor</th><th>Well</th><th>Inv. Date</th><th>Cleared</th><th class="center">TA</th><th class="num">Incl. Tax</th><th class="num">Paid</th><th>Status</th></tr></thead>
     <tbody>${body}</tbody></table>${note}</div>`;
 }
@@ -5032,6 +5343,9 @@ function renderUsers(){
 /* ---------- Draggable column resize (applies to every data table) ---------- */
 const _colWidthStore = {};
 function enableColumnResize(){
+  // Column dragging is a pointer affordance: on touch the handles only steal
+  // taps meant for the sort headers, and the phone layout stacks rows anyway.
+  if(!hasHover()) return;
   document.querySelectorAll('.table-wrap table, .dd-tablewrap table').forEach((table, tIdx)=>{
     const ths = table.querySelectorAll('thead th');
     if(!ths.length) return;
@@ -5083,6 +5397,46 @@ function enableColumnResize(){
   });
 }
 
+/* ---------- Mobile helpers ---------- */
+function hasHover(){
+  return !window.matchMedia || window.matchMedia('(hover:hover)').matches;
+}
+function isMobileLayout(){
+  return !!window.matchMedia && window.matchMedia('(max-width:960px)').matches;
+}
+/* The page behind an open drawer/sheet must not scroll away under the user's finger. */
+function syncBodyScrollLock(){
+  const overlayOpen = !!document.querySelector('.overlay, .modal-center, .dd-overlay');
+  document.body.classList.toggle('scroll-locked', overlayOpen || !!state.sidebarOpen);
+}
+/* Swipe the nav drawer away — the expected gesture on a phone. */
+function enableSidebarSwipe(){
+  const sb = el('appSidebar');
+  if(!sb || !isMobileLayout()) return;
+  let startX = 0, startY = 0, dx = 0, tracking = false;
+  sb.addEventListener('touchstart', (e)=>{
+    if(e.touches.length !== 1 || !state.sidebarOpen) return;
+    startX = e.touches[0].clientX; startY = e.touches[0].clientY; dx = 0; tracking = true;
+  }, {passive:true});
+  sb.addEventListener('touchmove', (e)=>{
+    if(!tracking) return;
+    dx = e.touches[0].clientX - startX;
+    if(Math.abs(e.touches[0].clientY - startY) > Math.abs(dx)){ tracking = false; sb.style.transform=''; return; }
+    if(dx < 0){ sb.style.transition = 'none'; sb.style.transform = 'translateX(' + dx + 'px)'; }
+  }, {passive:true});
+  const settle = ()=>{
+    if(!tracking) return;
+    tracking = false;
+    sb.style.transition = ''; sb.style.transform = '';
+    if(dx < -60){ state.sidebarOpen = false; render(); }
+  };
+  sb.addEventListener('touchend', settle, {passive:true});
+  sb.addEventListener('touchcancel', settle, {passive:true});
+}
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && state.sidebarOpen){ state.sidebarOpen = false; render(); }
+});
+
 function bindShell(){
   const pinBtn = el('sidebarPinToggle');
   if(pinBtn) pinBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.sidebarPinned = !state.sidebarPinned; render(); });
@@ -5091,6 +5445,8 @@ function bindShell(){
   if(menuToggleBtn) menuToggleBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.sidebarOpen=!state.sidebarOpen; render(); });
   const sidebarBackdrop = el('sidebarBackdrop');
   if(sidebarBackdrop) sidebarBackdrop.addEventListener('click', ()=>{ state.sidebarOpen=false; render(); });
+  const sidebarCloseBtn = el('sidebarClose');
+  if(sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.sidebarOpen=false; render(); });
   document.querySelectorAll('[data-navcontract]').forEach(n=>{
     n.addEventListener('click', ()=>{
       hideContractPop();
@@ -5098,9 +5454,13 @@ function bindShell(){
       state.sidebarOpen = false;
       render();
     });
-    n.addEventListener('mouseenter', (e)=> showContractPop(n.dataset.navcontract, e.currentTarget));
-    n.addEventListener('mouseleave', hideContractPop);
+    // The hover preview is mouse-only — on touch a tap opens the full summary instead.
+    if(hasHover()){
+      n.addEventListener('mouseenter', (e)=> showContractPop(n.dataset.navcontract, e.currentTarget));
+      n.addEventListener('mouseleave', hideContractPop);
+    }
   });
+  enableSidebarSwipe();
   const logoutBtn = el('logoutBtn'); if(logoutBtn) logoutBtn.addEventListener('click', logout);
   const gs = el('globalSearch');
   if(gs){
