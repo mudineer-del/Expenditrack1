@@ -230,13 +230,17 @@ input,select,textarea{font-family:inherit;}
 .nav-item.active .ic{background:var(--accent); color:#fff;}
 .nav-contracts{margin-top:8px; padding-top:4px; border-top:1px solid #eceae4; overflow-y:auto; max-height:32vh;}
 .nav-contract{
-  display:flex; align-items:center; gap:9px; padding:7px 14px; border-radius:999px; font-size:11.5px;
-  color:#5f5c54; margin-bottom:1px; cursor:pointer;
-  transition:background .18s ease, color .18s ease;
+  display:flex; align-items:center; gap:9px; padding:8px 14px; border-radius:999px; font-size:11.5px;
+  color:#3a3833; margin-bottom:6px; cursor:pointer; font-weight:600;
+  background:linear-gradient(180deg, #ffffff 0%, #f7f6f2 100%);
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 5px 12px -6px rgba(20,18,12,.2), 0 1px 3px rgba(20,18,12,.07);
+  transition:transform .15s ease, box-shadow .15s ease, color .18s ease;
 }
-.nav-contract:hover{background:#f1ede5; color:#1f1e1a;}
-.nc-dot{width:7px; height:7px; border-radius:50%; flex-shrink:0; transition:transform .18s ease;}
-.nav-contract:hover .nc-dot{transform:scale(1.35);}
+.nav-contract:hover{
+  transform:translateY(-1px); color:#1f1e1a;
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 8px 16px -6px rgba(20,18,12,.26), 0 2px 4px rgba(20,18,12,.09);
+}
+.nav-contract:active{ transform:translateY(0); box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 2px 5px rgba(20,18,12,.15); }
 .nc-txt{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .sidebar-foot{margin-top:auto; padding:16px 18px; border-top:1px solid #eceae4;}
 .user-chip{display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:999px; transition:background .15s ease;}
@@ -296,9 +300,6 @@ input,select,textarea{font-family:inherit;}
   display:flex; align-items:center; justify-content:space-between; padding:0 28px; position:sticky; top:0; z-index:20;
 }
 .topbar-left{display:flex; align-items:center; gap:22px; flex:1; min-width:0;}
-.menu-toggle{display:none; width:36px; height:36px; flex-shrink:0; align-items:center; justify-content:center; border:1px solid var(--border); background:#fff; border-radius:8px; color:var(--navy-800); cursor:pointer;}
-.menu-toggle:hover{background:var(--bg);}
-.sidebar-backdrop{display:none;}
 .topbar h1{font-size:16.5px; margin:0; color:#23221e; font-weight:700; letter-spacing:-.2px; white-space:nowrap;}
 .global-search{position:relative; flex:0 1 340px; min-width:160px;}
 .global-search input{width:100%; padding:9px 12px 9px 34px; border:1px solid #e2ded6; border-radius:999px; background:#f7f5f0; font-size:13px; transition:border-color .18s ease, background .18s ease;}
@@ -327,6 +328,8 @@ input,select,textarea{font-family:inherit;}
 .vendor-btn.active{background:var(--vc); color:#fff; box-shadow:0 2px 8px color-mix(in srgb, var(--vc) 35%, transparent);}
 .chart-title{font-size:12.5px; font-weight:700; color:var(--navy-900); margin-bottom:8px; letter-spacing:.2px;}
 .gauge-legend{display:flex; justify-content:space-between; gap:10px; padding-top:6px; margin-top:-4px;}
+.speedo-box{display:flex; align-items:center; justify-content:center; transition:transform .15s ease;}
+.speedo-box:hover{transform:scale(1.02);}
 .gauge-legend-item{display:flex; flex-direction:column; gap:2px; font-size:11.5px; color:var(--muted);}
 .gauge-legend-item .gl-dot{width:8px; height:8px; border-radius:2px; display:inline-block; margin-bottom:2px;}
 .gauge-legend-item .gl-label{font-size:11px; color:var(--muted);}
@@ -532,6 +535,13 @@ input,select,textarea{font-family:inherit;}
 .kpi-tile-sub{font-size:11px; color:var(--muted); margin-top:4px; display:flex; align-items:center; gap:4px;}
 .kpi-tile-arrow{position:absolute; top:16px; right:16px; opacity:0; transition:opacity .15s ease; color:var(--muted);}
 .kpi-tile:hover .kpi-tile-arrow{opacity:1;}
+.kpi-tile-spark{margin-top:8px; height:26px; position:relative;}
+.kpi-tile-minichart{margin-top:10px; height:34px; position:relative;}
+.kpi-tile-ring{position:absolute; top:14px; right:14px; width:40px; height:40px;}
+.ring-center{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--navy-900);}
+.story-banner{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 22px; margin-bottom:16px;}
+.story-label{font-size:11.5px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;}
+.story-text{font-size:16.5px; color:var(--navy-900); font-weight:500; line-height:1.45;}
 .chart-box{position:relative; height:230px; width:100%;}
 @media (max-width:960px){ .chart-box{height:200px;} }
 .util-bar{height:7px; background:var(--border-soft); border-radius:4px; margin-top:10px; overflow:hidden;}
@@ -708,49 +718,11 @@ body.col-resizing-active *{cursor:col-resize !important; user-select:none !impor
 .perm-note{font-size:12px; color:var(--muted); background:var(--bg); border:1px dashed var(--border); border-radius:8px; padding:10px 12px; margin-bottom:16px;}
 
 @media (max-width:960px){
-  .menu-toggle{display:flex;}
-  .main{margin-left:0 !important;}
-  .sidebar{position:fixed; top:0; left:0; width:260px; max-width:82vw; z-index:70; transform:translateX(-100%); transition:transform .22s ease; box-shadow:none;}
-  .sidebar.open{transform:translateX(0); box-shadow:10px 0 30px rgba(0,0,0,.2);}
-  .sidebar-backdrop.show{display:block; position:fixed; inset:0; background:rgba(7,27,46,.5); z-index:60; animation:fadeIn .15s ease;}
-  @keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
+  .sidebar{position:fixed; z-index:50; transform:translateX(-100%); transition:transform .2s;}
+  .sidebar.open{transform:translateX(0);}
   .grid-2{grid-template-columns:1fr;}
   .form-grid{grid-template-columns:1fr;}
   .login-left{display:none;}
-  .topbar{padding:0 14px; gap:10px;}
-  .topbar-left{gap:10px;}
-  .global-search{flex:1 1 auto; min-width:0;}
-  .content{padding:16px 14px 44px;}
-  .two-col-cards{grid-template-columns:1fr;}
-  .fmt-launch-txt{display:none;}
-  .report-filters{gap:10px;}
-  .rf-field{min-width:0; flex:1 1 140px;}
-  .rf-actions{margin-left:0; width:100%; justify-content:flex-start;}
-  .drawer{width:100%; max-width:100vw;}
-  .drawer-head{padding:16px 16px;}
-  .drawer-body{padding:16px 16px 32px;}
-  .modal-box{width:100%; padding:18px;}
-  .icon-btn{width:34px; height:34px;}
-  .page-btns button{width:34px; height:34px;}
-}
-@media (max-width:600px){
-  .topbar{height:56px;}
-  .topbar h1{font-size:14.5px;}
-  .content{padding:12px 10px 40px;}
-  .toolbar{gap:8px;}
-  .toolbar > *{flex:1 1 auto;}
-  .table-wrap{border-radius:10px;}
-  table{font-size:12.5px;}
-  .pagination{flex-direction:column; align-items:stretch; gap:10px;}
-  .page-size-picker{justify-content:space-between;}
-  .page-btns{justify-content:center; flex-wrap:wrap;}
-  .field input, .field select, .rf-field input, .rf-field select, .global-search input{font-size:16px;}
-  .form-actions{flex-direction:column;}
-  .form-actions .btn{width:100%;}
-  .seg{width:100%; overflow-x:auto;}
-  .rpt-contract-no-full{font-size:17px;}
-  .login-card{padding:0 6px;}
-  .login-right{padding:24px 18px;}
 }
 /* ---- Financial Reports ---- */
 .seg{display:inline-flex; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px;}
@@ -1956,7 +1928,7 @@ const state = {
   labels: {},
   settingsTab: 'profile',
   page: 'dashboard',
-  filters: { q:'', vendor:'', service:'', status:'', statusBucket:'', region:'', year:'', qtr:'', contract:'' },
+  filters: { q:'', vendor:'', service:'', status:'', statusBucket:'', region:'', year:'', qtr:'', contract:'', hasClearance:false },
   reportMode: 'contract',   // 'contract' = single-contract report, 'compare' = contract comparison, 'period' = period view
   reportFilters: { contract:'', vendor:'', service:'', type:'', region:'', status:'', well:'', year:'', qtr:'', from:'', to:'', groupBy:'contract' },
   reportCompare: [],        // contractNos selected for comparison
@@ -2347,6 +2319,53 @@ function fmtMoney(n){
   n = Number(n)||0;
   return '$'+n.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
 }
+function buildSpeedoGauge(pct, hubText, hubLabel){
+  pct = Math.max(0, Math.min(100, Number(pct)||0));
+  const cx=110, cy=110, rOuter=96, rTickOuter=88, rTickInner=78, rNum=64, needleLen=68;
+  const startDeg=135, sweepDeg=270;
+  const pt=(r,deg)=>{ const rad=deg*Math.PI/180; return [cx+r*Math.cos(rad), cy+r*Math.sin(rad)]; };
+  const arcPath=(r,d0,d1)=>{
+    const [x0,y0]=pt(r,d0), [x1,y1]=pt(r,d1);
+    const large = (d1-d0)>180 ? 1:0;
+    return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+  };
+  const zones = [
+    {from:0, to:50, color:'#c23b3b'},
+    {from:50, to:80, color:'#c8781c'},
+    {from:80, to:100, color:'#1c8a4b'},
+  ];
+  const zoneArcs = zones.map(z=>{
+    const d0 = startDeg + sweepDeg*(z.from/100);
+    const d1 = startDeg + sweepDeg*(z.to/100);
+    return `<path d="${arcPath(rOuter,d0,d1)}" stroke="${z.color}" stroke-width="9" fill="none" stroke-linecap="butt" opacity="0.85"/>`;
+  }).join('');
+  let ticks = '';
+  for(let v=0; v<=100; v+=10){
+    const deg = startDeg + sweepDeg*(v/100);
+    const [x0,y0] = pt(rTickOuter, deg);
+    const [x1,y1] = pt(rTickInner, deg);
+    const isMajor = v%20===0;
+    ticks += `<line x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}" stroke="#5f5c54" stroke-width="${isMajor?2.4:1.4}"/>`;
+    if(isMajor){
+      const [nx,ny] = pt(rNum, deg);
+      ticks += `<text x="${nx.toFixed(2)}" y="${(ny+4).toFixed(2)}" font-size="12" font-weight="700" fill="#43413c" text-anchor="middle" font-family="sans-serif">${v}</text>`;
+    }
+  }
+  const needleDeg = startDeg + sweepDeg*(pct/100);
+  const [nTipX,nTipY] = pt(needleLen, needleDeg);
+  const [nTailX,nTailY] = pt(14, needleDeg+180);
+  const needleColor = pct>=80?'#1c8a4b':pct>=50?'#c8781c':'#c23b3b';
+  return `
+  <svg viewBox="0 0 220 190" width="220" height="190" style="display:block; margin:0 auto;">
+    <circle cx="${cx}" cy="${cy}" r="${rOuter+8}" fill="#fbfaf7" stroke="#e2ded6" stroke-width="1.5"/>
+    ${zoneArcs}
+    ${ticks}
+    <line x1="${nTailX.toFixed(2)}" y1="${nTailY.toFixed(2)}" x2="${nTipX.toFixed(2)}" y2="${nTipY.toFixed(2)}" stroke="${needleColor}" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="24" fill="#fff" stroke="${needleColor}" stroke-width="2.5"/>
+    <text x="${cx}" y="${cy-2}" font-size="15" font-weight="700" fill="#0a2540" text-anchor="middle" font-family="sans-serif">${hubText}</text>
+    <text x="${cx}" y="${cy+13}" font-size="8.5" font-weight="700" fill="#8a8880" text-anchor="middle" font-family="sans-serif" letter-spacing="0.5">${hubLabel}</text>
+  </svg>`;
+}
 function fmtDate(d){
   if(!d) return '—';
   return d;
@@ -2369,6 +2388,7 @@ function filteredInvoices(){
   if(f.status) rows = rows.filter(r=>r.status===f.status);
   if(f.statusBucket==='cleared') rows = rows.filter(r=>(r.status||'').toLowerCase().includes('cleared'));
   if(f.statusBucket==='pending') rows = rows.filter(r=>{const s=(r.status||'').toLowerCase(); return s.includes('under')||s.includes('sent')||s.includes('budget');});
+  if(f.hasClearance) rows = rows.filter(r=>r.invoiceDate && r.clearanceDate);
   if(f.region) rows = rows.filter(r=>r.region===f.region);
   if(f.contract) rows = rows.filter(r=>normContract(r.contractNo)===normContract(f.contract));
   if(f.year) rows = rows.filter(r=>String(r.year)===String(f.year) || String(r.yr)===String(f.year));
@@ -2694,10 +2714,6 @@ function renderLogin(){
     </div>
     <div class="login-right">
       <div class="login-card">
-        <div class="login-mobile-brand">
-          <img src="${OGDCL_LOGO_DARK}" alt="OGDCL"/>
-          <h1${labelStyleAttr('login_title')}>${lbl('login_title','Drilling Fluids<br/>Expenditure & Invoice Tracker')}</h1>
-        </div>
         ${mode==='signin' ? `
         <h2>Sign in</h2>
         <p class="hint">Access the expenditure &amp; invoice tracking system.</p>
@@ -2712,7 +2728,7 @@ function renderLogin(){
         <div id="forgotPanel" class="forgot-panel" style="display:none;">
           <h3>Reset your password</h3>
           <p class="hint">Enter your email — if it matches an account, we'll send a reset link.</p>
-          <div class="field"><label>Email</label><input id="fpUser" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="you@ogdcl.com"/></div>
+          <div class="field"><label>Email</label><input id="fpUser" type="email" placeholder="you@ogdcl.com"/></div>
           <div id="fpMsg" class="fp-msg"></div>
           <div class="fp-actions">
             <button type="button" class="btn btn-ghost btn-sm" id="fpCancel">Back to sign in</button>
@@ -2725,7 +2741,7 @@ function renderLogin(){
         ${err}${notice}
         <form id="signupForm">
           <div class="field"><label>Full Name</label><input id="suName" placeholder="Your name" required/></div>
-          <div class="field"><label>Email</label><input id="suEmail" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="you@ogdcl.com" required/></div>
+          <div class="field"><label>Email</label><input id="suEmail" type="email" autocomplete="username" placeholder="you@ogdcl.com" required/></div>
           <div class="field"><label>Password</label><div class="pw-wrap"><input id="suPass" type="password" autocomplete="new-password" placeholder="At least 6 characters" required/><button type="button" class="pw-toggle" data-pwtoggle="suPass" aria-label="Show or hide password">${ICONS.eye}</button></div></div>
           <button class="btn btn-primary" type="submit">Create Account</button>
         </form>
@@ -2844,7 +2860,6 @@ const ICONS = {
   filter:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 4 21 4 14 13 14 20 10 22 10 13 3 4"/></svg>',
   sort:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M6 12h12M10 17h4"/></svg>',
   pin:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l1 6 3 3v2H5v-2l3-3z"/></svg>',
-  menu:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>',
   grid:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
   list:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>',
   building:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="1"/><line x1="9" y1="8" x2="9" y2="8"/><line x1="15" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>',
@@ -2902,10 +2917,11 @@ function renderShell(){
       <div class="nav-group nav-contracts">
         <div class="nav-label">Contracts</div>
         ${state.contracts.map(c=>{
-          const primaryVendor = (c.vendor||'').split('/')[0].trim();
-          const short = c.contractNo.length>26 ? '…'+c.contractNo.slice(-22) : c.contractNo;
+          const seps = [];
+          for(let i=0;i<c.contractNo.length;i++){ if(c.contractNo[i]==='-'||c.contractNo[i]==='/') seps.push(i); }
+          const cutIdx = seps.length>=2 ? seps[seps.length-2]+1 : 0;
+          const short = cutIdx>0 ? c.contractNo.slice(cutIdx) : c.contractNo;
           return `<div class="nav-contract" data-navcontract="${c.contractNo.replace(/"/g,'&quot;')}" title="${c.contractNo} — view invoices">
-            <span class="nc-dot" style="background:${vendorColor(primaryVendor)};"></span>
             <span class="nc-txt">${short}</span>
           </div>`;
         }).join('')}
@@ -2997,6 +3013,70 @@ function renderDashboard(){
   const recent = rows.slice().sort((a,b)=> (b.srNo||0)-(a.srNo||0)).slice(0,6);
   const selected = state.dashVendor || 'ALL';
 
+  // --- Quarter-over-quarter, year-over-year, and other richer KPIs (real data) ---
+  const fyKey = (yr,qtr)=>{
+    if(!yr || !qtr) return null;
+    const startYear = parseInt(String(yr).split('-')[0],10);
+    const q = parseInt(String(qtr).replace(/[^0-9]/g,''),10);
+    if(isNaN(startYear)||isNaN(q)) return null;
+    return startYear*4 + (q-1);
+  };
+  let latestQKey = null, latestQtrStr = null, latestQtrYr = null;
+  rows.forEach(r=>{ const key = fyKey(r.yr,r.qtr); if(key!=null && (latestQKey===null || key>latestQKey)){ latestQKey=key; latestQtrStr=r.qtr; latestQtrYr=r.yr; } });
+  let thisQTotal = 0, lastQTotal = 0;
+  if(latestQKey!=null){
+    rows.forEach(r=>{
+      const key = fyKey(r.yr,r.qtr);
+      if(key===latestQKey) thisQTotal += (Number(r.amountInclTax)||0);
+      else if(key===latestQKey-1) lastQTotal += (Number(r.amountInclTax)||0);
+    });
+  }
+  const qoqPct = lastQTotal>0 ? ((thisQTotal-lastQTotal)/lastQTotal*100) : null;
+
+  let latestYr = null, latestYrStart = -1;
+  rows.forEach(r=>{
+    if(!r.yr) return;
+    const sy = parseInt(String(r.yr).split('-')[0],10);
+    if(!isNaN(sy) && sy>latestYrStart){ latestYrStart = sy; latestYr = r.yr; }
+  });
+  const prevYr = latestYr ? (latestYrStart-1)+'-'+(latestYrStart) : null;
+  let ytdTotal = 0, lastYrTotal = 0;
+  if(latestYr){
+    rows.forEach(r=>{
+      if(r.yr===latestYr) ytdTotal += (Number(r.amountInclTax)||0);
+      else if(r.yr===prevYr) lastYrTotal += (Number(r.amountInclTax)||0);
+    });
+  }
+  const yoyPct = lastYrTotal>0 ? ((ytdTotal-lastYrTotal)/lastYrTotal*100) : null;
+
+  const avgInvoiceValue = k.count>0 ? (k.totalIncl/k.count) : 0;
+
+  let clearDaysSum = 0, clearDaysCount = 0;
+  rows.forEach(r=>{
+    if(!r.invoiceDate || !r.clearanceDate) return;
+    const d1 = new Date(r.invoiceDate), d2 = new Date(r.clearanceDate);
+    if(isNaN(d1)||isNaN(d2)) return;
+    const days = (d2-d1)/86400000;
+    if(days>=0 && days<3650){ clearDaysSum += days; clearDaysCount++; }
+  });
+  const avgDaysToClear = clearDaysCount>0 ? (clearDaysSum/clearDaysCount) : null;
+
+  const byVendorTotal = {};
+  rows.forEach(r=>{ const v=r.vendor||'Unknown'; byVendorTotal[v]=(byVendorTotal[v]||0)+(Number(r.amountInclTax)||0); });
+  const vendorPairs = Object.entries(byVendorTotal).sort((a,b)=>b[1]-a[1]);
+  const topVendor = vendorPairs[0] || null;
+  const topVendorPct = (topVendor && k.totalIncl>0) ? (topVendor[1]/k.totalIncl*100) : null;
+
+  const todayD = new Date();
+  const activeContracts = state.contracts.filter(c=>c.status==='Active');
+  const expiringSoon = activeContracts.filter(c=>{
+    if(!c.endDate) return false;
+    const end = new Date(c.endDate);
+    if(isNaN(end)) return false;
+    const daysLeft = Math.round((end-todayD)/86400000);
+    return daysLeft>=0 && daysLeft<=30;
+  }).length;
+
   // contractor cost metrics (when a specific contractor is selected)
   let costTiles = '', utilBar = '';
   if(selected!=='ALL'){
@@ -3023,7 +3103,22 @@ function renderDashboard(){
     }
   }
 
+  let storyText = '';
+  if(topVendor && k.count>0){
+    const trendPhrase = qoqPct!=null
+      ? (qoqPct>=0 ? `climbed ${Math.abs(qoqPct).toFixed(0)}% this quarter` : `eased ${Math.abs(qoqPct).toFixed(0)}% this quarter`)
+      : (yoyPct!=null ? (yoyPct>=0?`is up ${Math.abs(yoyPct).toFixed(0)}% this fiscal year`:`is down ${Math.abs(yoyPct).toFixed(0)}% this fiscal year`) : 'is being tracked');
+    storyText = `Expenditure ${trendPhrase}, with ${topVendor[0]} driving ${(topVendorPct||0).toFixed(0)}% of total spend`
+      + (expiringSoon>0 ? `, and ${expiringSoon} contract${expiringSoon!==1?'s':''} nearing expiry.` : '.');
+  } else {
+    storyText = `Tracking ${k.count.toLocaleString()} invoices worth ${fmtMoney(k.totalIncl)} across ${new Set(rows.map(r=>r.vendor)).size} contractors.`;
+  }
+
   return `
+  <div class="story-banner">
+    <div class="story-label">Spending story${selected!=='ALL'?' — '+selected:''}</div>
+    <div class="story-text">${storyText}</div>
+  </div>
   <div class="kpi-row">
     <div class="kpi-tile" data-kpi="all">
       <div class="kpi-tile-icon" style="background:var(--indigo-bg,#eef0fd); color:var(--indigo);">${ICONS.list}</div>
@@ -3043,16 +3138,71 @@ function renderDashboard(){
       <div class="kpi-tile-label">Cleared</div>
       <div class="kpi-tile-value" style="color:var(--green);">${k.cleared.toLocaleString()}</div>
       <div class="kpi-tile-sub">${((k.cleared/k.count)*100||0).toFixed(0)}% of invoices</div>
+      <div class="kpi-tile-spark"><canvas id="sparkCleared"></canvas></div>
     </div>
     <div class="kpi-tile" data-kpi="pending">
       <div class="kpi-tile-icon" style="background:var(--amber-bg,#fdf1de); color:var(--amber);">${ICONS.clock}</div>
       <div class="kpi-tile-label">Pending / in process</div>
       <div class="kpi-tile-value" style="color:var(--amber);">${k.pending.toLocaleString()}</div>
       <div class="kpi-tile-sub">Awaiting clearance</div>
+      <div class="kpi-tile-spark"><canvas id="sparkPending"></canvas></div>
     </div>
     ${costTiles}
   </div>
   ${utilBar}
+  <div class="kpi-row">
+    <div class="kpi-tile" data-kpi="thisQuarter" data-qyr="${latestQtrYr||''}" data-qq="${latestQtrStr||''}">
+      <div class="kpi-tile-icon" style="background:var(--indigo-bg,#eef0fd); color:var(--indigo);">${ICONS.history}</div>
+      <div class="kpi-tile-label">This quarter</div>
+      <div class="kpi-tile-value">${fmtMoney(thisQTotal)}</div>
+      <div class="kpi-tile-sub" style="color:${qoqPct==null?'var(--muted)':(qoqPct>=0?'var(--green)':'var(--red)')};">${qoqPct==null?'No prior quarter data':(qoqPct>=0?'+':'')+qoqPct.toFixed(0)+'% vs last quarter'}</div>
+      <div class="kpi-tile-minichart"><canvas id="miniThisQ"></canvas></div>
+    </div>
+    <div class="kpi-tile" data-kpi="fiscalYear" data-fyr="${latestYr||''}">
+      <div class="kpi-tile-icon" style="background:var(--blue-bg); color:var(--brand-blue,#0A86C8);">${ICONS.history}</div>
+      <div class="kpi-tile-label">Fiscal year ${latestYr||'—'}</div>
+      <div class="kpi-tile-value">${fmtMoney(ytdTotal)}</div>
+      <div class="kpi-tile-sub" style="color:${yoyPct==null?'var(--muted)':(yoyPct>=0?'var(--green)':'var(--red)')};">${yoyPct==null?'No prior year data':(yoyPct>=0?'+':'')+yoyPct.toFixed(0)+'% vs prior year'}</div>
+      <div class="kpi-tile-minichart"><canvas id="miniYTD"></canvas></div>
+    </div>
+    <div class="kpi-tile" data-kpi="all">
+      <div class="kpi-tile-icon" style="background:var(--green-bg); color:var(--green);">${ICONS.dollar}</div>
+      <div class="kpi-tile-label">Avg invoice value</div>
+      <div class="kpi-tile-value">${fmtMoney(avgInvoiceValue)}</div>
+      <div class="kpi-tile-sub">Across ${k.count.toLocaleString()} invoices</div>
+      <div class="kpi-tile-minichart"><canvas id="miniAvgInvoice"></canvas></div>
+    </div>
+    <div class="kpi-tile" data-kpi="avgDays">
+      <div class="kpi-tile-icon" style="background:var(--amber-bg,#fdf1de); color:var(--amber);">${ICONS.clock}</div>
+      <div class="kpi-tile-label">Avg days to clear</div>
+      <div class="kpi-tile-value">${avgDaysToClear==null?'—':avgDaysToClear.toFixed(1)+'d'}</div>
+      <div class="kpi-tile-sub">${clearDaysCount} invoices with dates</div>
+      <div class="kpi-tile-ring"><canvas id="ringAvgDays"></canvas><span class="ring-center">${avgDaysToClear==null?'—':Math.round(avgDaysToClear)+'d'}</span></div>
+    </div>
+    <div class="kpi-tile" data-kpi="topVendor" data-vendor-name="${topVendor?String(topVendor[0]).replace(/"/g,'&quot;'):''}">
+      <div class="kpi-tile-icon" style="background:var(--red-bg); color:var(--red);">${ICONS.building}</div>
+      <div class="kpi-tile-label">Top contractor share</div>
+      <div class="kpi-tile-value">${topVendorPct==null?'—':topVendorPct.toFixed(0)+'%'}</div>
+      <div class="kpi-tile-sub">${topVendor?topVendor[0]:'No data'}</div>
+      <div class="kpi-tile-ring"><canvas id="ringTopVendor"></canvas><span class="ring-center">${topVendorPct==null?'—':topVendorPct.toFixed(0)+'%'}</span></div>
+    </div>
+    <div class="kpi-tile" data-kpi="contracts">
+      <div class="kpi-tile-icon" style="background:var(--indigo-bg,#eef0fd); color:var(--indigo);">${ICONS.shield}</div>
+      <div class="kpi-tile-label">Active contracts</div>
+      <div class="kpi-tile-value">${activeContracts.length}</div>
+      <div class="kpi-tile-sub" style="color:${expiringSoon>0?'var(--amber)':'var(--muted)'};">${expiringSoon>0?expiringSoon+' expiring within 30 days':'None expiring soon'}</div>
+      <div class="kpi-tile-ring"><canvas id="ringContracts"></canvas><span class="ring-center">${activeContracts.length}</span></div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="panel-body" style="display:flex; align-items:center; gap:24px; flex-wrap:wrap; padding:18px 22px;">
+      <div style="flex:0 0 auto;">
+        <div class="chart-title" style="margin-bottom:10px;">Cost Mix</div>
+        <div style="position:relative; width:120px; height:120px;"><canvas id="costMixDonut"></canvas></div>
+      </div>
+      <div id="costMixLegend" style="flex:1; min-width:200px; display:flex; flex-wrap:wrap; gap:10px 22px;"></div>
+    </div>
+  </div>
   ${selected==='ALL' ? renderContractTiles() : ''}
   <div class="panel" style="margin-bottom:16px;">
     <div class="panel-head" style="flex-wrap:wrap; gap:10px;">
@@ -3077,7 +3227,7 @@ function renderDashboard(){
         </div>
         <div>
           <div class="chart-title">Invoice Status</div>
-          <div class="chart-box" style="height:190px;"><canvas id="statusChart"></canvas></div>
+          <div class="chart-box speedo-box" style="height:190px; cursor:pointer;" data-kpi="cleared">${buildSpeedoGauge(k.count>0?(k.cleared/k.count*100):0, k.count.toLocaleString(), 'INVOICES')}</div>
           <div id="statusLegend" class="gauge-legend"></div>
         </div>
       </div>
@@ -3092,17 +3242,17 @@ function renderDashboard(){
   <div class="panel">
       <div class="panel-head"><h3>Recent Invoices${selected!=='ALL'?' — '+selected:''}</h3><button class="btn btn-ghost btn-sm" data-nav="invoices">View all</button></div>
       <div class="panel-body" style="padding:0;">
-        <div class="table-wrap mobile-cards-wrap" style="border:none; border-radius:0;">
-          <table class="mobile-cards" style="min-width:0;">
+        <div class="table-wrap" style="border:none; border-radius:0;">
+          <table style="min-width:0;">
             <thead><tr><th>Sr#</th><th>Contractor</th><th>Invoice No.</th><th>Contract No.</th><th>Service</th><th>Amount (Incl. Tax)</th><th>Status</th></tr></thead>
             <tbody>
               ${recent.length ? recent.map(r=>`<tr>
-                <td data-label="Sr#">${r.srNo??''}</td><td class="mc-title">${r.vendor??''}</td><td class="mc-sub">${r.invoiceNo??''}</td>
-                <td data-label="Contract" style="max-width:200px; overflow:hidden; text-overflow:ellipsis;" title="${r.contractNo??''}">${r.contractNo??'—'}</td>
-                <td data-label="Service">${r.service??''}</td>
-                <td class="mono" data-label="Incl. tax">${fmtMoney(r.amountInclTax)}</td>
-                <td data-label="Status"><span class="status-pill ${statusClass(r.status)}">${r.status??'—'}</span></td>
-              </tr>`).join('') : `<tr><td class="mc-empty" colspan="7"><div class="empty"><h4>No invoices for this contractor yet</h4><p>New entries will appear here.</p></div></td></tr>`}
+                <td>${r.srNo??''}</td><td>${r.vendor??''}</td><td>${r.invoiceNo??''}</td>
+                <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis;" title="${r.contractNo??''}">${r.contractNo??'—'}</td>
+                <td>${r.service??''}</td>
+                <td class="mono">${fmtMoney(r.amountInclTax)}</td>
+                <td><span class="status-pill ${statusClass(r.status)}">${r.status??'—'}</span></td>
+              </tr>`).join('') : `<tr><td colspan="7"><div class="empty"><h4>No invoices for this contractor yet</h4><p>New entries will appear here.</p></div></td></tr>`}
             </tbody>
           </table>
         </div>
@@ -3174,6 +3324,155 @@ function drawCharts(){
     tCanvas.parentElement.innerHTML = '<div class="empty" style="padding:30px;"><h4>No dated invoices in scope</h4><p>Trend appears once invoices with dates are logged.</p></div>';
   }
 
+  // --- KPI tile sparklines: cleared vs pending amount by month ---
+  const byMonthCleared = {}, byMonthPending = {};
+  rows.forEach(r=>{
+    const d = r.invoiceDate;
+    if(!d || !/^\d{4}-\d{2}/.test(d)) return;
+    const key = d.slice(0,7);
+    const s = (r.status||'').toLowerCase();
+    const amt = Number(r.amountInclTax)||0;
+    if(s.includes('cleared')) byMonthCleared[key] = (byMonthCleared[key]||0) + amt;
+    else if(s.includes('under')||s.includes('sent')||s.includes('budget')) byMonthPending[key] = (byMonthPending[key]||0) + amt;
+  });
+  const sparkKeys = mKeys.slice(-10);
+  const sparkChart = (id, data, color)=>{
+    const c = el(id);
+    if(!c || !sparkKeys.length) return;
+    new Chart(c, {
+      type:'line',
+      data:{ labels:sparkKeys, datasets:[{ data:sparkKeys.map(k=>data[k]||0), borderColor:color, borderWidth:2, pointRadius:0, tension:.4, fill:false }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>' '+fmtMoney(c.raw) } } },
+        scales:{ x:{display:false}, y:{display:false} } }
+    });
+  };
+  sparkChart('sparkCleared', byMonthCleared, '#1c8a4b');
+  sparkChart('sparkPending', byMonthPending, '#c8781c');
+
+  // --- Mini charts for advanced KPI row (This quarter / YTD / Avg invoice / Avg days / Top vendor / Contracts) ---
+  const fyKey2 = (yr,qtr)=>{
+    if(!yr||!qtr) return null;
+    const sy = parseInt(String(yr).split('-')[0],10);
+    const q = parseInt(String(qtr).replace(/[^0-9]/g,''),10);
+    if(isNaN(sy)||isNaN(q)) return null;
+    return sy*4+(q-1);
+  };
+  let latestQKey2 = null;
+  rows.forEach(r=>{ const key=fyKey2(r.yr,r.qtr); if(key!=null && (latestQKey2===null||key>latestQKey2)) latestQKey2=key; });
+  const qTotals = {};
+  rows.forEach(r=>{ const key=fyKey2(r.yr,r.qtr); if(key==null) return; qTotals[key]=(qTotals[key]||0)+(Number(r.amountInclTax)||0); });
+  const last4Q = [];
+  if(latestQKey2!=null) for(let i=4;i>=0;i--) last4Q.push(qTotals[latestQKey2-i]||0);
+  const thisQ2 = last4Q[4]||0, lastQ2 = last4Q[3]||0;
+
+  let latestYr2=null, latestYrStart2=-1;
+  rows.forEach(r=>{ if(!r.yr) return; const sy=parseInt(String(r.yr).split('-')[0],10); if(!isNaN(sy)&&sy>latestYrStart2){latestYrStart2=sy; latestYr2=r.yr;} });
+  const yTotals = {};
+  rows.forEach(r=>{ if(!r.yr) return; const sy=parseInt(String(r.yr).split('-')[0],10); if(isNaN(sy)) return; yTotals[sy]=(yTotals[sy]||0)+(Number(r.amountInclTax)||0); });
+  const last4Y = [];
+  if(latestYrStart2>=0) for(let i=4;i>=0;i--) last4Y.push(yTotals[latestYrStart2-i]||0);
+  const ytd2 = last4Y[4]||0, lastYr2 = last4Y[3]||0;
+
+  const miniBarChart = (id, values, color)=>{
+    const c = el(id);
+    if(!c) return;
+    const n = values.length;
+    new Chart(c, {
+      type:'bar',
+      data:{ labels:values.map((_,i)=>i), datasets:[{
+        data:values,
+        backgroundColor:values.map((_,i)=> i===n-1 ? color : '#d8d5cc'),
+        borderRadius:6, borderSkipped:false, barPercentage:0.42, categoryPercentage:0.9
+      }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>' '+fmtMoney(c.raw) } } },
+        scales:{ x:{display:false}, y:{display:false, min:0} } }
+    });
+  };
+  miniBarChart('miniThisQ', last4Q, BRAND_BLUE);
+  miniBarChart('miniYTD', last4Y, '#1c8a4b');
+
+  const avgInvByMonth = {}, countByMonth = {};
+  rows.forEach(r=>{ const d=r.invoiceDate; if(!d||!/^\d{4}-\d{2}/.test(d)) return; const k2=d.slice(0,7);
+    avgInvByMonth[k2]=(avgInvByMonth[k2]||0)+(Number(r.amountInclTax)||0); countByMonth[k2]=(countByMonth[k2]||0)+1; });
+  const avgKeys = mKeys.slice(-10);
+  const miniAvgC = el('miniAvgInvoice');
+  if(miniAvgC && avgKeys.length){
+    new Chart(miniAvgC, {
+      type:'line',
+      data:{ labels:avgKeys, datasets:[{ data:avgKeys.map(k2=>countByMonth[k2]?avgInvByMonth[k2]/countByMonth[k2]:0), borderColor:'#3B6D11', borderWidth:2, pointRadius:0, tension:.4, fill:false }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>' '+fmtMoney(c.raw) } } },
+        scales:{ x:{display:false}, y:{display:false} } }
+    });
+  }
+
+  let clearSum2=0, clearCnt2=0;
+  rows.forEach(r=>{ if(!r.invoiceDate||!r.clearanceDate) return; const d1=new Date(r.invoiceDate), d2=new Date(r.clearanceDate);
+    if(isNaN(d1)||isNaN(d2)) return; const days=(d2-d1)/86400000; if(days>=0&&days<3650){ clearSum2+=days; clearCnt2++; } });
+  const avgDays2 = clearCnt2>0 ? clearSum2/clearCnt2 : null;
+  const ringGauge = (id, pct, color)=>{
+    const c = el(id);
+    if(!c) return;
+    new Chart(c, {
+      type:'doughnut',
+      data:{ datasets:[{ data:[pct, Math.max(0,100-pct)], backgroundColor:[color,'#eceae4'], borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'72%',
+        plugins:{ legend:{display:false}, tooltip:{enabled:false} } }
+    });
+  };
+  if(avgDays2!=null) ringGauge('ringAvgDays', Math.min(100,(avgDays2/30)*100), avgDays2<=15?'#1c8a4b':avgDays2<=30?'#c8781c':'#c23b3b');
+
+  const byVendorTotal2 = {};
+  rows.forEach(r=>{ const v=r.vendor||'Unknown'; byVendorTotal2[v]=(byVendorTotal2[v]||0)+(Number(r.amountInclTax)||0); });
+  const vendorPairs2 = Object.entries(byVendorTotal2).sort((a,b)=>b[1]-a[1]);
+  const grandTotal2 = vendorPairs2.reduce((s,p)=>s+p[1],0);
+  const topVendorPct2 = (vendorPairs2[0] && grandTotal2>0) ? (vendorPairs2[0][1]/grandTotal2*100) : null;
+  if(topVendorPct2!=null) ringGauge('ringTopVendor', topVendorPct2, '#c23b3b');
+
+  const activeContracts2 = state.contracts.filter(c=>c.status==='Active');
+  const todayD2 = new Date();
+  const expiringSoon2 = activeContracts2.filter(c=>{
+    if(!c.endDate) return false; const end=new Date(c.endDate); if(isNaN(end)) return false;
+    const daysLeft=Math.round((end-todayD2)/86400000); return daysLeft>=0 && daysLeft<=30;
+  }).length;
+  if(activeContracts2.length>0) ringGauge('ringContracts', expiringSoon2>0 ? (expiringSoon2/activeContracts2.length*100) : 0, expiringSoon2>0?'#c8781c':'#1c8a4b');
+
+  // --- Cost Mix donut (by service category) ---
+  const cmCanvas = el('costMixDonut');
+  const cmLegendEl = el('costMixLegend');
+  if(cmCanvas){
+    const byCat = {};
+    rows.forEach(r=>{ const s=r.service||'Unspecified'; byCat[s]=(byCat[s]||0)+(Number(r.amountInclTax)||0); });
+    const catPairs = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+    const cmTotal = catPairs.reduce((s,p)=>s+p[1],0);
+    const cmPalette = [BRAND_BLUE,'#c8781c','#1c8a4b','#c25577','#7a5fc9','#49BFAC','#8fb4c9','#d9a441'];
+    const top = catPairs.slice(0,7);
+    const other = catPairs.slice(7).reduce((s,p)=>s+p[1],0);
+    const cmLabels = top.map(p=>p[0]).concat(other>0?['Other']:[]);
+    const cmData = top.map(p=>p[1]).concat(other>0?[other]:[]);
+    if(cmTotal>0){
+      new Chart(cmCanvas, {
+        type:'doughnut',
+        data:{ labels:cmLabels, datasets:[{ data:cmData, backgroundColor:cmLabels.map((_,i)=>cmPalette[i%cmPalette.length]), borderWidth:2, borderColor:'#fff' }] },
+        options:{ responsive:true, maintainAspectRatio:false, cutout:'68%',
+          plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>' '+c.label+': '+fmtMoney(c.raw)+' ('+(c.raw/cmTotal*100).toFixed(0)+'%)' } } },
+          onClick: chartClickHandler(i=>rows.filter(r=>(r.service||'Unspecified')===cmLabels[i]), i=>'Service: '+cmLabels[i], i=>cmPalette[i%cmPalette.length]) }
+      });
+      if(cmLegendEl){
+        cmLegendEl.innerHTML = cmLabels.map((l,i)=>`
+          <div style="display:flex; align-items:center; gap:7px; font-size:12px; min-width:120px;">
+            <span style="width:9px; height:9px; border-radius:2px; background:${cmPalette[i%cmPalette.length]}; flex-shrink:0;"></span>
+            <span style="color:var(--navy-900); font-weight:600;">${l}</span>
+            <span style="color:var(--muted); margin-left:auto;">${(cmData[i]/cmTotal*100).toFixed(0)}%</span>
+          </div>`).join('');
+      }
+    } else if(cmLegendEl){
+      cmLegendEl.innerHTML = '<div class="empty" style="padding:10px;"><p>No invoices in scope</p></div>';
+    }
+  }
+
   // --- Expenditure by service ---
   const byService = {};
   rows.forEach(r=>{ const s=r.service||'Unspecified'; byService[s]=(byService[s]||0)+(Number(r.amountInclTax)||0); });
@@ -3215,7 +3514,7 @@ function drawCharts(){
     vCanvas.parentElement.innerHTML = '<div class="empty" style="padding:30px;"><h4>No invoices in scope</h4></div>';
   }
 
-  // --- Status distribution (gauge) ---
+  // --- Status distribution (legend for the speedometer gauge) ---
   const byStatus = {};
   rows.forEach(r=>{ const s=r.status||'Unspecified'; byStatus[s]=(byStatus[s]||0)+1; });
   const sPairs = Object.entries(byStatus).sort((a,b)=>b[1]-a[1]);
@@ -3223,39 +3522,14 @@ function drawCharts(){
   const sData = sPairs.map(p=>p[1]);
   const sTotal = sData.reduce((a,b)=>a+b,0);
   const palette = [BRAND_BLUE, BRAND_TEAL, '#c8781c','#1c8a4b','#c23b3b',NAVY,'#5b7086','#8fb4c9','#d9a441','#7fb69b','#9c7fc9','#c98f9c'];
-  const sCanvas = el('statusChart');
   const sLegendEl = el('statusLegend');
-  if(sCanvas && sLabels.length){
-    if(sLegendEl){
-      sLegendEl.innerHTML = sLabels.slice(0,3).map((l,i)=>`
+  if(sLegendEl){
+    sLegendEl.innerHTML = sLabels.length ? sLabels.slice(0,3).map((l,i)=>`
         <div class="gauge-legend-item">
           <span class="gl-dot" style="background:${palette[i%palette.length]};"></span>
           <span class="gl-label">${l}</span>
           <span class="gl-value">${((sData[i]/sTotal)*100).toFixed(0)}% <b>${sData[i]}</b></span>
-        </div>`).join('');
-    }
-    new Chart(sCanvas, {
-      type:'doughnut',
-      data:{ labels:sLabels, datasets:[{ data:sData, backgroundColor: sLabels.map((_,i)=>palette[i%palette.length]), borderWidth:3, borderColor:'#fff' }]},
-      options:{ responsive:true, maintainAspectRatio:false, cutout:'74%', circumference:180, rotation:270, onClick: chartClickHandler(
-          i=>rows.filter(r=>(r.status||'Unspecified')===sLabels[i]),
-          i=>'Status: '+sLabels[i], i=>palette[i%palette.length]),
-        plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>' '+c.label+': '+c.raw } } } },
-      plugins:[{
-        id:'gaugeCenterText',
-        afterDraw(c){
-          const {ctx, chartArea:{width,height,top}} = c;
-          ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
-          ctx.font='700 22px sans-serif'; ctx.fillStyle = NAVY;
-          ctx.fillText(sTotal.toLocaleString(), width/2, top+height*0.78);
-          ctx.font='600 10.5px sans-serif'; ctx.fillStyle = '#8a8880';
-          ctx.fillText('invoices', width/2, top+height*0.78+18);
-          ctx.restore();
-        }
-      }]
-    });
-  } else if(sCanvas){
-    sCanvas.parentElement.innerHTML = '<div class="empty" style="padding:30px;"><h4>No invoices in scope</h4></div>';
+        </div>`).join('') : '<div class="empty" style="padding:10px;"><p>No invoices in scope</p></div>';
   }
 
   // --- Financial Report: category spend, this month vs last ---
@@ -3313,7 +3587,7 @@ function renderInvoices(){
   const sumIncl = rows.reduce((s,r)=>s+(Number(r.amountInclTax)||0),0);
   const sumPaid = rows.reduce((s,r)=>s+(Number(r.amountPaid)||0),0);
   const clearedN = rows.filter(r=>(r.status||'').toLowerCase().includes('cleared')).length;
-  const hasFilter = f.q||f.vendor||f.service||f.status||f.statusBucket||f.region||f.year||f.contract;
+  const hasFilter = f.q||f.vendor||f.service||f.status||f.statusBucket||f.region||f.year||f.contract||f.hasClearance;
 
   const canBulk = can('delete');
   const pageIds = pageRows.map(r=>r.id);
@@ -3332,10 +3606,11 @@ function renderInvoices(){
       <td data-label="Service">${r.service?`<span class="tag-soft">${r.service}</span>`:'—'}</td>
       <td data-label="Region">${r.region??'—'}</td>
       <td class="td-date" data-label="Date">${fmtDate(r.invoiceDate)}</td>
-      <td class="mono" data-label="Excl. tax">${fmtMoney(r.amountExclTax)}</td>
-      <td class="mono td-strong" data-label="Incl. tax">${fmtMoney(r.amountInclTax)}</td>
+      <td class="mono" data-label="Excl.">${fmtMoney(r.amountExclTax)}</td>
+      <td class="mono td-strong" data-label="Incl.">${fmtMoney(r.amountInclTax)}</td>
       <td class="mono" data-label="Paid">${fmtMoney(r.amountPaid)}</td>
       <td data-label="Status"><span class="status-pill ${statusClass(r.status)}">${r.status??'—'}</span></td>
+      <td data-label="TA" style="text-align:center;">${taBadge(turnaround(r))}</td>
       <td class="mc-actions">
         <div class="row-actions">
           <button class="icon-btn" data-view="${r.id}" title="View" aria-label="View">${ICONS.eye}</button>
@@ -3344,7 +3619,7 @@ function renderInvoices(){
         </div>
       </td>
     </tr>`;
-  }).join('') : `<tr><td class="mc-empty" colspan="${canBulk?13:12}"><div class="empty">${ICONS.list}<h4>No matching invoices</h4><p>Try adjusting your filters or search terms.</p></div></td></tr>`;
+  }).join('') : `<tr><td class="mc-empty" colspan="${canBulk?14:13}"><div class="empty">${ICONS.list}<h4>No matching invoices</h4><p>Try adjusting your filters or search terms.</p></div></td></tr>`;
 
   return `
   <div class="inv-summary">
@@ -3355,7 +3630,7 @@ function renderInvoices(){
   </div>
   <div class="panel inv-panel">
     <div class="inv-toolbar">
-      <div class="search">${ICONS.search}<input id="searchInput" enterkeyhint="search" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Search invoices" placeholder="Search invoice no., vendor, description, location…" value="${f.q}"/></div>
+      <div class="search">${ICONS.search}<input id="searchInput" placeholder="Search invoice no., vendor, description, location…" value="${f.q}"/></div>
       <div class="inv-filters">
         <button type="button" class="btn btn-ghost btn-sm" id="openFiltersBtn">${ICONS.filter||'▤'} Filters${(()=>{ const n=['vendor','service','contract','status','region','year'].filter(k=>f[k]).length; return n?` <span class="filter-count">${n}</span>`:''; })()}</button>
         <div class="export-wrap">
@@ -3424,6 +3699,7 @@ function renderInvoices(){
           <th data-sort="amountInclTax">Incl. Tax ${sortArrow('amountInclTax')}</th>
           <th data-sort="amountPaid">Paid ${sortArrow('amountPaid')}</th>
           <th data-sort="status">Status ${sortArrow('status')}</th>
+          <th style="text-align:center;" title="Turnaround time: days from receiving to clearance">TAT</th>
           <th>Actions</th>
         </tr></thead>
         <tbody>${rowsHtml}</tbody>
@@ -3527,9 +3803,9 @@ function renderDrawer(){
             <div class="field"><label>Year</label><input name="year" type="number" inputmode="numeric" value="${inv.year??''}" ${dis}/></div>
             <div class="field"><label>Status ${addRefBtn('statuses',dis)}</label><select name="status" ${dis}>${opt(REF.statuses, inv.status)}</select></div>
             <div class="field full"><label>Description</label><textarea name="description" rows="2" ${dis} style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13.5px; resize:vertical;">${inv.description??''}</textarea></div>
-            <div class="field"><label>Amount Excl. Tax (USD)</label><input name="amountExclTax" type="number" inputmode="decimal" step="0.01" value="${inv.amountExclTax??0}" ${dis} id="fAmtExcl"/></div>
-            <div class="field"><label>GST / PST Rate</label><input name="gstPst" type="number" inputmode="decimal" step="0.01" value="${inv.gstPst??0}" ${dis} id="fGst"/></div>
-            <div class="field"><label>Amount Paid (USD)</label><input name="amountPaid" type="number" inputmode="decimal" step="0.01" value="${inv.amountPaid??0}" ${dis}/></div>
+            <div class="field"><label>Amount Excl. Tax (USD)</label><input name="amountExclTax" type="number" step="0.01" value="${inv.amountExclTax??0}" ${dis} id="fAmtExcl"/></div>
+            <div class="field"><label>GST / PST Rate</label><input name="gstPst" type="number" step="0.01" value="${inv.gstPst??0}" ${dis} id="fGst"/></div>
+            <div class="field"><label>Amount Paid (USD)</label><input name="amountPaid" type="number" step="0.01" value="${inv.amountPaid??0}" ${dis}/></div>
           </div>
           <div class="calc-box" id="calcBox" style="margin-top:16px;">
             <div>Tax (USD): <b id="calcTax">${fmtMoney(inv.tax)}</b></div>
@@ -4340,7 +4616,7 @@ function renderCompareBody(groups, selector, totalIncl){
 
   <div class="panel">
     <div class="panel-head"><h3>Contract Comparison</h3></div>
-    <div class="panel-body scroll-x" style="padding:0;">
+    <div class="panel-body" style="padding:0;overflow-x:auto;">
       <table class="data-table rpt-table">
         <thead><tr>
           <th>Contract</th><th class="num">Inv.</th><th class="num">Excl. Tax</th><th class="num">Incl. Tax</th>
@@ -4406,7 +4682,7 @@ function renderPeriodReport(){
 
   <div class="panel">
     <div class="panel-head"><h3>Breakdown by ${label} (${groups.length})</h3></div>
-    <div class="panel-body scroll-x" style="padding:0;">
+    <div class="panel-body" style="padding:0;overflow-x:auto;">
       <table class="data-table rpt-table">
         <thead><tr>
           <th>${label}</th><th class="num">Invoices</th><th class="num">Excl. Tax</th><th class="num">Tax</th>
@@ -4441,7 +4717,7 @@ function reportTable(rows){
     <td><span class="pill ${statusClass(r.status)}">${esc(r.status)||'—'}</span></td>
   </tr>`).join('');
   const note = rows.length>300 ? `<div class="muted" style="padding:8px 14px;font-size:12px;">Showing first 300 of ${rows.length}. Export for the full set.</div>`:'';
-  return `<div class="scroll-x"><table class="data-table rpt-table">
+  return `<div style="overflow-x:auto;"><table class="data-table rpt-table">
     <thead><tr><th>Sr</th><th>Invoice No</th><th>Contractor</th><th>Well</th><th>Inv. Date</th><th>Cleared</th><th class="center">TA</th><th class="num">Incl. Tax</th><th class="num">Paid</th><th>Status</th></tr></thead>
     <tbody>${body}</tbody></table>${note}</div>`;
 }
@@ -5560,11 +5836,16 @@ function bindDashboard(){
   }));
   document.querySelectorAll('[data-kpi]').forEach(t=>t.addEventListener('click', ()=>{
     const kind = t.dataset.kpi;
-    state.filters = Object.assign(state.filters, {q:'',vendor:'',service:'',status:'',statusBucket:'',region:'',year:'',qtr:'',contract:''});
+    if(kind==='contracts'){ state.page = 'vendors'; render(); return; }
+    state.filters = Object.assign(state.filters, {q:'',vendor:'',service:'',status:'',statusBucket:'',region:'',year:'',qtr:'',contract:'',hasClearance:false});
     const vendorSel = state.dashVendor && state.dashVendor!=='ALL' ? state.dashVendor : '';
     if(vendorSel) state.filters.vendor = vendorSel;
     if(kind==='cleared') state.filters.statusBucket = 'cleared';
     if(kind==='pending') state.filters.statusBucket = 'pending';
+    if(kind==='thisQuarter'){ state.filters.year = t.dataset.qyr||''; state.filters.qtr = t.dataset.qq||''; }
+    if(kind==='fiscalYear'){ state.filters.year = t.dataset.fyr||''; }
+    if(kind==='avgDays'){ state.filters.hasClearance = true; }
+    if(kind==='topVendor' && !vendorSel){ state.filters.vendor = t.dataset.vendorName||''; }
     state.pageNum = 1;
     state.page = 'invoices';
     render();
@@ -5573,7 +5854,7 @@ function bindDashboard(){
   if(finReportBody) finReportBody.addEventListener('click', (e)=>{
     const row = e.target.closest('[data-navservice]');
     if(!row) return;
-    state.filters = Object.assign(state.filters, {q:'',vendor:'',service:row.dataset.navservice,status:'',statusBucket:'',region:'',year:'',qtr:'',contract:''});
+    state.filters = Object.assign(state.filters, {q:'',vendor:'',service:row.dataset.navservice,status:'',statusBucket:'',region:'',year:'',qtr:'',contract:'',hasClearance:false});
     state.pageNum = 1;
     state.page = 'invoices';
     render();
@@ -5683,7 +5964,7 @@ function bindInvoicesPage(){
 
   const clearBtn = el('clearFilters');
   if(clearBtn) clearBtn.addEventListener('click', ()=>{
-    state.filters = { q:'', vendor:'', service:'', status:'', statusBucket:'', region:'', year:'', qtr:'', contract:'' };
+    state.filters = { q:'', vendor:'', service:'', status:'', statusBucket:'', region:'', year:'', qtr:'', contract:'', hasClearance:false };
     state.pageNum = 1; render();
   });
 
