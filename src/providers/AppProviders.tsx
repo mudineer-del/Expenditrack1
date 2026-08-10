@@ -4,6 +4,7 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { useEffect, type ReactNode } from "react"
 import { BrowserRouter } from "react-router-dom"
 import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { useAuthStore } from "@/store/useAuthStore"
 
 const queryClient = new QueryClient({
@@ -29,11 +30,13 @@ function AuthBootstrap() {
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-      <BrowserRouter>
-        <AuthBootstrap />
-        {children}
-        <Toaster richColors position="top-right" />
-      </BrowserRouter>
+      <TooltipProvider>
+        <BrowserRouter>
+          <AuthBootstrap />
+          {children}
+          <Toaster richColors position="top-right" />
+        </BrowserRouter>
+      </TooltipProvider>
     </PersistQueryClientProvider>
   )
 }
