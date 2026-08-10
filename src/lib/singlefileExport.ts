@@ -46,7 +46,7 @@ export interface SaveHtmlResult {
 export async function saveStandaloneAppAsHtml(): Promise<SaveHtmlResult> {
   let html: string
   try {
-    const res = await fetch("/ogdcl-singlefile.html")
+    const res = await fetch(`${import.meta.env.BASE_URL}ogdcl-singlefile.html`)
     if (!res.ok) {
       return {
         ok: false,

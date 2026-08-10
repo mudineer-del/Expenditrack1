@@ -33,7 +33,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
         <TooltipProvider>
-          <BrowserRouter>
+          <BrowserRouter basename={import.meta.env.BASE_URL}>
             <AuthBootstrap />
             {children}
             <Toaster richColors position="top-right" />
