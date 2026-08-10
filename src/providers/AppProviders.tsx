@@ -1,6 +1,7 @@
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
 import { QueryClient } from "@tanstack/react-query"
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
+import { ThemeProvider } from "next-themes"
 import { useEffect, type ReactNode } from "react"
 import { BrowserRouter } from "react-router-dom"
 import { Toaster } from "@/components/ui/sonner"
@@ -29,14 +30,16 @@ function AuthBootstrap() {
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-      <TooltipProvider>
-        <BrowserRouter>
-          <AuthBootstrap />
-          {children}
-          <Toaster richColors position="top-right" />
-        </BrowserRouter>
-      </TooltipProvider>
-    </PersistQueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+        <TooltipProvider>
+          <BrowserRouter>
+            <AuthBootstrap />
+            {children}
+            <Toaster richColors position="top-right" />
+          </BrowserRouter>
+        </TooltipProvider>
+      </PersistQueryClientProvider>
+    </ThemeProvider>
   )
 }

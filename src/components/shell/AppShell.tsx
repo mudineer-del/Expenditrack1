@@ -12,6 +12,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/shell/AppSidebar"
+import { ThemeToggle } from "@/components/shell/ThemeToggle"
 import { useAuth } from "@/hooks/useAuth"
 
 const TITLES: Record<string, string> = {
@@ -42,7 +43,8 @@ export function AppShell() {
           <SidebarTrigger />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <h1 className="text-base font-semibold">{pageTitle(location.pathname)}</h1>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 rounded-md p-1 outline-none hover:bg-muted">
                 <Avatar className="size-7">

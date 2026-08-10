@@ -1,16 +1,31 @@
+import { lazy, Suspense } from "react"
 import { Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { AppShell } from "@/components/shell/AppShell"
 import { RequireAdmin, RequireAuth } from "@/components/shell/RequireAuth"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/useAuth"
-import ActivityLogPage from "@/pages/ActivityLogPage"
-import DashboardPage from "@/pages/DashboardPage"
-import InvoicesPage from "@/pages/InvoicesPage"
 import LoginPage from "@/pages/LoginPage"
-import ReportsPage from "@/pages/ReportsPage"
 import ResetPasswordPage from "@/pages/ResetPasswordPage"
-import SettingsPage from "@/pages/SettingsPage"
-import UsersPage from "@/pages/UsersPage"
-import VendorsContractsPage from "@/pages/VendorsContractsPage"
+
+// Route-level code splitting: each page (and its charts/tables/heavy libs)
+// only loads when its route is visited, instead of one ~1.9MB bundle for
+// the whole app up front.
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"))
+const InvoicesPage = lazy(() => import("@/pages/InvoicesPage"))
+const VendorsContractsPage = lazy(() => import("@/pages/VendorsContractsPage"))
+const ReportsPage = lazy(() => import("@/pages/ReportsPage"))
+const ActivityLogPage = lazy(() => import("@/pages/ActivityLogPage"))
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"))
+const UsersPage = lazy(() => import("@/pages/UsersPage"))
+
+function RouteFallback() {
+  return (
+    <div className="grid gap-4">
+      <Skeleton className="h-20 w-full" />
+      <Skeleton className="h-72 w-full" />
+    </div>
+  )
+}
 
 function App() {
   const { isRecovery } = useAuth()
@@ -24,26 +39,28 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      <Route element={<RequireAuth />}>
-        <Route element={<AppShell />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="invoices" element={<InvoicesPage />} />
-          <Route path="vendors" element={<VendorsContractsPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="activity" element={<ActivityLogPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route element={<RequireAdmin />}>
-            <Route path="users" element={<UsersPage />} />
+        <Route element={<RequireAuth />}>
+          <Route element={<AppShell />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="invoices" element={<InvoicesPage />} />
+            <Route path="vendors" element={<VendorsContractsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="activity" element={<ActivityLogPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route element={<RequireAdmin />}>
+              <Route path="users" element={<UsersPage />} />
+            </Route>
           </Route>
         </Route>
-      </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   )
 }
 
