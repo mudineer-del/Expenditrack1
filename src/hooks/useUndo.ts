@@ -14,7 +14,7 @@ import { INVOICES_QUERY_KEY } from "@/hooks/useInvoices"
  * `state.invoices` array — here the source of truth is the database, so
  * "reverting" means writing the old data back to it.
  */
-async function reconcileInvoicesTo(snapshot: Invoice[], current: Invoice[]) {
+export async function reconcileInvoicesTo(snapshot: Invoice[], current: Invoice[]) {
   const supabase = getSupabaseClient()
   const snapshotIds = new Set(snapshot.map((r) => r.id))
   const toDelete = current.filter((r) => !snapshotIds.has(r.id)).map((r) => r.id)

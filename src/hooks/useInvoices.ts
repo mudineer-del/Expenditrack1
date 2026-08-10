@@ -5,6 +5,14 @@ import { fromRow, toRow, type Invoice, type InvoiceRow } from "@/types/invoice"
 import { useActivityStore } from "@/store/useActivityStore"
 import { useAuth } from "@/hooks/useAuth"
 import { fmtMoney } from "@/lib/dashboard"
+import {
+  loadNotifyConfig,
+  loadNotifyPrefs,
+  notifyInvoiceCleared,
+  notifyInvoiceReturned,
+  notifyNewInvoice,
+  notifyPaymentReceived,
+} from "@/lib/notifications"
 
 const PAGE_SIZE = 1000
 
@@ -39,7 +47,8 @@ export function useUpsertInvoice() {
     mutationFn: async (invoice: Invoice) => {
       const supabase = getSupabaseClient()
       const current = (queryClient.getQueryData(INVOICES_QUERY_KEY) as Invoice[] | undefined) ?? []
-      const wasEdit = current.some((r) => r.id === invoice.id)
+      const prev = current.find((r) => r.id === invoice.id)
+      const wasEdit = !!prev
       const undoId = useActivityStore
         .getState()
         .pushUndo(wasEdit ? `Edit of invoice ${invoice.invoiceNo || invoice.srNo}` : `Add of invoice ${invoice.invoiceNo || invoice.srNo}`, current)
@@ -53,6 +62,20 @@ export function useUpsertInvoice() {
         `${wasEdit ? "Edited" : "Added"} invoice ${invoice.invoiceNo || `#${invoice.srNo}`}${invoice.vendor ? ` (${invoice.vendor})` : ""}`,
         { invoiceNo: invoice.invoiceNo, vendor: invoice.vendor, undoId }
       )
+
+      const cfg = loadNotifyConfig()
+      const prefs = loadNotifyPrefs()
+      const wasCleared = (prev?.status || "").toLowerCase().includes("cleared")
+      const isCleared = (invoice.status || "").toLowerCase().includes("cleared")
+      const wasReturned = (prev?.status || "").toLowerCase().includes("returned")
+      const isReturned = (invoice.status || "").toLowerCase().includes("returned")
+      const prevPaid = Number(prev?.amountPaid) || 0
+      const nextPaid = Number(invoice.amountPaid) || 0
+      if (!wasEdit) void notifyNewInvoice(cfg, prefs, invoice)
+      if (wasEdit && isCleared && !wasCleared) void notifyInvoiceCleared(cfg, prefs, invoice)
+      if (wasEdit && isReturned && !wasReturned) void notifyInvoiceReturned(cfg, prefs, invoice)
+      if (wasEdit && nextPaid > 0 && prevPaid <= 0) void notifyPaymentReceived(cfg, prefs, invoice)
+
       return invoice
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY }),

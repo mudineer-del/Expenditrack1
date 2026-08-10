@@ -2,7 +2,7 @@ import { create } from "zustand"
 import { storeGet, storeSet } from "@/lib/localCache"
 import type { Invoice } from "@/types/invoice"
 
-export type ActivityAction = "Import" | "Add" | "Edit" | "Delete" | "Undo"
+export type ActivityAction = "Import" | "Add" | "Edit" | "Delete" | "Undo" | "Restore"
 
 export interface ActivityMeta {
   undoId?: string

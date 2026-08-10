@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useUndo } from "@/hooks/useUndo"
 import { useActivityStore, type ActivityAction } from "@/store/useActivityStore"
 
-const ACTIONS: ActivityAction[] = ["Import", "Add", "Edit", "Delete", "Undo"]
+const ACTIONS: ActivityAction[] = ["Import", "Add", "Edit", "Delete", "Undo", "Restore"]
 
 const ACTION_COLOR: Record<ActivityAction, string> = {
   Import: "#6d5fd6",
@@ -24,6 +24,7 @@ const ACTION_COLOR: Record<ActivityAction, string> = {
   Edit: "#c8781c",
   Delete: "#c23b3b",
   Undo: "#5b7086",
+  Restore: "#155a82",
 }
 
 function fmtDateTime(ts: number): string {

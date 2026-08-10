@@ -8,7 +8,7 @@ import {
   ShieldCheck,
   Wallet,
 } from "lucide-react"
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -32,6 +32,7 @@ import {
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
 import { useAppStore } from "@/store/useAppStore"
+import { checkContractNotifications, loadNotifyConfig, loadNotifyPrefs, maybeSendWeeklyDigest } from "@/lib/notifications"
 
 function PctSub({ pct, label }: { pct: number | null; label: string }) {
   if (pct == null) return <span className="text-muted-foreground">No prior period data</span>
@@ -51,6 +52,17 @@ export default function DashboardPage() {
 
   const invoices = invoicesQuery.data ?? []
   const contracts = contractsQuery.data ?? []
+
+  const notifiedThisSession = useRef(false)
+  useEffect(() => {
+    if (notifiedThisSession.current) return
+    if (!invoicesQuery.data || !contractsQuery.data) return
+    notifiedThisSession.current = true
+    const cfg = loadNotifyConfig()
+    const prefs = loadNotifyPrefs()
+    void checkContractNotifications(cfg, prefs, contractsQuery.data, invoicesQuery.data)
+    void maybeSendWeeklyDigest(cfg, prefs, invoicesQuery.data)
+  }, [invoicesQuery.data, contractsQuery.data])
 
   const rows = useMemo(
     () => (dashVendor === "ALL" ? invoices : invoices.filter((r) => r.vendor === dashVendor)),

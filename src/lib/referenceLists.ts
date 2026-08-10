@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { storeGet, storeSet } from "@/lib/localCache"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { getSupabaseClient } from "@/lib/supabase"
 
 export interface ReferenceLists {
   vendors: string[]
@@ -15,9 +15,8 @@ export interface ReferenceLists {
 
 /**
  * Default dropdown option lists, ported from the legacy app's `REF` constant
- * (index.html:1152-1163). Local-only for now (localStorage-backed, like the
- * legacy app) — Phase 7 promotes this to a Supabase-synced table so the
- * lists are shared across users/devices instead of per-browser.
+ * (index.html:1152-1163). Used to seed the Supabase `reference_lists` table
+ * on first run, and as a fallback while that table is loading or empty.
  */
 export const DEFAULT_REF: ReferenceLists = {
   vendors: ["Gemstone", "Hilong", "Mid Gard", "Schlumbergers", "Sprint", "Step Oiltools"],
@@ -47,15 +46,64 @@ export const DEFAULT_REF: ReferenceLists = {
   wells: [],
 }
 
-const STORE_KEY = "refLists"
+const REF_KEYS = Object.keys(DEFAULT_REF) as (keyof ReferenceLists)[]
 
-export function loadReferenceLists(): ReferenceLists {
-  const stored = storeGet<Partial<ReferenceLists>>(STORE_KEY)
-  return stored ? { ...DEFAULT_REF, ...stored } : DEFAULT_REF
+interface ReferenceListRow {
+  key: string
+  values: unknown
 }
 
-export function saveReferenceLists(ref: ReferenceLists) {
-  storeSet(STORE_KEY, ref)
+export const REFERENCE_LISTS_QUERY_KEY = ["referenceLists"] as const
+
+/**
+ * Best-effort seed of the shared table with the built-in defaults. Only an
+ * Admin's write actually succeeds (RLS policy on reference_lists) — anyone
+ * else's attempt silently no-ops and they keep seeing DEFAULT_REF client-side
+ * until an Admin has opened the app at least once.
+ */
+async function seedReferenceLists(): Promise<void> {
+  const supabase = getSupabaseClient()
+  const rows = REF_KEYS.map((key) => ({ key, values: DEFAULT_REF[key] }))
+  await supabase.from("reference_lists").upsert(rows, { onConflict: "key" })
+}
+
+async function fetchReferenceLists(): Promise<ReferenceLists> {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase.from("reference_lists").select("*")
+  if (error) throw error
+  const rows = (data ?? []) as ReferenceListRow[]
+  if (!rows.length) {
+    try {
+      await seedReferenceLists()
+    } catch {
+      // Non-Admins can't seed (RLS) — fine, fall through to client defaults.
+    }
+    return DEFAULT_REF
+  }
+  const merged: ReferenceLists = { ...DEFAULT_REF }
+  rows.forEach((r) => {
+    if (REF_KEYS.includes(r.key as keyof ReferenceLists) && Array.isArray(r.values)) {
+      merged[r.key as keyof ReferenceLists] = r.values as string[]
+    }
+  })
+  return merged
+}
+
+export function useReferenceListsQuery() {
+  return useQuery({ queryKey: REFERENCE_LISTS_QUERY_KEY, queryFn: fetchReferenceLists })
+}
+
+/** Admin-only write, enforced by RLS as well as the can() gate in the UI. */
+export function useSetReferenceList() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ key, values }: { key: keyof ReferenceLists; values: string[] }) => {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase.from("reference_lists").upsert({ key, values }, { onConflict: "key" })
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: REFERENCE_LISTS_QUERY_KEY }),
+  })
 }
 
 export function addReferenceValue(ref: ReferenceLists, key: keyof ReferenceLists, value: string): ReferenceLists {
@@ -63,22 +111,27 @@ export function addReferenceValue(ref: ReferenceLists, key: keyof ReferenceLists
   if (!trimmed) return ref
   const list = ref[key] || []
   if (list.some((x) => x.toLowerCase() === trimmed.toLowerCase())) return ref
-  const next = { ...ref, [key]: [...list, trimmed] }
-  saveReferenceLists(next)
-  return next
+  return { ...ref, [key]: [...list, trimmed] }
 }
 
-/** Small local-storage-backed hook until Phase 7 wires this to Supabase. */
+/**
+ * Convenience read (+ admin-write) hook for pages that just need the current
+ * lists. Kept as a thin wrapper over useReferenceListsQuery/useSetReferenceList
+ * so existing call sites (`const { ref } = useReferenceLists()`) don't need
+ * to change now that the lists are Supabase-synced instead of local-only.
+ */
 export function useReferenceLists() {
-  const [ref, setRef] = useState<ReferenceLists>(loadReferenceLists)
+  const query = useReferenceListsQuery()
+  const setList = useSetReferenceList()
+  const ref = query.data ?? DEFAULT_REF
 
-  useEffect(() => {
-    saveReferenceLists(ref)
-  }, [ref])
-
-  const addValue = (key: keyof ReferenceLists, value: string) => {
-    setRef((prev) => addReferenceValue(prev, key, value))
+  function addValue(key: keyof ReferenceLists, value: string) {
+    const next = addReferenceValue(ref, key, value)
+    if (next[key] !== ref[key]) setList.mutate({ key, values: next[key] })
+  }
+  function removeValue(key: keyof ReferenceLists, value: string) {
+    setList.mutate({ key, values: ref[key].filter((v) => v !== value) })
   }
 
-  return { ref, setRef, addValue }
+  return { ref, addValue, removeValue, isLoading: query.isLoading, isSaving: setList.isPending }
 }
