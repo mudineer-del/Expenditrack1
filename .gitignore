@@ -25,6 +25,14 @@ Your part-Supabase.docx
 Ikram New/
 Ikram-Previous/
 
+# Vite / React build (react-rewrite)
+dist/
+dist-ssr/
+*.local
+.vscode/*
+!.vscode/extensions.json
+.idea
+
 Save and close.
 
 3. Confirm what git will track now
