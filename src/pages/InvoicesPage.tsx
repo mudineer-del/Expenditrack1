@@ -123,7 +123,7 @@ export default function InvoicesPage() {
 
   function handleDeleteConfirm() {
     if (!deleteTarget) return
-    deleteInvoice.mutate(deleteTarget.id, {
+    deleteInvoice.mutate(deleteTarget, {
       onSuccess: () => toast.success("Invoice deleted."),
       onError: (e) => toast.error(e instanceof Error ? e.message : "Could not delete invoice."),
     })
@@ -131,10 +131,10 @@ export default function InvoicesPage() {
   }
 
   function handleBulkDeleteConfirm() {
-    const ids = Array.from(selected)
-    deleteInvoices.mutate(ids, {
+    const victims = invoices.filter((r) => selected.has(r.id))
+    deleteInvoices.mutate(victims, {
       onSuccess: () => {
-        toast.success(`Deleted ${ids.length} invoice${ids.length !== 1 ? "s" : ""}.`)
+        toast.success(`Deleted ${victims.length} invoice${victims.length !== 1 ? "s" : ""}.`)
         setSelected(new Set())
       },
       onError: (e) => toast.error(e instanceof Error ? e.message : "Could not delete invoices."),
