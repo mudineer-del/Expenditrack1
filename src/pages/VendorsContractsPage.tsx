@@ -1,4 +1,4 @@
-import { Building2, Plus } from "lucide-react"
+import { Building2, Plus, Search } from "lucide-react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ContractDrawer } from "@/components/contracts/ContractDrawer"
@@ -39,6 +40,7 @@ export default function VendorsContractsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingContract, setEditingContract] = useState<Contract | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Contract | null>(null)
+  const [contractSearch, setContractSearch] = useState("")
 
   const invoices = invoicesQuery.data ?? []
   const contracts = contractsQuery.data ?? []
@@ -68,6 +70,14 @@ export default function VendorsContractsPage() {
     () => contracts.slice().sort((a, b) => a.contractNo.localeCompare(b.contractNo)),
     [contracts]
   )
+
+  const filteredContracts = useMemo(() => {
+    const q = contractSearch.trim().toLowerCase()
+    if (!q) return sortedContracts
+    return sortedContracts.filter((c) =>
+      [c.contractNo, c.vendor, c.title, c.status].some((field) => (field || "").toLowerCase().includes(q))
+    )
+  }, [sortedContracts, contractSearch])
 
   function openAdd() {
     setEditingContract(null)
@@ -141,15 +151,26 @@ export default function VendorsContractsPage() {
       </div>
 
       <div className="rounded-lg border bg-card">
-        <div className="flex items-center justify-between border-b p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
           <h3 className="text-sm font-semibold">Contracts</h3>
-          {can("add") && (
-            <Button size="sm" onClick={openAdd}>
-              <Plus /> New Contract
-            </Button>
-          )}
+          <div className="flex flex-1 items-center justify-end gap-2">
+            <div className="relative w-full max-w-xs">
+              <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-8"
+                placeholder="Search contract no., contractor, title, status…"
+                value={contractSearch}
+                onChange={(e) => setContractSearch(e.target.value)}
+              />
+            </div>
+            {can("add") && (
+              <Button size="sm" onClick={openAdd}>
+                <Plus /> New Contract
+              </Button>
+            )}
+          </div>
         </div>
-        {sortedContracts.length ? (
+        {filteredContracts.length ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -164,7 +185,7 @@ export default function VendorsContractsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedContracts.map((c) => (
+              {filteredContracts.map((c) => (
                 <ContractRow
                   key={c.id}
                   contract={c}
@@ -177,6 +198,12 @@ export default function VendorsContractsPage() {
               ))}
             </TableBody>
           </Table>
+        ) : sortedContracts.length ? (
+          <div className="flex flex-col items-center gap-2 p-10 text-center text-muted-foreground">
+            <Search className="size-8" />
+            <h4 className="font-medium text-foreground">No matching contracts</h4>
+            <p className="text-sm">Try a different contract no., contractor, title, or status.</p>
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-2 p-10 text-center text-muted-foreground">
             <Building2 className="size-8" />

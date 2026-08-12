@@ -8,10 +8,10 @@ const config = {
 
 export function TrendChart({ data }: { data: { month: string; total: number }[] }) {
   if (!data.length) {
-    return <div className="flex h-56 items-center justify-center text-sm text-muted-foreground">No dated invoices</div>
+    return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No dated invoices</div>
   }
   return (
-    <ChartContainer config={config} className="h-56 w-full">
+    <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
       <BarChart data={data}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} />

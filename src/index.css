@@ -1,13 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-sans: 'Inter Variable', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -127,4 +127,27 @@
   html {
     @apply font-sans;
     }
+}
+
+/* KPI-card / chart sizing driven by the Format dialog's "scale" setting (see useDisplayStore). */
+:root {
+    --tile-pad: 1rem;
+    --tile-icon: 2rem;
+    --tile-icon-svg: 1rem;
+    --tile-value: 1.25rem;
+    --chart-h: 14rem;
+}
+:root[data-scale="compact"] {
+    --tile-pad: 0.75rem;
+    --tile-icon: 1.75rem;
+    --tile-icon-svg: 0.875rem;
+    --tile-value: 1.125rem;
+    --chart-h: 11rem;
+}
+:root[data-scale="spacious"] {
+    --tile-pad: 1.5rem;
+    --tile-icon: 2.5rem;
+    --tile-icon-svg: 1.25rem;
+    --tile-value: 1.5rem;
+    --chart-h: 18rem;
 }

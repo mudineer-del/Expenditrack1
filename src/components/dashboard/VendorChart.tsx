@@ -8,10 +8,10 @@ const config = {
 
 export function VendorChart({ data }: { data: { vendor: string; total: number }[] }) {
   if (!data.length) {
-    return <div className="flex h-56 items-center justify-center text-sm text-muted-foreground">No vendor data</div>
+    return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No vendor data</div>
   }
   return (
-    <ChartContainer config={config} className="h-56 w-full">
+    <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
       <BarChart data={data.slice(0, 10)}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="vendor" tickLine={false} axisLine={false} fontSize={11} interval={0} angle={-20} textAnchor="end" height={50} />

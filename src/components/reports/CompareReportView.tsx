@@ -1,5 +1,10 @@
-import { useMemo } from "react"
+import { Check, Plus, Search, X } from "lucide-react"
+import { useMemo, useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtMoney } from "@/lib/dashboard"
 import { groupRows, reportRows, shortContract, type ReportFilters, type ReportGroup } from "@/lib/reports"
@@ -8,6 +13,82 @@ import type { Invoice } from "@/types/invoice"
 
 function normContract(s: string | null | undefined): string {
   return (s || "").trim().toLowerCase()
+}
+
+/** "+ Add contract" search popover: lets you build a comparison list one contract at a time, adding as many as you like before closing. */
+function AddContractPopover({
+  allGroups,
+  isSelected,
+  onAdd,
+}: {
+  allGroups: ReportGroup[]
+  isSelected: (key: string) => boolean
+  onAdd: (key: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+
+  const options = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return q ? allGroups.filter((g) => shortContract(g.key).toLowerCase().includes(q)) : allGroups
+  }, [allGroups, query])
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o)
+        if (!o) setQuery("")
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Plus /> Add contract
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 gap-0 p-0">
+        <div className="p-2">
+          <div className="relative">
+            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              autoFocus
+              className="pl-8"
+              placeholder="Search contracts…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="max-h-64 overflow-y-auto border-t">
+          {options.length ? (
+            options.map((g) => {
+              const already = isSelected(g.key)
+              return (
+                <button
+                  key={g.key}
+                  type="button"
+                  onClick={() => !already && onAdd(g.key)}
+                  disabled={already}
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-muted disabled:cursor-default disabled:opacity-50"
+                >
+                  <span className="truncate" title={g.key}>
+                    {shortContract(g.key)}
+                  </span>
+                  {already ? (
+                    <Check className="size-3.5 shrink-0 text-primary" />
+                  ) : (
+                    <span className="shrink-0 text-muted-foreground">{fmtMoney(g.incl)}</span>
+                  )}
+                </button>
+              )
+            })
+          ) : (
+            <div className="p-3 text-center text-xs text-muted-foreground">No contracts found</div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 /** Ported from renderCompareReport/renderContractSelector/renderCompareBody (index.html:4517-4636). */
@@ -55,6 +136,24 @@ export function CompareReportView({
     onDrill(rows.filter((r) => normContract(r.contractNo) === normContract(g.key)), `Contract: ${shortContract(g.key)}`)
   }
 
+  function isAdded(key: string): boolean {
+    return !showNone && (selected.length === 0 || selected.some((s) => normContract(s) === normContract(key)))
+  }
+
+  /** Adding always starts (and builds) an explicit list, rather than the checkbox grid's "start from all, deselect" model. */
+  function addContract(key: string) {
+    const base = showNone ? [] : selected
+    if (base.some((s) => normContract(s) === normContract(key))) return
+    const next = [...base, key]
+    onCompareSelectionChange(next.length === n ? [] : next)
+  }
+
+  function removeContract(key: string) {
+    const base = selected.length ? selected : allGroups.map((g) => g.key)
+    const next = base.filter((k) => normContract(k) !== normContract(key))
+    onCompareSelectionChange(next.length === n ? [] : next.length ? next : ["__none__"])
+  }
+
   return (
     <div className="grid gap-4">
       <div className="rounded-lg border bg-card p-4">
@@ -62,7 +161,27 @@ export function CompareReportView({
           <h3 className="text-sm font-semibold">Select contracts to compare</h3>
           <span className="text-xs text-muted-foreground">{countText}</span>
         </div>
+        {selected.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {selected.map((key) => (
+              <Badge key={key} variant="secondary" className="gap-1 pr-1">
+                <span className="max-w-[160px] truncate" title={key}>
+                  {shortContract(key)}
+                </span>
+                <button
+                  type="button"
+                  className="rounded-full p-0.5 hover:bg-foreground/10"
+                  title="Remove"
+                  onClick={() => removeContract(key)}
+                >
+                  <X className="size-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
         <div className="mb-3 flex flex-wrap gap-2">
+          <AddContractPopover allGroups={allGroups} isSelected={isAdded} onAdd={addContract} />
           {presets.map((k) => (
             <button
               key={k}
@@ -87,7 +206,7 @@ export function CompareReportView({
         </div>
         <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
           {allGroups.map((g) => {
-            const on = !showNone && (selected.length === 0 || selected.some((s) => normContract(s) === normContract(g.key)))
+            const on = isAdded(g.key)
             return (
               <label key={g.key} className="flex items-center gap-2 rounded-md border p-2 text-xs">
                 <Checkbox

@@ -1,7 +1,12 @@
 import type { ReactNode } from "react"
+import { useDisplayStore } from "@/store/useDisplayStore"
+
+const GAUGE_SCALE: Record<string, number> = { compact: 0.82, comfortable: 1, spacious: 1.18 }
 
 /** Ported from buildSpeedoGauge (index.html:2322-2368). */
 export function Gauge({ pct, hubText, hubLabel }: { pct: number; hubText: string; hubLabel: string }) {
+  const cardScale = useDisplayStore((s) => s.cardScale)
+  const scale = GAUGE_SCALE[cardScale] ?? 1
   const clamped = Math.max(0, Math.min(100, Number(pct) || 0))
   const cx = 110
   const cy = 110
@@ -87,7 +92,12 @@ export function Gauge({ pct, hubText, hubLabel }: { pct: number; hubText: string
   const needleColor = clamped >= 80 ? "#1c8a4b" : clamped >= 50 ? "#c8781c" : "#c23b3b"
 
   return (
-    <svg viewBox="0 0 220 190" width={220} height={190} style={{ display: "block", margin: "0 auto" }}>
+    <svg
+      viewBox="0 0 220 190"
+      width={220 * scale}
+      height={190 * scale}
+      style={{ display: "block", margin: "0 auto" }}
+    >
       <circle cx={cx} cy={cy} r={rOuter + 8} fill="#fbfaf7" stroke="#e2ded6" strokeWidth={1.5} />
       {zoneArcs}
       {ticks}

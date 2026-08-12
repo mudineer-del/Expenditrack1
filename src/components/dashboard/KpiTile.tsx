@@ -23,21 +23,21 @@ export function KpiTile({
   return (
     <div
       className={cn(
-        "flex flex-col gap-1 rounded-lg border bg-card p-4",
+        "flex flex-col gap-1 rounded-lg border bg-card p-[var(--tile-pad)]",
         onClick && "cursor-pointer transition-colors hover:bg-muted/50"
       )}
       onClick={onClick}
     >
       <div
         className={cn(
-          "mb-1 flex size-8 items-center justify-center rounded-md [&_svg]:size-4",
+          "mb-1 flex size-[var(--tile-icon)] items-center justify-center rounded-md [&_svg]:size-[var(--tile-icon-svg)]",
           iconClassName ?? "bg-primary/10 text-primary"
         )}
       >
         {icon}
       </div>
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={cn("text-xl font-semibold tabular-nums", valueClassName)}>{value}</div>
+      <div className={cn("text-[length:var(--tile-value)] font-semibold tabular-nums", valueClassName)}>{value}</div>
       {sub && <div className={cn("text-xs text-muted-foreground", subClassName)}>{sub}</div>}
     </div>
   )
