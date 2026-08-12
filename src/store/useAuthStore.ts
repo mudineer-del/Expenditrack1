@@ -1,6 +1,7 @@
 import { create } from "zustand"
-import type { Session, User } from "@supabase/supabase-js"
+import type { Session, SupabaseClient, User } from "@supabase/supabase-js"
 import { getSupabaseClient } from "@/lib/supabase"
+import { fromProfileRow, type ProfileRow } from "@/lib/profiles"
 import type { AppUser, Role } from "@/types/user"
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated"
@@ -21,10 +22,9 @@ interface AuthState {
   updateProfile: (patch: Partial<Pick<AppUser, "name" | "phone" | "dept" | "designation">>) => Promise<{ ok: boolean; error?: string }>
 }
 
-/** Ported from currentUserFromSbUser (index.html:1177-1191): role/name/initials
- *  live in Supabase Auth's user_metadata, there is no separate users table. */
-function userFromSbUser(u: User | null | undefined): AppUser | null {
-  if (!u) return null
+/** Fallback only: used if the profiles row can't be read (e.g. supabase/profiles_setup.sql
+ *  hasn't been run yet). Ported from the original currentUserFromSbUser. */
+function fallbackUserFromSbUser(u: User): AppUser {
   const md = (u.user_metadata ?? {}) as Record<string, unknown>
   const name = (md.name as string) || u.email || ""
   const initials =
@@ -48,7 +48,17 @@ function userFromSbUser(u: User | null | undefined): AppUser | null {
   }
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+/** Source of truth is public.profiles (see supabase/profiles_setup.sql), which — unlike
+ *  auth.users.raw_user_meta_data — an Admin's session can read/edit for every account,
+ *  not just their own. Falls back to auth metadata if the migration hasn't run yet. */
+async function resolveUser(supabase: SupabaseClient, sbUser: User | null | undefined): Promise<AppUser | null> {
+  if (!sbUser) return null
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", sbUser.id).single()
+  if (!error && data) return fromProfileRow(data as ProfileRow)
+  return fallbackUserFromSbUser(sbUser)
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   status: "loading",
   session: null,
   user: null,
@@ -58,20 +68,29 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   initialize: () => {
     const supabase = getSupabaseClient()
-    supabase.auth.getSession().then(({ data }) => {
-      set({
-        session: data.session,
-        user: userFromSbUser(data.session?.user),
-        status: data.session ? "authenticated" : "unauthenticated",
-      })
-    })
+    // A single source of truth: onAuthStateChange fires once immediately with
+    // whatever session already exists (event "INITIAL_SESSION") and then again
+    // for every subsequent change, so a separate getSession() call is both
+    // redundant and dangerous here — as two independent async chains, it could
+    // resolve *after* a PASSWORD_RECOVERY event and stomp status back to
+    // "unauthenticated", bouncing the user to /login before isRecovery ever
+    // takes effect.
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      set({
-        session,
-        user: userFromSbUser(session?.user),
-        status: session ? "authenticated" : "unauthenticated",
-        ...(event === "PASSWORD_RECOVERY" ? { isRecovery: true } : {}),
-      })
+      // Set isRecovery synchronously, before the profiles round-trip below —
+      // App.tsx's redirect to /reset-password depends on it, and shouldn't
+      // wait on a network fetch the reset-password form doesn't even need.
+      if (event === "PASSWORD_RECOVERY") {
+        set({ isRecovery: true, session, status: session ? "authenticated" : "unauthenticated" })
+      }
+      void (async () => {
+        const user = await resolveUser(supabase, session?.user)
+        set({
+          session,
+          user,
+          status: session ? "authenticated" : "unauthenticated",
+          ...(event === "PASSWORD_RECOVERY" ? { isRecovery: true } : {}),
+        })
+      })()
     })
     return () => sub.subscription.unsubscribe()
   },
@@ -84,11 +103,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ error: error.message })
       return { ok: false, error: error.message }
     }
-    set({
-      session: data.session,
-      user: userFromSbUser(data.user),
-      status: "authenticated",
-    })
+    const user = await resolveUser(supabase, data.user)
+    set({ session: data.session, user, status: "authenticated" })
     return { ok: true }
   },
 
@@ -111,7 +127,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       return { ok: false, error: error.message }
     }
     if (data.session) {
-      set({ session: data.session, user: userFromSbUser(data.user), status: "authenticated" })
+      const user = await resolveUser(supabase, data.user)
+      set({ session: data.session, user, status: "authenticated" })
     }
     return { ok: true }
   },
@@ -140,9 +157,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   updateProfile: async (patch) => {
     const supabase = getSupabaseClient()
-    const { data, error } = await supabase.auth.updateUser({ data: patch })
+    const current = get().user
+    if (!current) return { ok: false, error: "Not signed in." }
+    const { data, error } = await supabase.from("profiles").update(patch).eq("id", current.id).select().single()
     if (error) return { ok: false, error: error.message }
-    set({ user: userFromSbUser(data.user) })
+    set({ user: fromProfileRow(data as ProfileRow) })
     return { ok: true }
   },
 }))
