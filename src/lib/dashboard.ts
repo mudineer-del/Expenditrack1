@@ -245,44 +245,89 @@ const REF_MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ]
 
-/** Monthly expenditure trend, for the Recharts line/bar chart. */
-export function monthlyTrend(rows: Invoice[]): { month: string; total: number }[] {
-  const byMonth: Record<string, number> = {}
+export interface TrendPoint {
+  month: string
+  key: string
+  total: number
+  invoices: Invoice[]
+}
+
+/** Monthly expenditure trend, for the Recharts line/bar chart. Each point carries its own
+ *  invoices so a click on it can drill straight into the matching records. */
+export function monthlyTrend(rows: Invoice[]): TrendPoint[] {
+  const byMonth: Record<string, Invoice[]> = {}
   rows.forEach((r) => {
     const d = r.invoiceDate
     if (d && /^\d{4}-\d{2}/.test(d)) {
       const k = d.slice(0, 7)
-      byMonth[k] = (byMonth[k] || 0) + (Number(r.amountInclTax) || 0)
+      ;(byMonth[k] ||= []).push(r)
     }
   })
   return Object.keys(byMonth)
     .sort()
     .map((k) => {
       const [y, m] = k.split("-")
-      return { month: `${REF_MONTHS[Number(m) - 1].slice(0, 3)} ${y.slice(2)}`, total: byMonth[k] }
+      const invoices = byMonth[k]
+      return {
+        month: `${REF_MONTHS[Number(m) - 1].slice(0, 3)} ${y.slice(2)}`,
+        key: k,
+        total: invoices.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0),
+        invoices,
+      }
     })
 }
 
+export interface CategoryTotal {
+  service: string
+  total: number
+  invoices: Invoice[]
+}
+
 /** Expenditure by service, for the Recharts bar chart. */
-export function serviceBreakdown(rows: Invoice[]): { service: string; total: number }[] {
-  const byService: Record<string, number> = {}
+export function serviceBreakdown(rows: Invoice[]): CategoryTotal[] {
+  const byService: Record<string, Invoice[]> = {}
   rows.forEach((r) => {
     const s = r.service || "Unspecified"
-    byService[s] = (byService[s] || 0) + (Number(r.amountInclTax) || 0)
+    ;(byService[s] ||= []).push(r)
   })
   return Object.entries(byService)
-    .sort((a, b) => b[1] - a[1])
-    .map(([service, total]) => ({ service, total }))
+    .map(([service, invoices]) => ({ service, total: invoices.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0), invoices }))
+    .sort((a, b) => b.total - a.total)
+}
+
+export interface VendorTotal {
+  vendor: string
+  total: number
+  invoices: Invoice[]
 }
 
 /** Expenditure by vendor, for the Recharts bar chart. */
-export function vendorBreakdown(rows: Invoice[]): { vendor: string; total: number }[] {
-  const byVendor: Record<string, number> = {}
+export function vendorBreakdown(rows: Invoice[]): VendorTotal[] {
+  const byVendor: Record<string, Invoice[]> = {}
   rows.forEach((r) => {
     const v = r.vendor || "Unknown"
-    byVendor[v] = (byVendor[v] || 0) + (Number(r.amountInclTax) || 0)
+    ;(byVendor[v] ||= []).push(r)
   })
   return Object.entries(byVendor)
-    .sort((a, b) => b[1] - a[1])
-    .map(([vendor, total]) => ({ vendor, total }))
+    .map(([vendor, invoices]) => ({ vendor, total: invoices.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0), invoices }))
+    .sort((a, b) => b.total - a.total)
+}
+
+export interface VendorCount {
+  vendor: string
+  count: number
+  invoices: Invoice[]
+}
+
+/** How many invoices are on file per contractor, for the "Invoices by Contractor" chart —
+ *  the volume counterpart to vendorBreakdown's dollar totals. */
+export function contractorInvoiceCounts(rows: Invoice[]): VendorCount[] {
+  const byVendor: Record<string, Invoice[]> = {}
+  rows.forEach((r) => {
+    const v = r.vendor || "Unknown"
+    ;(byVendor[v] ||= []).push(r)
+  })
+  return Object.entries(byVendor)
+    .map(([vendor, invoices]) => ({ vendor, count: invoices.length, invoices }))
+    .sort((a, b) => b.count - a.count)
 }

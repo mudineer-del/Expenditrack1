@@ -17,7 +17,8 @@ import {
   YAxis,
 } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
-import { fmtMoney } from "@/lib/dashboard"
+import { activeChartPayload } from "@/lib/chartClick"
+import { fmtMoney, type CategoryTotal } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
 
 const config = {
@@ -26,7 +27,7 @@ const config = {
 
 const PIE_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
 
-export function ServiceChart({ data }: { data: { service: string; total: number }[] }) {
+export function ServiceChart({ data, onDrill }: { data: CategoryTotal[]; onDrill: (title: string, invoices: CategoryTotal["invoices"]) => void }) {
   const chartType = useDisplayStore((s) => s.serviceChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
 
@@ -35,12 +36,25 @@ export function ServiceChart({ data }: { data: { service: string; total: number 
   }
   const top = data.slice(0, 8)
 
+  function drill(d: CategoryTotal | null) {
+    if (d) onDrill(`Invoices — ${d.service}`, d.invoices)
+  }
+
   if (chartType === "pie") {
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <PieChart>
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Pie data={top} dataKey="total" nameKey="service" innerRadius="45%" outerRadius="80%" isAnimationActive={animate}>
+          <Pie
+            data={top}
+            dataKey="total"
+            nameKey="service"
+            innerRadius="45%"
+            outerRadius="80%"
+            isAnimationActive={animate}
+            cursor="pointer"
+            onClick={(_, index) => drill(top[index])}
+          >
             {top.map((d, i) => (
               <Cell key={d.service} fill={PIE_COLORS[i % PIE_COLORS.length]} />
             ))}
@@ -53,12 +67,12 @@ export function ServiceChart({ data }: { data: { service: string; total: number 
   if (chartType === "radar") {
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
-        <RadarChart data={top}>
+        <RadarChart data={top} onClick={(e) => drill(activeChartPayload<CategoryTotal>(e))}>
           <PolarGrid />
           <PolarAngleAxis dataKey="service" fontSize={10} />
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={animate} />
+          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
         </RadarChart>
       </ChartContainer>
     )
@@ -67,7 +81,7 @@ export function ServiceChart({ data }: { data: { service: string; total: number 
   if (chartType === "bar") {
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
-        <BarChart data={top} layout="vertical" margin={{ left: 8 }}>
+        <BarChart data={top} layout="vertical" margin={{ left: 8 }} onClick={(e) => drill(activeChartPayload<CategoryTotal>(e))} className="cursor-pointer">
           <CartesianGrid horizontal={false} />
           <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} />
           <YAxis dataKey="service" type="category" tickLine={false} axisLine={false} fontSize={11} width={110} />
@@ -80,7 +94,7 @@ export function ServiceChart({ data }: { data: { service: string; total: number 
 
   return (
     <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
-      <ComposedChart data={top}>
+      <ComposedChart data={top} onClick={(e) => drill(activeChartPayload<CategoryTotal>(e))} className="cursor-pointer">
         <CartesianGrid vertical={false} />
         <XAxis dataKey="service" tickLine={false} axisLine={false} fontSize={10} interval={0} angle={-20} textAnchor="end" height={45} />
         <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
@@ -92,7 +106,7 @@ export function ServiceChart({ data }: { data: { service: string; total: number 
             stroke="var(--color-total)"
             strokeWidth={2.75}
             strokeLinecap="round"
-            dot={false}
+            dot={{ r: 3.5 }}
             activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
             isAnimationActive={animate}
           />

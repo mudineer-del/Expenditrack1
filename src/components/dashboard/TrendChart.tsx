@@ -16,7 +16,8 @@ import {
   YAxis,
 } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
-import { fmtMoney } from "@/lib/dashboard"
+import { activeChartPayload } from "@/lib/chartClick"
+import { fmtMoney, type TrendPoint } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
 
 const config = {
@@ -25,7 +26,7 @@ const config = {
 
 const PIE_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
 
-export function TrendChart({ data }: { data: { month: string; total: number }[] }) {
+export function TrendChart({ data, onDrill }: { data: TrendPoint[]; onDrill: (title: string, invoices: TrendPoint["invoices"]) => void }) {
   const chartType = useDisplayStore((s) => s.trendChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
 
@@ -33,12 +34,25 @@ export function TrendChart({ data }: { data: { month: string; total: number }[] 
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No dated invoices</div>
   }
 
+  function drill(d: TrendPoint | null) {
+    if (d) onDrill(`Invoices — ${d.month}`, d.invoices)
+  }
+
   if (chartType === "pie") {
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <PieChart>
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Pie data={data} dataKey="total" nameKey="month" innerRadius="45%" outerRadius="80%" isAnimationActive={animate}>
+          <Pie
+            data={data}
+            dataKey="total"
+            nameKey="month"
+            innerRadius="45%"
+            outerRadius="80%"
+            isAnimationActive={animate}
+            cursor="pointer"
+            onClick={(_, index) => drill(data[index])}
+          >
             {data.map((d, i) => (
               <Cell key={d.month} fill={PIE_COLORS[i % PIE_COLORS.length]} />
             ))}
@@ -51,12 +65,12 @@ export function TrendChart({ data }: { data: { month: string; total: number }[] 
   if (chartType === "radar") {
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
-        <RadarChart data={data}>
+        <RadarChart data={data} onClick={(e) => drill(activeChartPayload<TrendPoint>(e))}>
           <PolarGrid />
           <PolarAngleAxis dataKey="month" fontSize={10} />
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={animate} />
+          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
         </RadarChart>
       </ChartContainer>
     )
@@ -64,7 +78,7 @@ export function TrendChart({ data }: { data: { month: string; total: number }[] 
 
   return (
     <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
-      <ComposedChart data={data}>
+      <ComposedChart data={data} onClick={(e) => drill(activeChartPayload<TrendPoint>(e))} className="cursor-pointer">
         <CartesianGrid vertical={false} />
         <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} />
         <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
@@ -77,7 +91,7 @@ export function TrendChart({ data }: { data: { month: string; total: number }[] 
             stroke="var(--color-total)"
             strokeWidth={2.75}
             strokeLinecap="round"
-            dot={false}
+            dot={{ r: 3.5 }}
             activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
             isAnimationActive={animate}
           />

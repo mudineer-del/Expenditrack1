@@ -8,13 +8,14 @@ import {
   ShieldCheck,
   Wallet,
 } from "lucide-react"
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ChartTypeMenu } from "@/components/dashboard/ChartTypeMenu"
-import { Gauge } from "@/components/dashboard/Gauge"
+import { ContractorInvoicesChart } from "@/components/dashboard/ContractorInvoicesChart"
+import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
 import { KpiTile } from "@/components/dashboard/KpiTile"
 import { ServiceChart } from "@/components/dashboard/ServiceChart"
 import { SpendingTicker } from "@/components/dashboard/SpendingTicker"
@@ -26,6 +27,7 @@ import { useDisplayStore } from "@/store/useDisplayStore"
 import {
   avgLeadTime,
   computeDashboardStats,
+  contractorInvoiceCounts,
   fmtMoney,
   monthlyTrend,
   serviceBreakdown,
@@ -33,6 +35,7 @@ import {
   vendorColor,
   vendorContractCost,
 } from "@/lib/dashboard"
+import type { Invoice } from "@/types/invoice"
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
 import { getContractorLogo, useContractorLogosQuery } from "@/lib/contractorLogos"
@@ -59,6 +62,7 @@ export default function DashboardPage() {
   const trendChartType = useDisplayStore((s) => s.trendChartType)
   const serviceChartType = useDisplayStore((s) => s.serviceChartType)
   const vendorChartType = useDisplayStore((s) => s.vendorChartType)
+  const contractorChartType = useDisplayStore((s) => s.contractorChartType)
   const setChartType = useDisplayStore((s) => s.setChartType)
 
   const invoices = invoicesQuery.data ?? []
@@ -88,7 +92,11 @@ export default function DashboardPage() {
   const trend = useMemo(() => monthlyTrend(rows), [rows])
   const byService = useMemo(() => serviceBreakdown(rows), [rows])
   const byVendor = useMemo(() => vendorBreakdown(rows), [rows])
+  const byContractorCount = useMemo(() => contractorInvoiceCounts(rows), [rows])
   const contractCost = dashVendor !== "ALL" ? vendorContractCost(contracts, dashVendor) : 0
+
+  const [drill, setDrill] = useState<{ title: string; invoices: Invoice[] } | null>(null)
+  const onDrill = (title: string, drillInvoices: Invoice[]) => setDrill({ title, invoices: drillInvoices })
 
   if (invoicesQuery.isLoading || contractsQuery.isLoading) {
     return (
@@ -278,21 +286,24 @@ export default function DashboardPage() {
       )}
 
       <div className="rounded-lg border bg-card p-4">
-        <h3 className="mb-3 text-sm font-semibold">Expenditure Analysis</h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Expenditure Analysis</h3>
+          <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
+        </div>
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Monthly Expenditure Trend</span>
               <ChartTypeMenu value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />
             </div>
-            <TrendChart data={trend} />
+            <TrendChart data={trend} onDrill={onDrill} />
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Expenditure by Service</span>
               <ChartTypeMenu value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />
             </div>
-            <ServiceChart data={byService} />
+            <ServiceChart data={byService} onDrill={onDrill} />
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -301,15 +312,14 @@ export default function DashboardPage() {
               </span>
               <ChartTypeMenu value={vendorChartType} onChange={(t) => setChartType("vendorChartType", t)} />
             </div>
-            <VendorChart data={byVendor} />
+            <VendorChart data={byVendor} onDrill={onDrill} />
           </div>
           <div>
-            <div className="mb-2 text-xs font-medium text-muted-foreground">Invoice Status</div>
-            <Gauge
-              pct={stats.k.count > 0 ? (stats.k.cleared / stats.k.count) * 100 : 0}
-              hubText={stats.k.count.toLocaleString()}
-              hubLabel="INVOICES"
-            />
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Invoices by Contractor</span>
+              <ChartTypeMenu value={contractorChartType} onChange={(t) => setChartType("contractorChartType", t)} />
+            </div>
+            <ContractorInvoicesChart data={byContractorCount} onDrill={onDrill} />
           </div>
         </div>
       </div>
@@ -369,6 +379,13 @@ export default function DashboardPage() {
           </TableBody>
         </Table>
       </div>
+
+      <InvoiceListDialog
+        open={!!drill}
+        onOpenChange={(v) => !v && setDrill(null)}
+        title={drill?.title ?? ""}
+        invoices={drill?.invoices ?? []}
+      />
     </div>
   )
 }

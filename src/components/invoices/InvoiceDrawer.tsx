@@ -233,7 +233,15 @@ export function InvoiceDrawer({
           )}
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col gap-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            onKeyDown={(e) => {
+              // Enter inside any text/number/date field would otherwise silently submit
+              // the whole 21-field form via the Save button — require an explicit click.
+              if (e.key === "Enter" && e.target instanceof HTMLInputElement) e.preventDefault()
+            }}
+            className="flex flex-col gap-4"
+          >
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
               <FormField
                 control={form.control}
@@ -463,7 +471,15 @@ export function InvoiceDrawer({
             <DialogFooter>
               {!readOnly ? (
                 <>
-                  <Button type="submit">Save Entry</Button>
+                  {/* type="button" + explicit handleSubmit, not type="submit" — the Edit and
+                      Save buttons occupy the same slot across a mode switch, so React reuses
+                      the same DOM node and just flips its `type` attribute. Some browsers treat
+                      that flip, happening mid-click, as if the original click landed on a submit
+                      button — silently submitting the form the instant you press Edit. Calling
+                      handleSubmit directly sidesteps native submit semantics entirely. */}
+                  <Button type="button" onClick={form.handleSubmit(handleSubmit)}>
+                    Save Entry
+                  </Button>
                   <DialogClose asChild>
                     <Button type="button" variant="outline">
                       Cancel

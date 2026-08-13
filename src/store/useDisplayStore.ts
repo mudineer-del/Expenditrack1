@@ -37,12 +37,13 @@ interface DisplayPrefs {
   trendChartType: ChartType
   serviceChartType: ChartType
   vendorChartType: ChartType
+  contractorChartType: ChartType
   tableBanded: boolean
   tableHeaderShaded: boolean
   tableGridLines: boolean
 }
 
-type ChartKey = "trendChartType" | "serviceChartType" | "vendorChartType"
+type ChartKey = "trendChartType" | "serviceChartType" | "vendorChartType" | "contractorChartType"
 
 interface DisplayState extends DisplayPrefs {
   setColorTheme: (id: string) => void
@@ -63,12 +64,6 @@ interface DisplayState extends DisplayPrefs {
   setTableHeaderShaded: (v: boolean) => void
   setTableGridLines: (v: boolean) => void
 }
-
-/** Same compact/comfortable/spacious ratios index.css's --tile-* / --chart-h vars express for
- *  CSS-styled elements — the one place to look for this app's density-scale factors, for
- *  code (like Gauge, which sizes an SVG via a JS width/height prop) that can't just consume
- *  a CSS custom property directly. */
-export const CARD_SCALE_RATIO: Record<CardScale, number> = { compact: 0.82, comfortable: 1, spacious: 1.18 }
 
 const RADIUS_VALUES: Record<Radius, string> = { none: "0rem", sm: "0.25rem", md: "0.625rem", lg: "1rem" }
 const BORDER_WIDTH_VALUES: Record<BorderWidth, string> = { thin: "1px", medium: "1.5px", thick: "2px" }
@@ -172,6 +167,7 @@ function loadPrefs(): DisplayPrefs {
     trendChartType: saved?.trendChartType || "bar",
     serviceChartType: saved?.serviceChartType || "bar",
     vendorChartType: saved?.vendorChartType || "bar",
+    contractorChartType: saved?.contractorChartType || "pie",
     tableBanded: saved?.tableBanded ?? true,
     tableHeaderShaded: saved?.tableHeaderShaded ?? true,
     tableGridLines: saved?.tableGridLines ?? false,
@@ -211,6 +207,7 @@ function persist(state: DisplayPrefs): void {
     trendChartType,
     serviceChartType,
     vendorChartType,
+    contractorChartType,
     tableBanded,
     tableHeaderShaded,
     tableGridLines,
@@ -231,6 +228,7 @@ function persist(state: DisplayPrefs): void {
     trendChartType,
     serviceChartType,
     vendorChartType,
+    contractorChartType,
     tableBanded,
     tableHeaderShaded,
     tableGridLines,

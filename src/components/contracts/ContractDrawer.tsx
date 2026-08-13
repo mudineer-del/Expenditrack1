@@ -102,7 +102,15 @@ export function ContractDrawer({
           <DialogDescription className="sr-only">Contract entry form</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col gap-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            onKeyDown={(e) => {
+              // Enter inside a text field would otherwise silently submit the form via
+              // the Save button — require an explicit click.
+              if (e.key === "Enter" && e.target instanceof HTMLInputElement) e.preventDefault()
+            }}
+            className="flex flex-col gap-4"
+          >
             <FormField
               control={form.control}
               name="contractNo"
