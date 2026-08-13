@@ -1,6 +1,7 @@
 import { LogOut, Settings, User } from "lucide-react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +50,11 @@ export function AppShell() {
           <div className="ml-auto flex items-center gap-1">
             <FormatDialog />
             <ThemeToggle />
+            <Button variant="ghost" size="icon" asChild title="Settings">
+              <NavLink to="/settings">
+                <Settings />
+              </NavLink>
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 rounded-md p-1 outline-none hover:bg-muted">
                 <Avatar className="size-7">
