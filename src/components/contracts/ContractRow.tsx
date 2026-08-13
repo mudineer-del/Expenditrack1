@@ -2,16 +2,9 @@ import { Pencil, Trash2 } from "lucide-react"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { avgLeadTime, fmtMoney, vendorColor } from "@/lib/dashboard"
-import { contractExpenditure, contractStatusTone, invoicesForContract } from "@/lib/contracts"
+import { CONTRACT_TONE_CLASSES, contractExpenditure, contractStatusTone, invoicesForContract, utilizationColor } from "@/lib/contracts"
 import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
-
-const TONE_CLASSES: Record<string, string> = {
-  cleared: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
-  under: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  returned: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
-  other: "bg-muted text-muted-foreground",
-}
 
 /** Ported from the contract line-item markup inside renderVendors (index.html:4175-4204). */
 export function ContractRow({
@@ -34,7 +27,7 @@ export function ContractRow({
   const spent = contractExpenditure(invoices, contract.contractNo)
   const cost = Number(contract.value) || 0
   const pct = cost > 0 ? Math.min(100, (spent / cost) * 100) : 0
-  const barColor = pct >= 90 ? "#c23b3b" : pct >= 70 ? "#c8781c" : "#1c8a4b"
+  const barColor = utilizationColor(pct)
   const rows = invoicesForContract(invoices, contract.contractNo)
   const lead = avgLeadTime(rows)
   const primaryVendor = (contract.vendor || "").split("/")[0].trim()
@@ -72,7 +65,7 @@ export function ContractRow({
         )}
       </TableCell>
       <TableCell>
-        <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASSES[tone])}>
+        <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", CONTRACT_TONE_CLASSES[tone])}>
           {contract.status || "—"}
         </span>
       </TableCell>

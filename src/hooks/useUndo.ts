@@ -2,10 +2,13 @@ import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { getSupabaseClient } from "@/lib/supabase"
 import { toRow, type Invoice } from "@/types/invoice"
-import { useActivityStore, type UndoEntry } from "@/store/useActivityStore"
+import { toContractRow, type Contract } from "@/types/contract"
+import { useActivityStore, type Snapshot, type UndoEntry } from "@/store/useActivityStore"
 import { logActivity, useActivityLogQuery } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { INVOICES_QUERY_KEY } from "@/hooks/useInvoices"
+import { CONTRACTS_QUERY_KEY } from "@/hooks/useContracts"
+import { REFERENCE_LISTS_QUERY_KEY, type ReferenceLists } from "@/lib/referenceLists"
 
 /**
  * Reconciles Supabase's `invoices` table to match a snapshot: rows no longer
@@ -31,6 +34,52 @@ export async function reconcileInvoicesTo(snapshot: Invoice[], current: Invoice[
   }
 }
 
+/** Same idea as reconcileInvoicesTo, for the `contracts` table. */
+export async function reconcileContractsTo(snapshot: Contract[], current: Contract[]) {
+  const supabase = getSupabaseClient()
+  const snapshotIds = new Set(snapshot.map((c) => c.id))
+  const toDelete = current.filter((c) => !snapshotIds.has(c.id)).map((c) => c.id)
+
+  const rows = snapshot.map(toContractRow)
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await supabase.from("contracts").upsert(rows.slice(i, i + 200), { onConflict: "id" })
+    if (error) throw error
+  }
+  for (let i = 0; i < toDelete.length; i += 100) {
+    const { error } = await supabase.from("contracts").delete().in("id", toDelete.slice(i, i + 100))
+    if (error) throw error
+  }
+}
+
+/** `reference_lists` rows are one per list key, never deleted — reverting just overwrites values. */
+export async function reconcileRefListsTo(snapshot: ReferenceLists) {
+  const supabase = getSupabaseClient()
+  const rows = Object.entries(snapshot).map(([key, values]) => ({ key, values }))
+  const { error } = await supabase.from("reference_lists").upsert(rows, { onConflict: "key" })
+  if (error) throw error
+}
+
+/** Reconciles whichever parts of a Snapshot are present, then invalidates the matching queries. */
+async function reconcileSnapshot(
+  snapshot: Snapshot,
+  queryClient: ReturnType<typeof useQueryClient>,
+  currentInvoices: Invoice[],
+  currentContracts: Contract[]
+) {
+  if (snapshot.invoices) {
+    await reconcileInvoicesTo(snapshot.invoices, currentInvoices)
+    await queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY })
+  }
+  if (snapshot.contracts) {
+    await reconcileContractsTo(snapshot.contracts, currentContracts)
+    await queryClient.invalidateQueries({ queryKey: CONTRACTS_QUERY_KEY })
+  }
+  if (snapshot.refLists) {
+    await reconcileRefListsTo(snapshot.refLists)
+    await queryClient.invalidateQueries({ queryKey: REFERENCE_LISTS_QUERY_KEY })
+  }
+}
+
 /** Ported from doUndo/doUndoTo/doUndoSelected (index.html:1995-2040). */
 export function useUndo() {
   const queryClient = useQueryClient()
@@ -45,11 +94,11 @@ export function useUndo() {
     if (idx === -1) return null
     const target = undoStack[idx]
     const discardedCount = undoStack.length - idx
-    const current = (queryClient.getQueryData(INVOICES_QUERY_KEY) as Invoice[] | undefined) ?? []
+    const currentInvoices = (queryClient.getQueryData(INVOICES_QUERY_KEY) as Invoice[] | undefined) ?? []
+    const currentContracts = (queryClient.getQueryData(CONTRACTS_QUERY_KEY) as Contract[] | undefined) ?? []
 
-    await reconcileInvoicesTo(target.snapshot, current)
+    await reconcileSnapshot(target.snapshot, queryClient, currentInvoices, currentContracts)
     useActivityStore.setState({ undoStack: undoStack.slice(0, idx) })
-    await queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY })
     return { target, discardedCount }
   }
 

@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PALETTES } from "@/lib/colorPalettes"
@@ -147,6 +148,13 @@ export function FormatDialog() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const activeCustomColors = store.customColors ?? PALETTES.find((p) => p.id === store.colorTheme)?.light ?? PALETTES[0].light
+  const activeCustomFont = store.customFonts.find((f) => f.id === store.fontFamily)
+  const activeFontCss =
+    store.fontFamily in FONT_FAMILY_VALUES
+      ? FONT_FAMILY_VALUES[store.fontFamily as BuiltinFont]
+      : activeCustomFont
+        ? `'${customFontFaceName(activeCustomFont.id)}', 'Inter Variable', sans-serif`
+        : FONT_FAMILY_VALUES.inter
 
   async function handleFontFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -239,50 +247,37 @@ export function FormatDialog() {
 
           <TabsContent value="text" className="grid gap-5 pt-4">
             <Section title="Font family">
-              <div className="grid gap-1.5">
-                {FONT_FAMILIES.map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => store.setFontFamily(f.key)}
-                    className={cn(
-                      "flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                      store.fontFamily === f.key ? "border-primary bg-primary/10" : "hover:bg-muted"
-                    )}
-                    style={{ fontFamily: FONT_FAMILY_VALUES[f.key] }}
-                  >
-                    {f.label}
-                    {store.fontFamily === f.key && <Check className="size-4 text-primary" />}
-                  </button>
-                ))}
-                {store.customFonts.map((f) => (
-                  <div
-                    key={f.id}
-                    className={cn(
-                      "flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors",
-                      store.fontFamily === f.id ? "border-primary bg-primary/10" : "hover:bg-muted"
-                    )}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => store.setFontFamily(f.id)}
-                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      style={{ fontFamily: `'${customFontFaceName(f.id)}', 'Inter Variable', sans-serif` }}
-                    >
-                      <span className="truncate">{f.fileName}</span>
-                      {store.fontFamily === f.id && <Check className="size-4 shrink-0 text-primary" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => store.removeCustomFont(f.id)}
-                      className="ml-2 shrink-0 text-muted-foreground hover:text-destructive"
-                      title="Remove this font"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <Select value={store.fontFamily} onValueChange={store.setFontFamily}>
+                <SelectTrigger className="w-full" style={{ fontFamily: activeFontCss }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FONT_FAMILIES.map((f) => (
+                    <SelectItem key={f.key} value={f.key} style={{ fontFamily: FONT_FAMILY_VALUES[f.key] }}>
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                  {store.customFonts.length > 0 && (
+                    <>
+                      <SelectSeparator />
+                      {store.customFonts.map((f) => (
+                        <SelectItem key={f.id} value={f.id} style={{ fontFamily: `'${customFontFaceName(f.id)}', 'Inter Variable', sans-serif` }}>
+                          {f.fileName}
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+              {activeCustomFont && (
+                <button
+                  type="button"
+                  onClick={() => store.removeCustomFont(activeCustomFont.id)}
+                  className="mt-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="size-3" /> Remove "{activeCustomFont.fileName}"
+                </button>
+              )}
             </Section>
             <Section title="Custom font file" hint="Upload a .ttf, .otf, .woff, or .woff2 file (max 2 MB) — including exported Microsoft Office fonts. Upload as many as you like; each is saved and stays selectable.">
               <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>

@@ -12,8 +12,21 @@ const VENDOR_COLORS: Record<string, string> = {
 }
 const FALLBACK_VENDOR_COLORS = ["#5b7086", "#3d8f84", "#8b5cf6", "#c23b3b", "#155a82", "#2f9e94"]
 
-export function vendorColor(v: string, index = 0): string {
-  return VENDOR_COLORS[v] || FALLBACK_VENDOR_COLORS[index % FALLBACK_VENDOR_COLORS.length]
+/** Simple deterministic string hash so a vendor not in VENDOR_COLORS still gets
+ *  the same fallback color everywhere it's shown, instead of always the first one. */
+function hashVendor(v: string): number {
+  let h = 0
+  for (let i = 0; i < v.length; i++) h = (h * 31 + v.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+/** `index` is an explicit override for callers (like a chart legend) that need
+ *  guaranteed-distinct colors among a specific set of vendors shown together;
+ *  omit it and the color is derived from the vendor's own name instead. */
+export function vendorColor(v: string, index?: number): string {
+  if (VENDOR_COLORS[v]) return VENDOR_COLORS[v]
+  const i = index ?? hashVendor(v)
+  return FALLBACK_VENDOR_COLORS[i % FALLBACK_VENDOR_COLORS.length]
 }
 
 export function fmtMoney(n: number | "" | null | undefined): string {

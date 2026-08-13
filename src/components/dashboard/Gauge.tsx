@@ -1,12 +1,10 @@
 import type { ReactNode } from "react"
-import { useDisplayStore } from "@/store/useDisplayStore"
-
-const GAUGE_SCALE: Record<string, number> = { compact: 0.82, comfortable: 1, spacious: 1.18 }
+import { CARD_SCALE_RATIO, useDisplayStore } from "@/store/useDisplayStore"
 
 /** Ported from buildSpeedoGauge (index.html:2322-2368). */
 export function Gauge({ pct, hubText, hubLabel }: { pct: number; hubText: string; hubLabel: string }) {
   const cardScale = useDisplayStore((s) => s.cardScale)
-  const scale = GAUGE_SCALE[cardScale] ?? 1
+  const scale = CARD_SCALE_RATIO[cardScale] ?? 1
   const clamped = Math.max(0, Math.min(100, Number(pct) || 0))
   const cx = 110
   const cy = 110
@@ -63,7 +61,7 @@ export function Gauge({ pct, hubText, hubLabel }: { pct: number; hubText: string
         y1={y0.toFixed(2)}
         x2={x1.toFixed(2)}
         y2={y1.toFixed(2)}
-        stroke="#5f5c54"
+        stroke="var(--muted-foreground)"
         strokeWidth={isMajor ? 2.4 : 1.4}
       />
     )
@@ -76,7 +74,7 @@ export function Gauge({ pct, hubText, hubLabel }: { pct: number; hubText: string
           y={(ny + 4).toFixed(2)}
           fontSize={12}
           fontWeight={700}
-          fill="#43413c"
+          fill="var(--foreground)"
           textAnchor="middle"
           fontFamily="sans-serif"
         >
@@ -98,7 +96,7 @@ export function Gauge({ pct, hubText, hubLabel }: { pct: number; hubText: string
       height={190 * scale}
       style={{ display: "block", margin: "0 auto" }}
     >
-      <circle cx={cx} cy={cy} r={rOuter + 8} fill="#fbfaf7" stroke="#e2ded6" strokeWidth={1.5} />
+      <circle cx={cx} cy={cy} r={rOuter + 8} fill="var(--card)" stroke="var(--border)" strokeWidth={1.5} />
       {zoneArcs}
       {ticks}
       <line
@@ -110,8 +108,8 @@ export function Gauge({ pct, hubText, hubLabel }: { pct: number; hubText: string
         strokeWidth={4}
         strokeLinecap="round"
       />
-      <circle cx={cx} cy={cy} r={24} fill="#fff" stroke={needleColor} strokeWidth={2.5} />
-      <text x={cx} y={cy - 2} fontSize={15} fontWeight={700} fill="#0a2540" textAnchor="middle" fontFamily="sans-serif">
+      <circle cx={cx} cy={cy} r={24} fill="var(--card)" stroke={needleColor} strokeWidth={2.5} />
+      <text x={cx} y={cy - 2} fontSize={15} fontWeight={700} fill="var(--foreground)" textAnchor="middle" fontFamily="sans-serif">
         {hubText}
       </text>
       <text
@@ -119,7 +117,7 @@ export function Gauge({ pct, hubText, hubLabel }: { pct: number; hubText: string
         y={cy + 13}
         fontSize={8.5}
         fontWeight={700}
-        fill="#8a8880"
+        fill="var(--muted-foreground)"
         textAnchor="middle"
         fontFamily="sans-serif"
         letterSpacing={0.5}

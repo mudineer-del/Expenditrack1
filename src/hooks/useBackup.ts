@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { getSupabaseClient } from "@/lib/supabase"
-import { toContractRow, type Contract } from "@/types/contract"
+import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
 import type { Backup } from "@/lib/backup"
 import { useActivityStore } from "@/store/useActivityStore"
@@ -8,46 +7,34 @@ import { logActivity } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { CONTRACTS_QUERY_KEY } from "@/hooks/useContracts"
 import { INVOICES_QUERY_KEY } from "@/hooks/useInvoices"
-import { reconcileInvoicesTo } from "@/hooks/useUndo"
-import { REFERENCE_LISTS_QUERY_KEY } from "@/lib/referenceLists"
-
-async function reconcileContractsTo(snapshot: Contract[], current: Contract[]) {
-  const supabase = getSupabaseClient()
-  const snapshotIds = new Set(snapshot.map((c) => c.id))
-  const toDelete = current.filter((c) => !snapshotIds.has(c.id)).map((c) => c.id)
-  const rows = snapshot.map(toContractRow)
-  for (let i = 0; i < rows.length; i += 200) {
-    const { error } = await supabase.from("contracts").upsert(rows.slice(i, i + 200), { onConflict: "id" })
-    if (error) throw error
-  }
-  for (let i = 0; i < toDelete.length; i += 100) {
-    const { error } = await supabase.from("contracts").delete().in("id", toDelete.slice(i, i + 100))
-    if (error) throw error
-  }
-}
+import { reconcileContractsTo, reconcileInvoicesTo, reconcileRefListsTo } from "@/hooks/useUndo"
+import { REFERENCE_LISTS_QUERY_KEY, type ReferenceLists } from "@/lib/referenceLists"
 
 /** Ported from restoreBackup (index.html:1839-1866), reconciling Supabase
  *  instead of reassigning a local array (see useUndo's reconcileInvoicesTo
  *  for why). Also restores the reference lists; the activity log is no
- *  longer among the restored fields (see comment below). */
+ *  longer among the restored fields (see comment below). Its undo snapshot
+ *  captures all three tables — a restore overwrites all of them, so undoing
+ *  it has to revert all three, not just invoices. */
 export function useRestoreBackup() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   return useMutation({
     mutationFn: async (backup: Backup) => {
-      const supabase = getSupabaseClient()
       const currentInvoices = (queryClient.getQueryData(INVOICES_QUERY_KEY) as Invoice[] | undefined) ?? []
       const currentContracts = (queryClient.getQueryData(CONTRACTS_QUERY_KEY) as Contract[] | undefined) ?? []
+      const currentRefLists = queryClient.getQueryData(REFERENCE_LISTS_QUERY_KEY) as ReferenceLists | undefined
 
-      const undoId = useActivityStore.getState().pushUndo("Restore from backup", currentInvoices)
+      const undoId = useActivityStore.getState().pushUndo("Restore from backup", {
+        invoices: currentInvoices,
+        contracts: currentContracts,
+        ...(currentRefLists ? { refLists: currentRefLists } : {}),
+      })
 
       await reconcileInvoicesTo(backup.data.invoices, currentInvoices)
       await reconcileContractsTo(backup.data.contracts, currentContracts)
-
-      const refRows = Object.entries(backup.data.refLists).map(([key, values]) => ({ key, values }))
-      if (refRows.length) {
-        const { error } = await supabase.from("reference_lists").upsert(refRows, { onConflict: "key" })
-        if (error) throw error
+      if (Object.keys(backup.data.refLists).length) {
+        await reconcileRefListsTo(backup.data.refLists)
       }
 
       // The backup's activityLog field is kept for historical reference inside

@@ -1,5 +1,15 @@
 import { Plus, X } from "lucide-react"
 import { useState } from "react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useReferenceLists, type ReferenceLists } from "@/lib/referenceLists"
@@ -68,6 +78,7 @@ function ListCard({
  *  Supabase-synced (Phase 7) instead of local-storage-only. */
 export function ReferenceListsTab() {
   const { ref, addValue, removeValue } = useReferenceLists()
+  const [removeTarget, setRemoveTarget] = useState<{ key: keyof ReferenceLists; title: string; value: string } | null>(null)
 
   return (
     <div className="grid gap-4">
@@ -81,9 +92,32 @@ export function ReferenceListsTab() {
           title={l.title}
           items={ref[l.key]}
           onAdd={(v) => addValue(l.key, v)}
-          onRemove={(v) => removeValue(l.key, v)}
+          onRemove={(v) => setRemoveTarget({ key: l.key, title: l.title, value: v })}
         />
       ))}
+
+      <AlertDialog open={!!removeTarget} onOpenChange={(v) => !v && setRemoveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this option?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {removeTarget &&
+                `"${removeTarget.value}" will no longer be offered under ${removeTarget.title}. Existing records that already use it keep it as-is.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (removeTarget) removeValue(removeTarget.key, removeTarget.value)
+                setRemoveTarget(null)
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

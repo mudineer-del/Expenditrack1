@@ -3,8 +3,10 @@ import { getSupabaseClient } from "@/lib/supabase"
 import { runInvoiceMigrations } from "@/lib/migrations"
 import { fromRow, toRow, type Invoice, type InvoiceRow } from "@/types/invoice"
 import { useActivityStore } from "@/store/useActivityStore"
+import { useAuthStore } from "@/store/useAuthStore"
 import { logActivity } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
+import { can } from "@/lib/can"
 import { fmtMoney } from "@/lib/dashboard"
 import {
   loadNotifyConfig,
@@ -31,7 +33,13 @@ async function fetchAllInvoices(): Promise<Invoice[]> {
     all.push(...batch)
     if (batch.length < PAGE_SIZE) break
   }
-  return runInvoiceMigrations(all.map(fromRow))
+  const rows = all.map(fromRow)
+  // Migrations write corrected rows back to Supabase — only run them for a
+  // role that could make that write anyway, so a Viewer just opening the
+  // Dashboard never triggers a bulk table write on someone else's behalf.
+  const role = useAuthStore.getState().user?.role
+  if (!can(role, "edit")) return rows
+  return runInvoiceMigrations(rows)
 }
 
 export const INVOICES_QUERY_KEY = ["invoices"] as const
@@ -52,7 +60,7 @@ export function useUpsertInvoice() {
       const wasEdit = !!prev
       const undoId = useActivityStore
         .getState()
-        .pushUndo(wasEdit ? `Edit of invoice ${invoice.invoiceNo || invoice.srNo}` : `Add of invoice ${invoice.invoiceNo || invoice.srNo}`, current)
+        .pushUndo(wasEdit ? `Edit of invoice ${invoice.invoiceNo || invoice.srNo}` : `Add of invoice ${invoice.invoiceNo || invoice.srNo}`, { invoices: current })
 
       const { error } = await supabase.from("invoices").upsert(toRow(invoice), { onConflict: "id" })
       if (error) throw error
@@ -94,7 +102,7 @@ export function useBulkUpsertInvoices() {
       const current = (queryClient.getQueryData(INVOICES_QUERY_KEY) as Invoice[] | undefined) ?? []
       const undoId = useActivityStore
         .getState()
-        .pushUndo(`Import of ${invoices.length} invoice${invoices.length !== 1 ? "s" : ""}`, current)
+        .pushUndo(`Import of ${invoices.length} invoice${invoices.length !== 1 ? "s" : ""}`, { invoices: current })
 
       const rows = invoices.map(toRow)
       const chunk = 200
@@ -128,7 +136,7 @@ export function useDeleteInvoice() {
       const current = (queryClient.getQueryData(INVOICES_QUERY_KEY) as Invoice[] | undefined) ?? []
       const undoId = useActivityStore
         .getState()
-        .pushUndo(`Delete of invoice ${invoice.invoiceNo || `#${invoice.srNo}`}`, current)
+        .pushUndo(`Delete of invoice ${invoice.invoiceNo || `#${invoice.srNo}`}`, { invoices: current })
 
       const { error } = await supabase.from("invoices").delete().eq("id", invoice.id)
       if (error) throw error
@@ -155,7 +163,7 @@ export function useDeleteInvoices() {
       const current = (queryClient.getQueryData(INVOICES_QUERY_KEY) as Invoice[] | undefined) ?? []
       const undoId = useActivityStore
         .getState()
-        .pushUndo(`Bulk delete of ${victims.length} invoice${victims.length !== 1 ? "s" : ""}`, current)
+        .pushUndo(`Bulk delete of ${victims.length} invoice${victims.length !== 1 ? "s" : ""}`, { invoices: current })
 
       const ids = victims.map((v) => v.id)
       const chunk = 100

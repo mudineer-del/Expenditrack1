@@ -1,5 +1,13 @@
+import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { useAuth } from "@/hooks/useAuth"
+
+/** "Not available yet" badges sit right on each inert control, not just in a
+ *  footnote below them — this is a security page, so it shouldn't be possible
+ *  to glance at it and believe 2FA or a session timeout is actually active. */
+function NotAvailable() {
+  return <Badge variant="outline">Not available yet</Badge>
+}
 
 /** Ported from the Security settings tab (index.html:5271-5297). These
  *  preferences are prototype-only, same as the legacy app — a real
@@ -18,21 +26,27 @@ export function SecurityTab() {
             <div className="font-medium">Two-Factor Authentication</div>
             <p className="text-sm text-muted-foreground">Add an extra layer of security to your account at sign-in.</p>
           </div>
-          <Switch defaultChecked={!!user.twofa} disabled />
+          <div className="flex items-center gap-2">
+            <NotAvailable />
+            <Switch defaultChecked={!!user.twofa} disabled />
+          </div>
         </div>
         <div className="flex items-center justify-between py-3">
           <div>
             <div className="font-medium">Login Alerts</div>
             <p className="text-sm text-muted-foreground">Get notified of sign-ins from new devices.</p>
           </div>
-          <Switch disabled />
+          <div className="flex items-center gap-2">
+            <NotAvailable />
+            <Switch disabled />
+          </div>
         </div>
         <div className="flex items-center justify-between py-3">
           <div>
             <div className="font-medium">Session Timeout</div>
-            <p className="text-sm text-muted-foreground">Automatically sign out after a period of inactivity.</p>
+            <p className="text-sm text-muted-foreground">Not currently enforced — sessions stay signed in until you sign out.</p>
           </div>
-          <span className="text-sm text-muted-foreground">1 hour</span>
+          <NotAvailable />
         </div>
         <div className="flex items-center justify-between py-3">
           <div>
@@ -43,8 +57,8 @@ export function SecurityTab() {
         </div>
       </div>
       <p className="mt-4 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-        These security preferences are stored for this prototype. In a production deployment they'd be enforced by
-        your identity provider and backend.
+        The settings above marked "Not available yet" aren't enforced by this app — a production deployment would
+        implement them via the identity provider and backend, not a client-side toggle.
       </p>
     </div>
   )

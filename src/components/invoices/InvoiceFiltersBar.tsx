@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -109,8 +110,8 @@ export function InvoiceFiltersBar({
         />
       </div>
 
-      <Popover>
-        <PopoverTrigger asChild>
+      <Dialog>
+        <DialogTrigger asChild>
           <Button
             variant="outline"
             size="sm"
@@ -119,19 +120,23 @@ export function InvoiceFiltersBar({
             <Filter /> Filters
             {activeCount > 0 && <Badge variant="secondary">{activeCount}</Badge>}
           </Button>
-        </PopoverTrigger>
-        <PopoverContent className="grid w-80 gap-3 border-t-4" style={{ borderTopColor: "var(--chart-1)" }} align="start">
-          <p className="text-sm font-semibold">Filter invoices</p>
-          <FilterSelect label="Vendor" icon={Building2} color={FILTER_COLORS[0]} value={filters.vendor} options={refLists.vendors} onChange={(v) => set("vendor", v)} />
-          <FilterSelect label="Service" icon={Wrench} color={FILTER_COLORS[1]} value={filters.service} options={refLists.services} onChange={(v) => set("service", v)} />
-          <FilterSelect label="Contract" icon={FileText} color={FILTER_COLORS[2]} value={filters.contract} options={contractNumbers} onChange={(v) => set("contract", v)} />
-          <FilterSelect label="Status" icon={CircleCheck} color={FILTER_COLORS[3]} value={filters.status} options={refLists.statuses} onChange={(v) => set("status", v)} />
-          <FilterSelect label="Region" icon={MapPin} color={FILTER_COLORS[4]} value={filters.region} options={refLists.regions} onChange={(v) => set("region", v)} />
-          <FilterSelect label="Year" icon={Calendar} color={FILTER_COLORS[0]} value={filters.year} options={yearOptions} onChange={(v) => set("year", v)} />
-          <FilterSelect label="Quarter" icon={CalendarDays} color={FILTER_COLORS[1]} value={filters.qtr} options={refLists.quarters} onChange={(v) => set("qtr", v)} />
-          <FilterSelect label="Uploaded By" icon={UserCircle} color={FILTER_COLORS[2]} value={filters.enteredBy} options={enteredByOptions} onChange={(v) => set("enteredBy", v)} />
-        </PopoverContent>
-      </Popover>
+        </DialogTrigger>
+        <DialogContent className="border-t-4 sm:max-w-lg" style={{ borderTopColor: "var(--chart-1)" }}>
+          <DialogHeader>
+            <DialogTitle>Filter invoices</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <FilterSelect label="Vendor" icon={Building2} color={FILTER_COLORS[0]} value={filters.vendor} options={refLists.vendors} onChange={(v) => set("vendor", v)} />
+            <FilterSelect label="Service" icon={Wrench} color={FILTER_COLORS[1]} value={filters.service} options={refLists.services} onChange={(v) => set("service", v)} />
+            <FilterSelect label="Contract" icon={FileText} color={FILTER_COLORS[2]} value={filters.contract} options={contractNumbers} onChange={(v) => set("contract", v)} />
+            <FilterSelect label="Status" icon={CircleCheck} color={FILTER_COLORS[3]} value={filters.status} options={refLists.statuses} onChange={(v) => set("status", v)} />
+            <FilterSelect label="Region" icon={MapPin} color={FILTER_COLORS[4]} value={filters.region} options={refLists.regions} onChange={(v) => set("region", v)} />
+            <FilterSelect label="Year" icon={Calendar} color={FILTER_COLORS[0]} value={filters.year} options={yearOptions} onChange={(v) => set("year", v)} />
+            <FilterSelect label="Quarter" icon={CalendarDays} color={FILTER_COLORS[1]} value={filters.qtr} options={refLists.quarters} onChange={(v) => set("qtr", v)} />
+            <FilterSelect label="Uploaded By" icon={UserCircle} color={FILTER_COLORS[2]} value={filters.enteredBy} options={enteredByOptions} onChange={(v) => set("enteredBy", v)} />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Popover>
         <PopoverTrigger asChild>

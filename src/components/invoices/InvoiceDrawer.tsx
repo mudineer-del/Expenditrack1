@@ -14,14 +14,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { fmtMoney } from "@/lib/dashboard"
 import { blankInvoice, type Invoice } from "@/types/invoice"
@@ -48,7 +48,7 @@ const schema = z.object({
   status: z.string().min(1, "Required"),
   description: z.string().optional(),
   amountExclTax: z.coerce.number().min(0),
-  gstPst: z.coerce.number().min(0),
+  gstPst: z.coerce.number().min(0).max(1, "That's over 100% — check the rate."),
   amountPaid: z.coerce.number().min(0),
 })
 
@@ -214,11 +214,11 @@ export function InvoiceDrawer({
   const title = mode === "add" ? "New Invoice Entry" : mode === "edit" ? "Edit Invoice" : "Invoice Details"
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
-          <SheetDescription className="sr-only">Invoice entry form</SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] w-full overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">Invoice entry form</DialogDescription>
           {invoice?.createdByName && (
             <p className="text-xs text-muted-foreground">
               Entered by <b>{invoice.createdByName}</b>
@@ -231,9 +231,9 @@ export function InvoiceDrawer({
               {invoice.updatedAt && ` · ${invoice.updatedAt.slice(0, 10)}`}
             </p>
           )}
-        </SheetHeader>
+        </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-1 flex-col gap-4 overflow-y-auto px-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
@@ -412,15 +412,31 @@ export function InvoiceDrawer({
               <FormField
                 control={form.control}
                 name="gstPst"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>GST / PST Rate</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" disabled={readOnly} {...field} value={(field.value as number | undefined) ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const stored = field.value as number | undefined
+                  const pct = stored === undefined || stored === null || Number.isNaN(stored) ? "" : stored * 100
+                  return (
+                    <FormItem>
+                      <FormLabel>GST / PST Rate (%)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min={0}
+                            max={100}
+                            disabled={readOnly}
+                            className="pr-7"
+                            value={pct}
+                            onChange={(e) => field.onChange(e.target.value === "" ? "" : Number(e.target.value) / 100)}
+                          />
+                          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )
+                }}
               />
               <FormField
                 control={form.control}
@@ -444,15 +460,15 @@ export function InvoiceDrawer({
                 Amount Incl. Tax (USD): <b>{fmtMoney(total)}</b>
               </div>
             </div>
-            <SheetFooter className="px-0 pb-4">
+            <DialogFooter>
               {!readOnly ? (
                 <>
                   <Button type="submit">Save Entry</Button>
-                  <SheetClose asChild>
+                  <DialogClose asChild>
                     <Button type="button" variant="outline">
                       Cancel
                     </Button>
-                  </SheetClose>
+                  </DialogClose>
                 </>
               ) : (
                 <>
@@ -461,17 +477,17 @@ export function InvoiceDrawer({
                       Edit
                     </Button>
                   )}
-                  <SheetClose asChild>
+                  <DialogClose asChild>
                     <Button type="button" variant="outline">
                       Close
                     </Button>
-                  </SheetClose>
+                  </DialogClose>
                 </>
               )}
-            </SheetFooter>
+            </DialogFooter>
           </form>
         </Form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

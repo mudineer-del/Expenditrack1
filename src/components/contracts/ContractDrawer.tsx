@@ -7,14 +7,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { CONTRACT_STATUS_OPTIONS } from "@/lib/contracts"
 import { blankContract, type Contract } from "@/types/contract"
 import type { ReferenceLists } from "@/lib/referenceLists"
@@ -95,14 +95,14 @@ export function ContractDrawer({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>{isEdit ? "Edit Contract" : "New Contract Provision"}</SheetTitle>
-          <SheetDescription className="sr-only">Contract entry form</SheetDescription>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] w-full overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "Edit Contract" : "New Contract Provision"}</DialogTitle>
+          <DialogDescription className="sr-only">Contract entry form</DialogDescription>
+        </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-1 flex-col gap-4 overflow-y-auto px-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col gap-4">
             <FormField
               control={form.control}
               name="contractNo"
@@ -231,17 +231,17 @@ export function ContractDrawer({
                 </FormItem>
               )}
             />
-            <SheetFooter className="px-0 pb-4">
+            <DialogFooter>
               <Button type="submit">Save Contract</Button>
-              <SheetClose asChild>
+              <DialogClose asChild>
                 <Button type="button" variant="outline">
                   Cancel
                 </Button>
-              </SheetClose>
-            </SheetFooter>
+              </DialogClose>
+            </DialogFooter>
           </form>
         </Form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -72,11 +72,6 @@ export function AppShell() {
                     <User /> Profile
                   </NavLink>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <NavLink to="/settings">
-                    <Settings /> Settings
-                  </NavLink>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => signOut()}>
                   <LogOut /> Sign out

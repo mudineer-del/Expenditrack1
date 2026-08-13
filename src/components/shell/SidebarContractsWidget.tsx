@@ -7,25 +7,11 @@ import { useAuth } from "@/hooks/useAuth"
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
 import { avgLeadTime, fmtMoney, statusTone, vendorColor } from "@/lib/dashboard"
-import { contractStatusTone, invoicesForContract } from "@/lib/contracts"
+import { CONTRACT_TONE_CLASSES, contractStatusTone, daysUntil, invoicesForContract, utilizationColor } from "@/lib/contracts"
 import { cn } from "@/lib/utils"
 import { useProminentContractsStore } from "@/store/useProminentContractsStore"
 import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
-
-const TONE_CLASSES: Record<string, string> = {
-  cleared: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
-  under: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  returned: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
-  other: "bg-muted text-muted-foreground",
-}
-
-function daysUntil(dateStr: string): number | null {
-  if (!dateStr) return null
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return null
-  return Math.round((d.getTime() - Date.now()) / 86400000)
-}
 
 /** Contract numbers are long dash/slash-delimited paths (e.g. "OGDCL-SCM-Services-CB-4600000369-2024")
  *  that overflow the narrow sidebar pill. Cut at the last "-" or "/" within the budget so the
@@ -50,7 +36,7 @@ function ContractPill({ contract, invoices, onOpen }: { contract: Contract; invo
   const pending = rows.length - cleared
   const lead = avgLeadTime(rows)
   const pct = cost > 0 ? Math.min(100, (spent / cost) * 100) : 0
-  const barColor = pct >= 90 ? "#c23b3b" : pct >= 70 ? "#c8781c" : "#1c8a4b"
+  const barColor = utilizationColor(pct)
 
   return (
     <HoverCard openDelay={150} closeDelay={100}>
@@ -78,7 +64,7 @@ function ContractPill({ contract, invoices, onOpen }: { contract: Contract; invo
         <div className="mb-2 truncate text-xs text-muted-foreground">{contract.vendor || "—"}</div>
 
         <div className="mb-2 flex items-center justify-between">
-          <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium", TONE_CLASSES[tone])}>
+          <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium", CONTRACT_TONE_CLASSES[tone])}>
             {contract.status || "—"}
           </span>
           {days !== null && (

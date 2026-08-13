@@ -1,5 +1,7 @@
 import { create } from "zustand"
+import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
+import type { ReferenceLists } from "@/lib/referenceLists"
 
 export type ActivityAction = "Import" | "Add" | "Edit" | "Delete" | "Undo" | "Restore"
 
@@ -18,11 +20,20 @@ export interface ActivityEntry {
   meta: ActivityMeta | null
 }
 
+/** Whichever of these are present get reconciled back on undo — a plain
+ *  invoice edit only snapshots invoices, but a backup restore touches all
+ *  three, so its undo needs to revert all three too. */
+export interface Snapshot {
+  invoices?: Invoice[]
+  contracts?: Contract[]
+  refLists?: ReferenceLists
+}
+
 export interface UndoEntry {
   id: string
   ts: number
   label: string
-  snapshot: Invoice[]
+  snapshot: Snapshot
 }
 
 /** Ported from MAX_UNDO (index.html:1959). */
@@ -31,7 +42,7 @@ const MAX_UNDO = 20
 interface ActivityState {
   undoStack: UndoEntry[]
   selectedLogIds: Set<string>
-  pushUndo: (label: string, snapshot: Invoice[]) => string
+  pushUndo: (label: string, snapshot: Snapshot) => string
   toggleSelect: (id: string) => void
   setSelection: (ids: Set<string>) => void
   clearSelection: () => void

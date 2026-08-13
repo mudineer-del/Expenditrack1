@@ -1,34 +1,20 @@
 import { Building2, Calendar, DollarSign, FileText } from "lucide-react"
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { cn } from "@/lib/utils"
 import { avgLeadTime, fmtMoney, vendorColor } from "@/lib/dashboard"
-import { contractExpenditure, contractStatusTone, invoicesForContract } from "@/lib/contracts"
+import { CONTRACT_TONE_CLASSES, contractExpenditure, contractStatusTone, daysUntil, invoicesForContract, utilizationColor } from "@/lib/contracts"
 import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
-
-const TONE_CLASSES: Record<string, string> = {
-  cleared: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
-  under: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  returned: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
-  other: "bg-muted text-muted-foreground",
-}
-
-function daysUntil(dateStr: string): number | null {
-  if (!dateStr) return null
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return null
-  return Math.round((d.getTime() - Date.now()) / 86400000)
-}
 
 /** Immersive contract detail view — everything about one contract in one place, opened by clicking its row. */
 export function ContractDetailSheet({
@@ -46,12 +32,12 @@ export function ContractDetailSheet({
   onEdit: () => void
   canEdit: boolean
 }) {
-  if (!contract) return <Sheet open={open} onOpenChange={onOpenChange} />
+  if (!contract) return <Dialog open={open} onOpenChange={onOpenChange} />
 
   const cost = Number(contract.value) || 0
   const spent = contractExpenditure(invoices, contract.contractNo)
   const pct = cost > 0 ? Math.min(100, (spent / cost) * 100) : 0
-  const barColor = pct >= 90 ? "#c23b3b" : pct >= 70 ? "#c8781c" : "#1c8a4b"
+  const barColor = utilizationColor(pct)
   const rows = invoicesForContract(invoices, contract.contractNo).sort((a, b) => (b.invoiceDate || "").localeCompare(a.invoiceDate || ""))
   const lead = avgLeadTime(rows)
   const primaryVendor = (contract.vendor || "").split("/")[0].trim()
@@ -60,24 +46,24 @@ export function ContractDetailSheet({
   const daysLeft = daysUntil(contract.endDate)
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] w-full overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
           <div className="flex items-start gap-3">
             <span className="mt-1 h-10 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
             <div className="min-w-0">
-              <SheetTitle className="flex flex-wrap items-center gap-2">
+              <DialogTitle className="flex flex-wrap items-center gap-2">
                 {contract.contractNo}
-                <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASSES[tone])}>
+                <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", CONTRACT_TONE_CLASSES[tone])}>
                   {contract.status || "—"}
                 </span>
-              </SheetTitle>
-              <SheetDescription className="truncate">{contract.title || "No title"}</SheetDescription>
+              </DialogTitle>
+              <DialogDescription className="truncate">{contract.title || "No title"}</DialogDescription>
             </div>
           </div>
-        </SheetHeader>
+        </DialogHeader>
 
-        <div className="grid gap-4 px-4">
+        <div className="grid gap-4">
           <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
             <div className="flex items-center gap-2">
               <Building2 className="size-4 text-muted-foreground" />
@@ -160,13 +146,13 @@ export function ContractDetailSheet({
           </div>
         </div>
 
-        <SheetFooter className="px-4 pb-4">
+        <DialogFooter>
           {canEdit && <Button onClick={onEdit}>Edit Contract</Button>}
-          <SheetClose asChild>
+          <DialogClose asChild>
             <Button variant="outline">Close</Button>
-          </SheetClose>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

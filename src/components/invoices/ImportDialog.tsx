@@ -66,6 +66,12 @@ export function ImportDialog({
     }
   }
 
+  function skipDuplicates() {
+    const remaining = records.filter((r) => !existingKeys.has(invoiceDupKey(r)))
+    setRecords(remaining)
+    if (!remaining.length) setError("All rows were duplicates of existing invoices — nothing left to import.")
+  }
+
   function handleConfirm() {
     setBusy(true)
     const maxSr = existingInvoices.reduce((m, r) => Math.max(m, Number(r.srNo) || 0), 0)
@@ -108,10 +114,15 @@ export function ImportDialog({
                 <b>{fileName}</b> — {records.length} row{records.length !== 1 ? "s" : ""} recognized.
               </p>
               {dupCount > 0 && (
-                <p className="mt-1 flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
-                  <AlertTriangle className="size-4" /> {dupCount} row{dupCount !== 1 ? "s" : ""} match an existing invoice
-                  (same vendor, invoice no., and amount) — importing will add them as new entries anyway.
-                </p>
+                <div className="mt-1.5">
+                  <p className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="size-4" /> {dupCount} row{dupCount !== 1 ? "s" : ""} match an existing invoice
+                    (same vendor, invoice no., and amount).
+                  </p>
+                  <Button variant="outline" size="sm" className="mt-1.5" onClick={skipDuplicates}>
+                    Skip {dupCount} duplicate row{dupCount !== 1 ? "s" : ""}
+                  </Button>
+                </div>
               )}
             </div>
             {unmatched.length > 0 && (

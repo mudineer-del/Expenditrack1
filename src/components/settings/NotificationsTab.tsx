@@ -114,6 +114,11 @@ export function NotificationsTab() {
             <code>to_email</code>, <code>subject</code> and <code>message</code>, then paste the three IDs below
             along with the address that should receive alerts.
           </p>
+          <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+            This configuration is saved to this browser only, not shared across your team. Automatic contract and
+            weekly-digest checks only run while someone opens the Dashboard in a browser where it's set up — "Check
+            contracts now" below is the reliable way to trigger a check on demand.
+          </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5 sm:col-span-2">
               <Label>Public Key</Label>

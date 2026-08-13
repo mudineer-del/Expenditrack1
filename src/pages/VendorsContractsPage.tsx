@@ -103,7 +103,7 @@ export default function VendorsContractsPage() {
 
   function handleDeleteConfirm() {
     if (!deleteTarget) return
-    deleteContract.mutate(deleteTarget.id, {
+    deleteContract.mutate(deleteTarget, {
       onSuccess: () => toast.success("Contract deleted."),
       onError: (e) => toast.error(e instanceof Error ? e.message : "Could not delete contract."),
     })
@@ -241,8 +241,7 @@ export default function VendorsContractsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this contract?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget &&
-                `Contract ${deleteTarget.contractNo} (${deleteTarget.vendor || "—"}) will be permanently removed. This cannot be undone.`}
+              {deleteTarget && `Contract ${deleteTarget.contractNo} (${deleteTarget.vendor || "—"}) will be permanently deleted.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

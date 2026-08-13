@@ -64,6 +64,12 @@ interface DisplayState extends DisplayPrefs {
   setTableGridLines: (v: boolean) => void
 }
 
+/** Same compact/comfortable/spacious ratios index.css's --tile-* / --chart-h vars express for
+ *  CSS-styled elements — the one place to look for this app's density-scale factors, for
+ *  code (like Gauge, which sizes an SVG via a JS width/height prop) that can't just consume
+ *  a CSS custom property directly. */
+export const CARD_SCALE_RATIO: Record<CardScale, number> = { compact: 0.82, comfortable: 1, spacious: 1.18 }
+
 const RADIUS_VALUES: Record<Radius, string> = { none: "0rem", sm: "0.25rem", md: "0.625rem", lg: "1rem" }
 const BORDER_WIDTH_VALUES: Record<BorderWidth, string> = { thin: "1px", medium: "1.5px", thick: "2px" }
 const SHADOW_VALUES: Record<Shadow, string> = {

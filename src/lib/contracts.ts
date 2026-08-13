@@ -28,3 +28,24 @@ export function contractStatusTone(status: string | null | undefined): ContractT
 }
 
 export const CONTRACT_STATUS_OPTIONS = ["Active", "Pending", "Under Review", "Expired", "Terminated", "Closed"]
+
+/** Shared by every place a contract's status shows as a colored pill (row, detail sheet, sidebar widget). */
+export const CONTRACT_TONE_CLASSES: Record<ContractTone, string> = {
+  cleared: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
+  under: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  returned: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
+  other: "bg-muted text-muted-foreground",
+}
+
+/** Days until (positive) or since (negative) a contract's end date; null if there isn't one on file. */
+export function daysUntil(dateStr: string): number | null {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return null
+  return Math.round((d.getTime() - Date.now()) / 86400000)
+}
+
+/** Traffic-light color for a contract's spend-vs-value utilization bar. */
+export function utilizationColor(pct: number): string {
+  return pct >= 90 ? "#c23b3b" : pct >= 70 ? "#c8781c" : "#1c8a4b"
+}
