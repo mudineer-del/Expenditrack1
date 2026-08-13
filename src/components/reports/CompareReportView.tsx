@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { fmtMoney } from "@/lib/dashboard"
 import { groupRows, reportRows, shortContract, type ReportFilters, type ReportGroup } from "@/lib/reports"
 import { CompareTaChart, CompareValueChart } from "@/components/reports/CompareCharts"
+import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
 import type { Invoice } from "@/types/invoice"
 
 function normContract(s: string | null | undefined): string {
@@ -161,6 +162,19 @@ export function CompareReportView({
           <h3 className="text-sm font-semibold">Select contracts to compare</h3>
           <span className="text-xs text-muted-foreground">{countText}</span>
         </div>
+        <div className="mb-3">
+          <SelectionToolbar
+            count={groups.length}
+            label="contracts included"
+            summary={showNone ? "Comparison is empty" : groups.length === n ? "All contracts" : "Custom selection"}
+            onClear={() => onCompareSelectionChange(["__none__"])}
+            action={
+              <Button variant="outline" size="sm" onClick={() => onCompareSelectionChange([])}>
+                Select all
+              </Button>
+            }
+          />
+        </div>
         {selected.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-1.5">
             {selected.map((key) => (
@@ -183,26 +197,29 @@ export function CompareReportView({
         <div className="mb-3 flex flex-wrap gap-2">
           <AddContractPopover allGroups={allGroups} isSelected={isAdded} onAdd={addContract} />
           {presets.map((k) => (
-            <button
+            <Button
               key={k}
-              className={`rounded-full border px-3 py-1 text-xs font-medium ${isTop(k) ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted"}`}
+              variant={isTop(k) ? "secondary" : "outline"}
+              size="sm"
               onClick={() => onCompareSelectionChange(allGroups.slice(0, k).map((g) => g.key))}
             >
               Top {k} by value
-            </button>
+            </Button>
           ))}
-          <button
-            className={`rounded-full border px-3 py-1 text-xs font-medium ${!showNone && selected.length === 0 ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted"}`}
+          <Button
+            variant={!showNone && selected.length === 0 ? "secondary" : "outline"}
+            size="sm"
             onClick={() => onCompareSelectionChange([])}
           >
             All ({n})
-          </button>
-          <button
-            className={`rounded-full border px-3 py-1 text-xs font-medium ${showNone ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted"}`}
+          </Button>
+          <Button
+            variant={showNone ? "secondary" : "outline"}
+            size="sm"
             onClick={() => onCompareSelectionChange(["__none__"])}
           >
             Clear
-          </button>
+          </Button>
         </div>
         <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
           {allGroups.map((g) => {

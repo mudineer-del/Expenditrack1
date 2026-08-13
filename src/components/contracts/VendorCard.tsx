@@ -1,9 +1,11 @@
 import { fmtMoney } from "@/lib/dashboard"
+import { ContractorLogo } from "@/components/shared/ContractorLogo"
 
 /** Ported from the vendor-card markup inside renderVendors (index.html:4153-4172). */
 export function VendorCard({
   vendor,
   color,
+  logo,
   total,
   sharePct,
   count,
@@ -13,6 +15,7 @@ export function VendorCard({
 }: {
   vendor: string
   color: string
+  logo?: string
   total: number
   sharePct: number
   count: number
@@ -20,7 +23,6 @@ export function VendorCard({
   active: boolean
   onClick: () => void
 }) {
-  const initials = vendor.slice(0, 2).toUpperCase()
   return (
     <button
       type="button"
@@ -29,12 +31,7 @@ export function VendorCard({
       style={active ? { borderColor: color, boxShadow: `0 0 0 2px ${color}` } : undefined}
     >
       <div className="mb-2 flex items-center gap-2">
-        <span
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-          style={{ backgroundColor: color }}
-        >
-          {initials}
-        </span>
+        <ContractorLogo vendor={vendor} logo={logo} color={color} />
         <div className="truncate font-medium">{vendor}</div>
       </div>
       <div className="text-lg font-semibold">{fmtMoney(total)}</div>

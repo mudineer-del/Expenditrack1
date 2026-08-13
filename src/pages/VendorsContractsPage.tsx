@@ -20,6 +20,7 @@ import { ContractDrawer } from "@/components/contracts/ContractDrawer"
 import { ContractRow } from "@/components/contracts/ContractRow"
 import { VendorCard } from "@/components/contracts/VendorCard"
 import { avgLeadTime, vendorColor } from "@/lib/dashboard"
+import { getContractorLogo, useContractorLogosQuery } from "@/lib/contractorLogos"
 import { useReferenceLists } from "@/lib/referenceLists"
 import { useAuth } from "@/hooks/useAuth"
 import { useContractsQuery, useDeleteContract, useUpsertContract } from "@/hooks/useContracts"
@@ -33,6 +34,7 @@ export default function VendorsContractsPage() {
   const invoicesQuery = useInvoicesQuery()
   const contractsQuery = useContractsQuery()
   const { ref: refLists } = useReferenceLists()
+  const contractorLogosQuery = useContractorLogosQuery()
   const upsertContract = useUpsertContract()
   const deleteContract = useDeleteContract()
   const dashVendor = useAppStore((s) => s.dashVendor)
@@ -141,6 +143,7 @@ export default function VendorsContractsPage() {
               key={v.vendor}
               vendor={v.vendor}
               color={vendorColor(v.vendor)}
+              logo={getContractorLogo(contractorLogosQuery.data ?? {}, v.vendor)}
               total={v.total}
               sharePct={v.sharePct}
               count={v.count}
@@ -165,11 +168,14 @@ export default function VendorsContractsPage() {
                 onChange={(e) => setContractSearch(e.target.value)}
               />
             </div>
-            {can("add") && (
-              <Button size="sm" onClick={openAdd}>
-                <Plus /> New Contract
-              </Button>
-            )}
+            <Button
+              size="sm"
+              disabled={!can("add")}
+              title={can("add") ? "Add contract" : "Only Editors and Admins can add contracts"}
+              onClick={openAdd}
+            >
+              <Plus /> New Contract
+            </Button>
           </div>
         </div>
         {filteredContracts.length ? (
@@ -194,6 +200,7 @@ export default function VendorsContractsPage() {
                   invoices={invoices}
                   canEdit={can("edit")}
                   canDelete={can("delete")}
+                  logo={getContractorLogo(contractorLogosQuery.data ?? {}, c.vendor.split("/")[0].trim())}
                   onView={() => setViewingContract(c)}
                   onEdit={() => openEdit(c)}
                   onDelete={() => setDeleteTarget(c)}
@@ -229,6 +236,7 @@ export default function VendorsContractsPage() {
         contract={viewingContract}
         invoices={invoices}
         canEdit={can("edit")}
+        logo={getContractorLogo(contractorLogosQuery.data ?? {}, viewingContract?.vendor.split("/")[0].trim() || "")}
         onOpenChange={(v) => !v && setViewingContract(null)}
         onEdit={() => {
           if (viewingContract) openEdit(viewingContract)

@@ -1,4 +1,4 @@
-import { Pin, PinOff, RotateCcw, Star } from "lucide-react"
+import { ArrowLeftRight, Pin, PinOff, RotateCcw, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -7,6 +7,12 @@ import { vendorColor } from "@/lib/dashboard"
 import { cn } from "@/lib/utils"
 import { useLabelsStore, type AppLabels } from "@/store/useLabelsStore"
 import { useProminentContractsStore } from "@/store/useProminentContractsStore"
+import { useTickerStore, type TickerStyle } from "@/store/useTickerStore"
+
+const TICKER_STYLES: { key: TickerStyle; label: string; hint: string }[] = [
+  { key: "scroll", label: "Scroll", hint: "All active contracts scroll past continuously, like a stock ticker." },
+  { key: "cycle", label: "Cycle", hint: "One contract at a time, auto-advancing every few seconds." },
+]
 
 const FIELDS: { key: keyof AppLabels; label: string; hint: string }[] = [
   { key: "sidebarTitle", label: "Sidebar title", hint: "Shown at the top of the sidebar (e.g. \"OGDCL\")." },
@@ -46,7 +52,38 @@ export function LabelsTab() {
         </div>
       </div>
 
+      <SpendingTickerSection />
       <ProminentContractsSection />
+    </div>
+  )
+}
+
+/** Picks how the Dashboard's spending-story ticker plays through active contracts, on this device. */
+function SpendingTickerSection() {
+  const style = useTickerStore((s) => s.style)
+  const setStyle = useTickerStore((s) => s.setStyle)
+
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <h3 className="mb-4 flex items-center gap-1.5 text-sm font-semibold">
+        <ArrowLeftRight className="size-4" /> Spending Ticker
+      </h3>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {TICKER_STYLES.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            onClick={() => setStyle(s.key)}
+            className={cn(
+              "rounded-lg border p-3 text-left transition-colors",
+              style === s.key ? "border-primary bg-primary/5" : "hover:bg-muted"
+            )}
+          >
+            <div className="text-sm font-medium">{s.label}</div>
+            <p className="mt-0.5 text-xs text-muted-foreground">{s.hint}</p>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

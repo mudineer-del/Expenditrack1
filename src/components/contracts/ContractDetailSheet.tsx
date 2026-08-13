@@ -1,4 +1,4 @@
-import { Building2, Calendar, DollarSign, FileText } from "lucide-react"
+import { Calendar, DollarSign, FileText } from "lucide-react"
 import {
   Dialog,
   DialogClose,
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { cn } from "@/lib/utils"
 import { avgLeadTime, fmtMoney, vendorColor } from "@/lib/dashboard"
 import { CONTRACT_TONE_CLASSES, contractExpenditure, contractStatusTone, daysUntil, invoicesForContract, utilizationColor } from "@/lib/contracts"
@@ -24,6 +25,7 @@ export function ContractDetailSheet({
   onOpenChange,
   onEdit,
   canEdit,
+  logo,
 }: {
   open: boolean
   contract: Contract | null
@@ -31,6 +33,7 @@ export function ContractDetailSheet({
   onOpenChange: (open: boolean) => void
   onEdit: () => void
   canEdit: boolean
+  logo?: string
 }) {
   if (!contract) return <Dialog open={open} onOpenChange={onOpenChange} />
 
@@ -66,7 +69,7 @@ export function ContractDetailSheet({
         <div className="grid gap-4">
           <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
             <div className="flex items-center gap-2">
-              <Building2 className="size-4 text-muted-foreground" />
+              <ContractorLogo vendor={primaryVendor || contract.vendor} logo={logo} color={color} size="sm" />
               <div>
                 <div className="text-xs text-muted-foreground">Vendor</div>
                 <div className="font-medium">{contract.vendor || "—"}</div>
@@ -147,7 +150,13 @@ export function ContractDetailSheet({
         </div>
 
         <DialogFooter>
-          {canEdit && <Button onClick={onEdit}>Edit Contract</Button>}
+          <Button
+            onClick={onEdit}
+            disabled={!canEdit}
+            title={canEdit ? "Edit contract" : "Only Editors and Admins can edit contracts"}
+          >
+            Edit Contract
+          </Button>
           <DialogClose asChild>
             <Button variant="outline">Close</Button>
           </DialogClose>

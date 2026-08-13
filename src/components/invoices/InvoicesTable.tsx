@@ -6,9 +6,11 @@ import {
 } from "@tanstack/react-table"
 import { Eye, Pencil, Trash2 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { fmtMoney, vendorColor } from "@/lib/dashboard"
+import { getContractorLogo, type ContractorLogos } from "@/lib/contractorLogos"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Invoice } from "@/types/invoice"
@@ -41,6 +43,7 @@ export function InvoicesTable({
   canBulk,
   canEdit,
   canDelete,
+  contractorLogos,
   selected,
   onToggleSelect,
   onToggleSelectAll,
@@ -52,6 +55,7 @@ export function InvoicesTable({
   canBulk: boolean
   canEdit: boolean
   canDelete: boolean
+  contractorLogos: ContractorLogos
   selected: Set<string>
   onToggleSelect: (id: string) => void
   onToggleSelectAll: (checked: boolean) => void
@@ -80,12 +84,7 @@ export function InvoicesTable({
         const r = row.original
         return (
           <div className="flex items-center gap-2">
-            <span
-              className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-              style={{ backgroundColor: vendorColor(r.vendor) }}
-            >
-              {(r.vendor || "?").slice(0, 2).toUpperCase()}
-            </span>
+            <ContractorLogo vendor={r.vendor || "Unknown"} logo={getContractorLogo(contractorLogos, r.vendor)} color={vendorColor(r.vendor)} size="sm" />
             {r.vendor}
           </div>
         )
@@ -156,16 +155,22 @@ export function InvoicesTable({
             <button className="rounded p-1 hover:bg-muted" title="View" onClick={() => onView(r)}>
               <Eye className="size-4" />
             </button>
-            {canEdit && (
-              <button className="rounded p-1 hover:bg-muted" title="Edit" onClick={() => onEdit(r)}>
-                <Pencil className="size-4" />
-              </button>
-            )}
-            {canDelete && (
-              <button className="rounded p-1 text-destructive hover:bg-destructive/10" title="Delete" onClick={() => onDelete(r)}>
-                <Trash2 className="size-4" />
-              </button>
-            )}
+            <button
+              className="rounded p-1 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+              title={canEdit ? "Edit" : "Only Editors and Admins can edit invoices"}
+              disabled={!canEdit}
+              onClick={() => onEdit(r)}
+            >
+              <Pencil className="size-4" />
+            </button>
+            <button
+              className="rounded p-1 text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
+              title={canDelete ? "Delete" : "Only Admins can delete invoices"}
+              disabled={!canDelete}
+              onClick={() => onDelete(r)}
+            >
+              <Trash2 className="size-4" />
+            </button>
           </div>
         )
       },

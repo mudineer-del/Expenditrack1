@@ -230,3 +230,26 @@ svg.lucide {
 .ogdcl-hoverable:hover {
     transform: translateY(-2px);
 }
+
+/* Dashboard spending ticker (Settings > Labels > Spending ticker): continuous marquee for
+   the "scroll" style. Content is duplicated once in the component, so translating by exactly
+   -50% loops seamlessly. Respects the Format dialog's animations toggle and reduced-motion,
+   same as .ogdcl-hoverable above. */
+@keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+.ticker-track {
+    animation: ticker-scroll var(--ticker-duration, 30s) linear infinite;
+}
+:root[data-animations="off"] .ticker-track {
+    animation: none;
+}
+.ticker-viewport:hover .ticker-track {
+    animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+    .ticker-track {
+        animation: none;
+    }
+}

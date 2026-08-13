@@ -1,6 +1,7 @@
 import { Pencil, Trash2 } from "lucide-react"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { avgLeadTime, fmtMoney, vendorColor } from "@/lib/dashboard"
 import { CONTRACT_TONE_CLASSES, contractExpenditure, contractStatusTone, invoicesForContract, utilizationColor } from "@/lib/contracts"
 import type { Contract } from "@/types/contract"
@@ -12,6 +13,7 @@ export function ContractRow({
   invoices,
   canEdit,
   canDelete,
+  logo,
   onView,
   onEdit,
   onDelete,
@@ -20,6 +22,7 @@ export function ContractRow({
   invoices: Invoice[]
   canEdit: boolean
   canDelete: boolean
+  logo?: string
   onView: () => void
   onEdit: () => void
   onDelete: () => void
@@ -38,7 +41,7 @@ export function ContractRow({
     <TableRow className="cursor-pointer" onClick={onView}>
       <TableCell>
         <div className="flex items-center gap-2">
-          <span className="h-8 w-1 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+          <ContractorLogo vendor={primaryVendor || contract.vendor} logo={logo} color={color} size="sm" />
           <div>
             <div className="font-medium">{contract.contractNo}</div>
             <div className="text-xs text-muted-foreground">
@@ -71,10 +74,10 @@ export function ContractRow({
       </TableCell>
       <TableCell>
         <div className="flex justify-end gap-1">
-          {canEdit && (
-            <button
-              className="rounded p-1 hover:bg-muted"
-              title="Edit"
+          <button
+              className="rounded p-1 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+              title={canEdit ? "Edit" : "Only Editors and Admins can edit contracts"}
+              disabled={!canEdit}
               onClick={(e) => {
                 e.stopPropagation()
                 onEdit()
@@ -82,11 +85,10 @@ export function ContractRow({
             >
               <Pencil className="size-4" />
             </button>
-          )}
-          {canDelete && (
-            <button
-              className="rounded p-1 text-destructive hover:bg-destructive/10"
-              title="Delete"
+          <button
+              className="rounded p-1 text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
+              title={canDelete ? "Delete" : "Only Admins can delete contracts"}
+              disabled={!canDelete}
               onClick={(e) => {
                 e.stopPropagation()
                 onDelete()
@@ -94,7 +96,6 @@ export function ContractRow({
             >
               <Trash2 className="size-4" />
             </button>
-          )}
         </div>
       </TableCell>
     </TableRow>

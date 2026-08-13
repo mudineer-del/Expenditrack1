@@ -17,9 +17,11 @@ import { ChartTypeMenu } from "@/components/dashboard/ChartTypeMenu"
 import { Gauge } from "@/components/dashboard/Gauge"
 import { KpiTile } from "@/components/dashboard/KpiTile"
 import { ServiceChart } from "@/components/dashboard/ServiceChart"
+import { SpendingTicker } from "@/components/dashboard/SpendingTicker"
 import { TrendChart } from "@/components/dashboard/TrendChart"
 import { VendorChart } from "@/components/dashboard/VendorChart"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import {
   avgLeadTime,
@@ -33,6 +35,7 @@ import {
 } from "@/lib/dashboard"
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
+import { getContractorLogo, useContractorLogosQuery } from "@/lib/contractorLogos"
 import { useAppStore } from "@/store/useAppStore"
 import { checkContractNotifications, loadNotifyConfig, loadNotifyPrefs, maybeSendWeeklyDigest } from "@/lib/notifications"
 
@@ -50,6 +53,7 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const invoicesQuery = useInvoicesQuery()
   const contractsQuery = useContractsQuery()
+  const contractorLogosQuery = useContractorLogosQuery()
   const dashVendor = useAppStore((s) => s.dashVendor)
   const setDashVendor = useAppStore((s) => s.setDashVendor)
   const trendChartType = useDisplayStore((s) => s.trendChartType)
@@ -110,12 +114,7 @@ export default function DashboardPage() {
 
   return (
     <div className="grid gap-4">
-      <div className="rounded-lg border bg-card p-4">
-        <div className="text-xs font-medium text-muted-foreground">
-          Spending story{dashVendor !== "ALL" ? ` — ${dashVendor}` : ""}
-        </div>
-        <div className="mt-1 text-sm">{stats.storyText}</div>
-      </div>
+      <SpendingTicker contracts={contracts} invoices={invoices} />
 
       <div className="flex flex-wrap gap-2">
         <Button
@@ -254,7 +253,7 @@ export default function DashboardPage() {
                   onClick={() => setDashVendor(v)}
                 >
                   <div className="mb-2 flex items-center gap-2 font-medium">
-                    <span className="size-2.5 rounded-full" style={{ backgroundColor: vendorColor(v) }} />
+                    <ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={vendorColor(v)} size="sm" />
                     {v}
                   </div>
                   <dl className="grid gap-1 text-xs text-muted-foreground">
@@ -345,12 +344,7 @@ export default function DashboardPage() {
                   <TableCell>{r.srNo}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span
-                        className="flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                        style={{ backgroundColor: vendorColor(r.vendor) }}
-                      >
-                        {(r.vendor || "?").slice(0, 2).toUpperCase()}
-                      </span>
+                      <ContractorLogo vendor={r.vendor || "Unknown"} logo={getContractorLogo(contractorLogosQuery.data ?? {}, r.vendor)} color={vendorColor(r.vendor)} size="sm" />
                       {r.vendor}
                     </div>
                   </TableCell>

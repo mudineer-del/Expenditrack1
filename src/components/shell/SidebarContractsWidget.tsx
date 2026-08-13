@@ -9,6 +9,8 @@ import { useInvoicesQuery } from "@/hooks/useInvoices"
 import { avgLeadTime, fmtMoney, statusTone, vendorColor } from "@/lib/dashboard"
 import { CONTRACT_TONE_CLASSES, contractStatusTone, daysUntil, invoicesForContract, utilizationColor } from "@/lib/contracts"
 import { cn } from "@/lib/utils"
+import { ContractorLogo } from "@/components/shared/ContractorLogo"
+import { getContractorLogo, useContractorLogosQuery } from "@/lib/contractorLogos"
 import { useProminentContractsStore } from "@/store/useProminentContractsStore"
 import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
@@ -24,7 +26,7 @@ function contractShortLabel(contractNo: string, maxLen = 22): string {
   return contractNo.slice(0, cut > 4 ? cut : maxLen) + "…"
 }
 
-function ContractPill({ contract, invoices, onOpen }: { contract: Contract; invoices: Invoice[]; onOpen: () => void }) {
+function ContractPill({ contract, invoices, logo, onOpen }: { contract: Contract; invoices: Invoice[]; logo?: string; onOpen: () => void }) {
   const primaryVendor = (contract.vendor || "").split("/")[0].trim()
   const color = vendorColor(primaryVendor)
   const days = daysUntil(contract.endDate)
@@ -47,7 +49,7 @@ function ContractPill({ contract, invoices, onOpen }: { contract: Contract; invo
           className="flex w-full items-center gap-2 rounded-full border bg-sidebar px-2.5 py-1.5 text-left transition-all duration-200 ease-out hover:translate-x-0.5 hover:shadow-md"
           style={{ borderColor: `color-mix(in oklch, ${color} 45%, transparent)` }}
         >
-          <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+          <ContractorLogo vendor={primaryVendor || contract.vendor} logo={logo} color={color} size="sm" />
           <span className="truncate text-xs font-medium text-sidebar-foreground">
             {contractShortLabel(contract.contractNo)}
           </span>
@@ -121,6 +123,7 @@ export function SidebarContractsWidget() {
   const navigate = useNavigate()
   const contractsQuery = useContractsQuery()
   const invoicesQuery = useInvoicesQuery()
+  const contractorLogosQuery = useContractorLogosQuery()
   const contracts = contractsQuery.data ?? []
   const invoices = invoicesQuery.data ?? []
   const { ids: prominentIds } = useProminentContractsStore()
@@ -160,7 +163,13 @@ export function SidebarContractsWidget() {
         {/* Capped so a long pinned list scrolls internally instead of growing past the sidebar and pushing the footer off-screen. */}
         <div className="grid max-h-56 gap-1.5 overflow-y-auto pr-0.5">
           {upcoming.map((contract) => (
-            <ContractPill key={contract.id} contract={contract} invoices={invoices} onOpen={() => setViewingContract(contract)} />
+            <ContractPill
+              key={contract.id}
+              contract={contract}
+              invoices={invoices}
+              logo={getContractorLogo(contractorLogosQuery.data ?? {}, contract.vendor.split("/")[0].trim())}
+              onOpen={() => setViewingContract(contract)}
+            />
           ))}
           {!upcoming.length && <p className="px-1.5 text-xs text-muted-foreground">No active contracts on file.</p>}
         </div>
@@ -171,6 +180,7 @@ export function SidebarContractsWidget() {
         contract={viewingContract}
         invoices={invoices}
         canEdit={can("edit")}
+        logo={getContractorLogo(contractorLogosQuery.data ?? {}, viewingContract?.vendor.split("/")[0].trim() || "")}
         onOpenChange={(v) => !v && setViewingContract(null)}
         onEdit={() => {
           setViewingContract(null)

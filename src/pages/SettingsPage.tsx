@@ -30,7 +30,7 @@ const ADMIN_TABS: { key: TabKey; label: string; icon: typeof User }[] = [
 export default function SettingsPage() {
   const { isAdmin } = useAuth()
   const [tab, setTab] = useState<TabKey>("profile")
-  const tabs = isAdmin ? [...BASE_TABS, ...ADMIN_TABS] : BASE_TABS
+  const tabs = [...BASE_TABS, ...ADMIN_TABS]
 
   return (
     <div className="grid gap-4 lg:grid-cols-[200px_1fr]">
@@ -39,8 +39,10 @@ export default function SettingsPage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
+            disabled={!isAdmin && ADMIN_TABS.some((adminTab) => adminTab.key === t.key)}
+            title={!isAdmin && ADMIN_TABS.some((adminTab) => adminTab.key === t.key) ? "Only Admins can access this setting" : undefined}
             className={cn(
-              "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45",
               tab === t.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
             )}
           >

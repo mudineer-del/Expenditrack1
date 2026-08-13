@@ -25,9 +25,11 @@ import { ImportDialog } from "@/components/invoices/ImportDialog"
 import { InvoiceDrawer } from "@/components/invoices/InvoiceDrawer"
 import { InvoiceFiltersBar } from "@/components/invoices/InvoiceFiltersBar"
 import { InvoicesTable } from "@/components/invoices/InvoicesTable"
+import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
 import { fmtMoney } from "@/lib/dashboard"
 import { BLANK_FILTERS, filterAndSortInvoices, type SortState } from "@/lib/invoiceFilters"
 import { exportInvoicesCsv, exportInvoicesXlsx } from "@/lib/invoiceIO"
+import { useContractorLogosQuery } from "@/lib/contractorLogos"
 import { useReferenceLists } from "@/lib/referenceLists"
 import { useAuth } from "@/hooks/useAuth"
 import { useContractsQuery } from "@/hooks/useContracts"
@@ -51,6 +53,7 @@ export default function InvoicesPage() {
   const invoicesQuery = useInvoicesQuery()
   const contractsQuery = useContractsQuery()
   const { ref: refLists } = useReferenceLists()
+  const contractorLogosQuery = useContractorLogosQuery()
   const upsertInvoice = useUpsertInvoice()
   const deleteInvoice = useDeleteInvoice()
   const deleteInvoices = useDeleteInvoices()
@@ -269,34 +272,39 @@ export default function InvoicesPage() {
                 <DropdownMenuItem onClick={() => exportInvoicesXlsx(filteredRows)}>Excel (.xlsx)</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            {can("add") && (
-              <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-                <Upload /> Import
-              </Button>
-            )}
-            {can("add") && (
-              <Button size="sm" onClick={openAdd}>
-                <Plus /> New Entry
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!can("add")}
+              title={can("add") ? "Import invoices" : "Only Editors and Admins can import invoices"}
+              onClick={() => setImportOpen(true)}
+            >
+              <Upload /> Import
+            </Button>
+            <Button
+              size="sm"
+              disabled={!can("add")}
+              title={can("add") ? "Add invoice" : "Only Editors and Admins can add invoices"}
+              onClick={openAdd}
+            >
+              <Plus /> New Entry
+            </Button>
           </div>
         </div>
 
         {canBulk && selected.size > 0 && (
-          <div className="mb-3 flex items-center gap-3 rounded-lg border bg-muted/50 p-2.5 text-sm">
-            <span>
-              <b>{selected.size}</b> invoice{selected.size !== 1 ? "s" : ""} selected
-            </span>
-            <span className="text-muted-foreground">
-              {fmtMoney(invoices.filter((r) => selected.has(r.id)).reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0))} total
-            </span>
-            <div className="flex-1" />
-            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
-              Clear selection
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => setBulkDeleteConfirm(true)}>
-              <Trash2 /> Delete Selected
-            </Button>
+          <div className="mb-3">
+            <SelectionToolbar
+              count={selected.size}
+              label={`invoice${selected.size !== 1 ? "s" : ""} selected`}
+              summary={`${fmtMoney(invoices.filter((r) => selected.has(r.id)).reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0))} total`}
+              onClear={() => setSelected(new Set())}
+              action={
+                <Button variant="destructive" size="sm" onClick={() => setBulkDeleteConfirm(true)}>
+                  <Trash2 /> Delete selected
+                </Button>
+              }
+            />
           </div>
         )}
 
@@ -305,6 +313,7 @@ export default function InvoicesPage() {
           canBulk={canBulk}
           canEdit={can("edit")}
           canDelete={can("delete")}
+          contractorLogos={contractorLogosQuery.data ?? {}}
           selected={selected}
           onToggleSelect={toggleSelect}
           onToggleSelectAll={toggleSelectAll}

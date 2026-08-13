@@ -54,20 +54,34 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV.filter((item) => !("adminOnly" in item) || !item.adminOnly || isAdmin).map((item) => (
-                <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton asChild tooltip={item.label}>
-                    <NavLink
-                      to={item.to}
-                      end={"end" in item ? item.end : false}
-                      className={({ isActive }) => (isActive ? "bg-sidebar-accent font-medium" : "")}
+              {NAV.map((item) => {
+                const restricted = "adminOnly" in item && item.adminOnly && !isAdmin
+                return (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton
+                      asChild={!restricted}
+                      disabled={restricted}
+                      tooltip={restricted ? "Only Admins can access Users" : item.label}
                     >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                      {restricted ? (
+                        <>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </>
+                      ) : (
+                        <NavLink
+                          to={item.to}
+                          end={"end" in item ? item.end : false}
+                          className={({ isActive }) => (isActive ? "bg-sidebar-accent font-medium" : "")}
+                        >
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

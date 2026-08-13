@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx"
 import type { Invoice } from "@/types/invoice"
 
 /** Ported from EXPORT_COLS (index.html:2457-2463). */
@@ -43,8 +42,12 @@ export function exportInvoicesCsv(rows: Invoice[]) {
   )
 }
 
-/** Real .xlsx (via SheetJS), replacing the legacy app's XML-as-.xls trick. */
-export function exportInvoicesXlsx(rows: Invoice[]) {
+/** Real .xlsx (via SheetJS), replacing the legacy app's XML-as-.xls trick.
+ *  SheetJS is a large dependency (~500kB) only needed when someone actually
+ *  exports/imports Excel — dynamically imported so it doesn't ship in the
+ *  Invoices route's initial chunk for everyone who never touches it. */
+export async function exportInvoicesXlsx(rows: Invoice[]) {
+  const XLSX = await import("xlsx")
   const stamp = new Date().toISOString().slice(0, 10)
   const aoa = [EXPORT_COLS.map((c) => c[1]), ...rows.map((r) => EXPORT_COLS.map((c) => r[c[0]] ?? ""))]
   const ws = XLSX.utils.aoa_to_sheet(aoa)
@@ -261,6 +264,7 @@ export async function parseImportFile(file: File): Promise<ImportMatrix> {
     const text = await file.text()
     return parseDelimited(text, ",")
   }
+  const XLSX = await import("xlsx")
   const buf = await file.arrayBuffer()
   const wb = XLSX.read(buf, { type: "array" })
   const sheet = wb.Sheets[wb.SheetNames[0]]

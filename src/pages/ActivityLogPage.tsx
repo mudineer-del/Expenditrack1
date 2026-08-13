@@ -1,4 +1,4 @@
-import { Undo2 } from "lucide-react"
+import { FileSignature, Layers, Receipt, Undo2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -13,10 +13,19 @@ import {
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
+import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
 import { useActivityLogQuery, useClearActivityLog } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { useUndo } from "@/hooks/useUndo"
-import { useActivityStore, type ActivityAction } from "@/store/useActivityStore"
+import { useActivityStore, type ActivityAction, type ActivityEntry } from "@/store/useActivityStore"
+
+/** The action badge says what happened; this says to what — an entry's own
+ *  meta already carries invoiceNo or contractNo, so no string-parsing needed. */
+function EntryKindIcon({ entry }: { entry: ActivityEntry }) {
+  if (entry.meta?.invoiceNo !== undefined) return <Receipt className="size-3.5 text-muted-foreground" aria-label="Invoice" />
+  if (entry.meta?.contractNo !== undefined) return <FileSignature className="size-3.5 text-muted-foreground" aria-label="Contract" />
+  return <Layers className="size-3.5 text-muted-foreground" aria-label="Bulk / system change" />
+}
 
 const ACTIONS: ActivityAction[] = ["Import", "Add", "Edit", "Delete", "Undo", "Restore"]
 
@@ -95,17 +104,15 @@ export default function ActivityLogPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Activity &amp; Change Log</h2>
         <div className="flex gap-2">
-          {selectable && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!undoStackLength}
-              title={lastUndoLabel ? `Undo: ${lastUndoLabel}` : "Nothing to undo"}
-              onClick={undoLast}
-            >
-              <Undo2 /> Undo last
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!selectable || !undoStackLength}
+            title={!selectable ? "Only Editors and Admins can undo changes" : lastUndoLabel ? `Undo: ${lastUndoLabel}` : "Nothing to undo"}
+            onClick={undoLast}
+          >
+            <Undo2 /> Undo last
+          </Button>
           {isAdmin && log.length > 0 && (
             <Button variant="ghost" size="sm" onClick={handleClearLog} disabled={clearLog.isPending}>
               Clear log
@@ -137,28 +144,27 @@ export default function ActivityLogPage() {
           </div>
 
           {selectable && undoableLog.length > 0 && (
-            <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/50 p-2.5 text-sm">
-              <label className="flex items-center gap-2">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={(v) => setSelection(v ? new Set(undoableLog.map((e) => e.id)) : new Set())}
-                />
-                Select all undoable ({undoableLog.length})
-              </label>
-              {selectedLogIds.size > 0 && (
-                <>
-                  <span>
-                    <b>{selectedLogIds.size}</b> selected
-                  </span>
-                  <Button variant="ghost" size="sm" onClick={clearSelection}>
-                    Clear
-                  </Button>
+            <SelectionToolbar
+              count={selectedLogIds.size}
+              label="changes selected"
+              leading={
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={(v) => setSelection(v ? new Set(undoableLog.map((e) => e.id)) : new Set())}
+                  />
+                  Select all undoable ({undoableLog.length})
+                </label>
+              }
+              onClear={clearSelection}
+              action={
+                selectedLogIds.size > 0 ? (
                   <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
-                    <Undo2 /> Undo Selected
+                    <Undo2 /> Undo selected
                   </Button>
-                </>
-              )}
-            </div>
+                ) : undefined
+              }
+            />
           )}
 
           <div className="rounded-lg border bg-card">
@@ -182,6 +188,9 @@ export default function ActivityLogPage() {
                         style={{ backgroundColor: ACTION_COLOR[e.action] }}
                       >
                         {e.action}
+                      </span>
+                      <span className="mt-1 shrink-0" title={e.meta?.invoiceNo !== undefined ? "Invoice" : e.meta?.contractNo !== undefined ? "Contract" : "Bulk / system change"}>
+                        <EntryKindIcon entry={e} />
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm">{e.detail}</div>

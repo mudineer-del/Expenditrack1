@@ -215,7 +215,7 @@ export function InvoiceDrawer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] w-full overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[85vh] w-full overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="sr-only">Invoice entry form</DialogDescription>
@@ -234,7 +234,7 @@ export function InvoiceDrawer({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
               <FormField
                 control={form.control}
                 name="srNo"
