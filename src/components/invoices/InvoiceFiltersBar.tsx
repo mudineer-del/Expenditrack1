@@ -1,8 +1,20 @@
-import { ArrowDownAZ, Filter, Search, X } from "lucide-react"
+import {
+  ArrowDownAZ,
+  Building2,
+  Calendar,
+  CalendarDays,
+  CircleCheck,
+  FileText,
+  Filter,
+  MapPin,
+  Search,
+  UserCircle,
+  Wrench,
+  X,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BLANK_FILTERS, type InvoiceFilters, type SortState } from "@/lib/invoiceFilters"
@@ -15,22 +27,33 @@ const SORT_OPTIONS: Array<[keyof Invoice, string]> = [
   ["amountExclTax", "Excl. Tax"], ["amountInclTax", "Incl. Tax"], ["amountPaid", "Paid"], ["status", "Status"],
 ]
 
+const FILTER_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
+
 function FilterSelect({
   label,
+  icon: Icon,
+  color,
   value,
   options,
   onChange,
 }: {
   label: string
+  icon: typeof Building2
+  color: string
   value: string
   options: string[]
   onChange: (v: string) => void
 }) {
   return (
     <div className="grid gap-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-1.5 text-xs font-medium">
+        <span className="flex size-5 items-center justify-center rounded-full" style={{ backgroundColor: `color-mix(in oklch, ${color} 18%, transparent)` }}>
+          <Icon className="size-3" style={{ color }} />
+        </span>
+        {label}
+      </div>
       <Select value={value || "__all__"} onValueChange={(v) => onChange(v === "__all__" ? "" : v)}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" style={value ? { borderColor: color } : undefined}>
           <SelectValue placeholder="All" />
         </SelectTrigger>
         <SelectContent>
@@ -54,6 +77,7 @@ export function InvoiceFiltersBar({
   refLists,
   contractNumbers,
   yearOptions,
+  enteredByOptions,
 }: {
   filters: InvoiceFilters
   onFiltersChange: (f: InvoiceFilters) => void
@@ -62,10 +86,11 @@ export function InvoiceFiltersBar({
   refLists: ReferenceLists
   contractNumbers: string[]
   yearOptions: string[]
+  enteredByOptions: string[]
 }) {
-  const activeCount = (["vendor", "service", "contract", "status", "region", "year", "qtr"] as const).filter(
-    (k) => filters[k]
-  ).length
+  const activeCount = (
+    ["vendor", "service", "contract", "status", "region", "year", "qtr", "enteredBy"] as const
+  ).filter((k) => filters[k]).length
   const hasFilter = activeCount > 0 || !!filters.q
 
   function set<K extends keyof InvoiceFilters>(key: K, value: InvoiceFilters[K]) {
@@ -86,19 +111,25 @@ export function InvoiceFiltersBar({
 
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            className={activeCount > 0 ? "border-primary/50 text-primary" : undefined}
+          >
             <Filter /> Filters
             {activeCount > 0 && <Badge variant="secondary">{activeCount}</Badge>}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="grid w-80 gap-3" align="start">
-          <FilterSelect label="Vendor" value={filters.vendor} options={refLists.vendors} onChange={(v) => set("vendor", v)} />
-          <FilterSelect label="Service" value={filters.service} options={refLists.services} onChange={(v) => set("service", v)} />
-          <FilterSelect label="Contract" value={filters.contract} options={contractNumbers} onChange={(v) => set("contract", v)} />
-          <FilterSelect label="Status" value={filters.status} options={refLists.statuses} onChange={(v) => set("status", v)} />
-          <FilterSelect label="Region" value={filters.region} options={refLists.regions} onChange={(v) => set("region", v)} />
-          <FilterSelect label="Year" value={filters.year} options={yearOptions} onChange={(v) => set("year", v)} />
-          <FilterSelect label="Quarter" value={filters.qtr} options={refLists.quarters} onChange={(v) => set("qtr", v)} />
+        <PopoverContent className="grid w-80 gap-3 border-t-4" style={{ borderTopColor: "var(--chart-1)" }} align="start">
+          <p className="text-sm font-semibold">Filter invoices</p>
+          <FilterSelect label="Vendor" icon={Building2} color={FILTER_COLORS[0]} value={filters.vendor} options={refLists.vendors} onChange={(v) => set("vendor", v)} />
+          <FilterSelect label="Service" icon={Wrench} color={FILTER_COLORS[1]} value={filters.service} options={refLists.services} onChange={(v) => set("service", v)} />
+          <FilterSelect label="Contract" icon={FileText} color={FILTER_COLORS[2]} value={filters.contract} options={contractNumbers} onChange={(v) => set("contract", v)} />
+          <FilterSelect label="Status" icon={CircleCheck} color={FILTER_COLORS[3]} value={filters.status} options={refLists.statuses} onChange={(v) => set("status", v)} />
+          <FilterSelect label="Region" icon={MapPin} color={FILTER_COLORS[4]} value={filters.region} options={refLists.regions} onChange={(v) => set("region", v)} />
+          <FilterSelect label="Year" icon={Calendar} color={FILTER_COLORS[0]} value={filters.year} options={yearOptions} onChange={(v) => set("year", v)} />
+          <FilterSelect label="Quarter" icon={CalendarDays} color={FILTER_COLORS[1]} value={filters.qtr} options={refLists.quarters} onChange={(v) => set("qtr", v)} />
+          <FilterSelect label="Uploaded By" icon={UserCircle} color={FILTER_COLORS[2]} value={filters.enteredBy} options={enteredByOptions} onChange={(v) => set("enteredBy", v)} />
         </PopoverContent>
       </Popover>
 

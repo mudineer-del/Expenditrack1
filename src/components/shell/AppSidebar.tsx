@@ -20,7 +20,10 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { OgdclMark } from "@/components/shared/OgdclMark"
+import { SidebarContractsWidget } from "@/components/shell/SidebarContractsWidget"
 import { useAuth } from "@/hooks/useAuth"
+import { useLabelsStore } from "@/store/useLabelsStore"
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutGrid, end: true },
@@ -33,17 +36,17 @@ const NAV = [
 
 export function AppSidebar() {
   const { user, isAdmin } = useAuth()
+  const sidebarTitle = useLabelsStore((s) => s.sidebarTitle)
+  const sidebarSubtitle = useLabelsStore((s) => s.sidebarSubtitle)
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-            DF
-          </div>
+          <OgdclMark size="sm" />
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-semibold">OGDCL</p>
-            <p className="truncate text-xs text-muted-foreground">Drilling Fluids Tracker</p>
+            <p className="truncate text-sm font-semibold">{sidebarTitle}</p>
+            <p className="truncate text-xs text-muted-foreground">{sidebarSubtitle}</p>
           </div>
         </div>
       </SidebarHeader>
@@ -69,6 +72,9 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      {/* Rendered outside SidebarContent so it stays pinned above the footer instead of
+          scrolling with the nav — SidebarContent's flex-1 already fills the gap above this. */}
+      <SidebarContractsWidget />
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>

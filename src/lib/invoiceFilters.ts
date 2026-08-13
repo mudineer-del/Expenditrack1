@@ -9,10 +9,11 @@ export interface InvoiceFilters {
   year: string
   qtr: string
   contract: string
+  enteredBy: string
 }
 
 export const BLANK_FILTERS: InvoiceFilters = {
-  q: "", vendor: "", service: "", status: "", region: "", year: "", qtr: "", contract: "",
+  q: "", vendor: "", service: "", status: "", region: "", year: "", qtr: "", contract: "", enteredBy: "",
 }
 
 export interface SortState {
@@ -44,6 +45,7 @@ export function filterAndSortInvoices(invoices: Invoice[], f: InvoiceFilters, so
   if (f.contract) rows = rows.filter((r) => normContract(r.contractNo) === normContract(f.contract))
   if (f.year) rows = rows.filter((r) => String(r.year) === String(f.year) || String(r.yr) === String(f.year))
   if (f.qtr) rows = rows.filter((r) => r.qtr === f.qtr)
+  if (f.enteredBy) rows = rows.filter((r) => r.createdByName === f.enteredBy)
 
   const { key, dir } = sort
   rows.sort((a, b) => {

@@ -3,6 +3,7 @@ import { getSupabaseClient } from "@/lib/supabase"
 import { runInvoiceMigrations } from "@/lib/migrations"
 import { fromRow, toRow, type Invoice, type InvoiceRow } from "@/types/invoice"
 import { useActivityStore } from "@/store/useActivityStore"
+import { logActivity } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { fmtMoney } from "@/lib/dashboard"
 import {
@@ -56,7 +57,8 @@ export function useUpsertInvoice() {
       const { error } = await supabase.from("invoices").upsert(toRow(invoice), { onConflict: "id" })
       if (error) throw error
 
-      useActivityStore.getState().logActivity(
+      await logActivity(
+        queryClient,
         { name: user?.name || "Unknown", role: user?.role || "" },
         wasEdit ? "Edit" : "Add",
         `${wasEdit ? "Edited" : "Added"} invoice ${invoice.invoiceNo || `#${invoice.srNo}`}${invoice.vendor ? ` (${invoice.vendor})` : ""}`,
@@ -103,7 +105,8 @@ export function useBulkUpsertInvoices() {
         if (error) throw error
       }
 
-      useActivityStore.getState().logActivity(
+      await logActivity(
+        queryClient,
         { name: user?.name || "Unknown", role: user?.role || "" },
         "Import",
         `Imported ${invoices.length} invoice${invoices.length !== 1 ? "s" : ""}`,
@@ -130,7 +133,8 @@ export function useDeleteInvoice() {
       const { error } = await supabase.from("invoices").delete().eq("id", invoice.id)
       if (error) throw error
 
-      useActivityStore.getState().logActivity(
+      await logActivity(
+        queryClient,
         { name: user?.name || "Unknown", role: user?.role || "" },
         "Delete",
         `Deleted invoice ${invoice.invoiceNo || `#${invoice.srNo}`}${invoice.vendor ? ` (${invoice.vendor})` : ""}`,
@@ -164,7 +168,8 @@ export function useDeleteInvoices() {
       }
 
       const total = victims.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0)
-      useActivityStore.getState().logActivity(
+      await logActivity(
+        queryClient,
         { name: user?.name || "Unknown", role: user?.role || "" },
         "Delete",
         `Bulk deleted ${victims.length} invoice${victims.length !== 1 ? "s" : ""} (${fmtMoney(total)})`,

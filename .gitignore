@@ -12,6 +12,9 @@ node_modules/
 # Zips (may contain secrets)
 *.zip
 
+# Font source files staged for import (see src/assets/fonts/ for what's actually in use)
+fonts/
+
 # All tracker HTML versions except the live index.html
 OGDCL_Expenditure_Invoice_Tracker*.html
 OGDCL_report_*.html

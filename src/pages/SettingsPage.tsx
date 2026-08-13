@@ -1,22 +1,24 @@
-import { Bell, Cloud, Database, Key, Shield, Tags, User } from "lucide-react"
+import { Bell, Cloud, Database, Key, Shield, Tags, Type, User } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { BackupTab } from "@/components/settings/BackupTab"
 import { CloudSyncTab } from "@/components/settings/CloudSyncTab"
+import { LabelsTab } from "@/components/settings/LabelsTab"
 import { NotificationsTab } from "@/components/settings/NotificationsTab"
 import { PasswordTab } from "@/components/settings/PasswordTab"
 import { ProfileTab } from "@/components/settings/ProfileTab"
 import { ReferenceListsTab } from "@/components/settings/ReferenceListsTab"
 import { SecurityTab } from "@/components/settings/SecurityTab"
 
-type TabKey = "profile" | "security" | "password" | "notifications" | "backup" | "lists" | "cloud"
+type TabKey = "profile" | "security" | "password" | "notifications" | "labels" | "backup" | "lists" | "cloud"
 
 const BASE_TABS: { key: TabKey; label: string; icon: typeof User }[] = [
   { key: "profile", label: "Profile", icon: User },
   { key: "security", label: "Security", icon: Shield },
   { key: "password", label: "Password", icon: Key },
   { key: "notifications", label: "Notifications", icon: Bell },
+  { key: "labels", label: "Labels", icon: Type },
   { key: "backup", label: "Data & Backup", icon: Database },
 ]
 const ADMIN_TABS: { key: TabKey; label: string; icon: typeof User }[] = [
@@ -24,13 +26,7 @@ const ADMIN_TABS: { key: TabKey; label: string; icon: typeof User }[] = [
   { key: "cloud", label: "Cloud Sync", icon: Cloud },
 ]
 
-/**
- * Ported from renderSettings/renderSettingsTab (index.html:5220-5237 and its
- * per-tab bodies). The legacy Appearance (accent color/density picker) and
- * Titles & Labels (custom UI-text editor with a font/color format dialog)
- * tabs are deliberately not ported — they're cosmetic theme editors with low
- * functional value relative to their build cost, out of scope for this pass.
- */
+/** Ported from renderSettings/renderSettingsTab (index.html:5220-5237 and its per-tab bodies). */
 export default function SettingsPage() {
   const { isAdmin } = useAuth()
   const [tab, setTab] = useState<TabKey>("profile")
@@ -58,6 +54,7 @@ export default function SettingsPage() {
         {tab === "security" && <SecurityTab />}
         {tab === "password" && <PasswordTab />}
         {tab === "notifications" && <NotificationsTab />}
+        {tab === "labels" && <LabelsTab />}
         {tab === "backup" && <BackupTab />}
         {tab === "lists" && isAdmin && <ReferenceListsTab />}
         {tab === "cloud" && isAdmin && <CloudSyncTab />}

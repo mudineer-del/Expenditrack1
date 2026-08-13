@@ -54,8 +54,8 @@ export function ReportDetailDrawer({ detail, onOpenChange }: { detail: ReportDet
                     <TableCell className="text-center">
                       {turnaroundDays(r) !== null ? `${turnaroundDays(r)}d` : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-mono">{fmtMoney(r.amountInclTax)}</TableCell>
-                    <TableCell className="text-right font-mono text-green-700 dark:text-green-400">{fmtMoney(r.amountPaid)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtMoney(r.amountInclTax)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-green-700 dark:text-green-400">{fmtMoney(r.amountPaid)}</TableCell>
                     <TableCell>
                       <StatusBadge status={r.status} />
                     </TableCell>

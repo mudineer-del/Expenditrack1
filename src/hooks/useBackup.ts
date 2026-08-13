@@ -4,6 +4,7 @@ import { toContractRow, type Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
 import type { Backup } from "@/lib/backup"
 import { useActivityStore } from "@/store/useActivityStore"
+import { logActivity } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { CONTRACTS_QUERY_KEY } from "@/hooks/useContracts"
 import { INVOICES_QUERY_KEY } from "@/hooks/useInvoices"
@@ -27,8 +28,8 @@ async function reconcileContractsTo(snapshot: Contract[], current: Contract[]) {
 
 /** Ported from restoreBackup (index.html:1839-1866), reconciling Supabase
  *  instead of reassigning a local array (see useUndo's reconcileInvoicesTo
- *  for why). Also restores the reference lists and replaces the local
- *  activity log, same fields the legacy restore touched. */
+ *  for why). Also restores the reference lists; the activity log is no
+ *  longer among the restored fields (see comment below). */
 export function useRestoreBackup() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
@@ -49,8 +50,12 @@ export function useRestoreBackup() {
         if (error) throw error
       }
 
-      useActivityStore.setState({ log: backup.data.activityLog })
-      useActivityStore.getState().logActivity(
+      // The backup's activityLog field is kept for historical reference inside
+      // the file itself, but no longer replaces the live log — that's now
+      // shared team history in Supabase, not something one person's restore
+      // should overwrite.
+      await logActivity(
+        queryClient,
         { name: user?.name || "Unknown", role: user?.role || "" },
         "Restore",
         `Restored backup from ${backup.exportedAt ? backup.exportedAt.slice(0, 10) : "file"} (${backup.data.invoices.length} invoices)`,

@@ -19,6 +19,7 @@ export function ContractRow({
   invoices,
   canEdit,
   canDelete,
+  onView,
   onEdit,
   onDelete,
 }: {
@@ -26,6 +27,7 @@ export function ContractRow({
   invoices: Invoice[]
   canEdit: boolean
   canDelete: boolean
+  onView: () => void
   onEdit: () => void
   onDelete: () => void
 }) {
@@ -40,7 +42,7 @@ export function ContractRow({
   const tone = contractStatusTone(contract.status)
 
   return (
-    <TableRow>
+    <TableRow className="cursor-pointer" onClick={onView}>
       <TableCell>
         <div className="flex items-center gap-2">
           <span className="h-8 w-1 shrink-0 rounded-full" style={{ backgroundColor: color }} />
@@ -53,8 +55,8 @@ export function ContractRow({
           </div>
         </div>
       </TableCell>
-      <TableCell className="text-right font-mono">{cost > 0 ? fmtMoney(cost) : "—"}</TableCell>
-      <TableCell className="text-right font-mono">{fmtMoney(spent)}</TableCell>
+      <TableCell className="text-right tabular-nums">{cost > 0 ? fmtMoney(cost) : "—"}</TableCell>
+      <TableCell className="text-right tabular-nums">{fmtMoney(spent)}</TableCell>
       <TableCell className="text-right">{rows.length}</TableCell>
       <TableCell className="text-right">{lead !== null ? `${lead}d` : "—"}</TableCell>
       <TableCell>
@@ -77,12 +79,26 @@ export function ContractRow({
       <TableCell>
         <div className="flex justify-end gap-1">
           {canEdit && (
-            <button className="rounded p-1 hover:bg-muted" title="Edit" onClick={onEdit}>
+            <button
+              className="rounded p-1 hover:bg-muted"
+              title="Edit"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit()
+              }}
+            >
               <Pencil className="size-4" />
             </button>
           )}
           {canDelete && (
-            <button className="rounded p-1 text-destructive hover:bg-destructive/10" title="Delete" onClick={onDelete}>
+            <button
+              className="rounded p-1 text-destructive hover:bg-destructive/10"
+              title="Delete"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+            >
               <Trash2 className="size-4" />
             </button>
           )}

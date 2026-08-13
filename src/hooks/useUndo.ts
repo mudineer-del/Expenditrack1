@@ -3,6 +3,7 @@ import { toast } from "sonner"
 import { getSupabaseClient } from "@/lib/supabase"
 import { toRow, type Invoice } from "@/types/invoice"
 import { useActivityStore, type UndoEntry } from "@/store/useActivityStore"
+import { logActivity, useActivityLogQuery } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { INVOICES_QUERY_KEY } from "@/hooks/useInvoices"
 
@@ -36,6 +37,7 @@ export function useUndo() {
   const { user } = useAuth()
   const undoStackLength = useActivityStore((s) => s.undoStack.length)
   const lastUndoLabel = useActivityStore((s) => s.undoStack.at(-1)?.label ?? "")
+  const activityLogQuery = useActivityLogQuery()
 
   async function undoTo(entryId: string): Promise<{ target: UndoEntry; discardedCount: number } | null> {
     const { undoStack } = useActivityStore.getState()
@@ -52,7 +54,7 @@ export function useUndo() {
   }
 
   function logUndo(detail: string) {
-    useActivityStore.getState().logActivity({ name: user?.name || "Unknown", role: user?.role || "" }, "Undo", detail)
+    void logActivity(queryClient, { name: user?.name || "Unknown", role: user?.role || "" }, "Undo", detail)
   }
 
   async function undoLast() {
@@ -73,7 +75,8 @@ export function useUndo() {
       toast.error("Select at least one change to undo.")
       return false
     }
-    const { log, undoStack } = useActivityStore.getState()
+    const { undoStack } = useActivityStore.getState()
+    const log = activityLogQuery.data ?? []
     const undoIds = new Set<string>()
     log.forEach((e) => {
       if (logIds.has(e.id) && e.meta?.undoId) undoIds.add(String(e.meta.undoId))

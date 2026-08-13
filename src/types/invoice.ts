@@ -26,6 +26,10 @@ export interface Invoice {
   amountInclTax: number | ""
   amountPaid: number | ""
   status: string
+  /** Server-stamped (see supabase/invoices_attribution_setup.sql) — not written by toRow(). */
+  createdByName?: string
+  updatedByName?: string
+  updatedAt?: string
 }
 
 export type InvoiceRow = Record<string, unknown> & { id: string }
@@ -104,6 +108,11 @@ export function fromRow(row: InvoiceRow): Invoice {
     const v = draft[k]
     if (v !== "" && v !== null && v !== undefined) draft[k] = Number(v)
   }
+  // Server-stamped columns, deliberately outside SB_FIELDS so toRow() never sends
+  // client values for them — the DB trigger is the only thing that sets these.
+  draft.createdByName = row.created_by_name || ""
+  draft.updatedByName = row.updated_by_name || ""
+  draft.updatedAt = row.updated_at ? String(row.updated_at) : ""
   return draft as unknown as Invoice
 }
 

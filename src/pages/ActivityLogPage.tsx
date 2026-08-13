@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useActivityLogQuery, useClearActivityLog } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { useUndo } from "@/hooks/useUndo"
 import { useActivityStore, type ActivityAction } from "@/store/useActivityStore"
@@ -35,14 +37,15 @@ function fmtDateTime(ts: number): string {
 
 /** Ported from renderActivity/bindActivityPage/renderUndoConfirm (index.html:5165-5216, 6406-6445). */
 export default function ActivityLogPage() {
-  const { can } = useAuth()
-  const log = useActivityStore((s) => s.log)
+  const { can, isAdmin } = useAuth()
+  const activityLogQuery = useActivityLogQuery()
+  const log = useMemo(() => activityLogQuery.data ?? [], [activityLogQuery.data])
   const undoStack = useActivityStore((s) => s.undoStack)
   const selectedLogIds = useActivityStore((s) => s.selectedLogIds)
   const toggleSelect = useActivityStore((s) => s.toggleSelect)
   const setSelection = useActivityStore((s) => s.setSelection)
   const clearSelection = useActivityStore((s) => s.clearSelection)
-  const clearLog = useActivityStore((s) => s.clearLog)
+  const clearLog = useClearActivityLog()
   const { undoStackLength, lastUndoLabel, undoLast, undoSelected } = useUndo()
 
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -76,8 +79,10 @@ export default function ActivityLogPage() {
   }, [confirmOpen, selectedLogIds, log, undoStack])
 
   function handleClearLog() {
-    clearLog()
-    toast.success("Activity log cleared.")
+    clearLog.mutate(undefined, {
+      onSuccess: () => toast.success("Activity log cleared for everyone."),
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Could not clear the activity log."),
+    })
   }
 
   async function handleConfirmUndo() {
@@ -101,92 +106,103 @@ export default function ActivityLogPage() {
               <Undo2 /> Undo last
             </Button>
           )}
-          {selectable && log.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={handleClearLog}>
+          {isAdmin && log.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={handleClearLog} disabled={clearLog.isPending}>
               Clear log
             </Button>
           )}
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 rounded-lg border bg-card p-3 text-sm">
-        {ACTIONS.map((a) => {
-          const c = log.filter((e) => e.action === a).length
-          return (
-            <div key={a} className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full" style={{ backgroundColor: ACTION_COLOR[a] }} />
-              <b>{c}</b> {a}
-              {c === 1 ? "" : "s"}
-            </div>
-          )
-        })}
-      </div>
-
-      {selectable && undoableLog.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/50 p-2.5 text-sm">
-          <label className="flex items-center gap-2">
-            <Checkbox
-              checked={allSelected}
-              onCheckedChange={(v) => setSelection(v ? new Set(undoableLog.map((e) => e.id)) : new Set())}
-            />
-            Select all undoable ({undoableLog.length})
-          </label>
-          {selectedLogIds.size > 0 && (
-            <>
-              <span>
-                <b>{selectedLogIds.size}</b> selected
-              </span>
-              <Button variant="ghost" size="sm" onClick={clearSelection}>
-                Clear
-              </Button>
-              <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
-                <Undo2 /> Undo Selected
-              </Button>
-            </>
-          )}
+      {activityLogQuery.isLoading ? (
+        <Skeleton className="h-16 w-full" />
+      ) : activityLogQuery.isError ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
+          Could not load the activity log. Run <code>supabase/activity_log_setup.sql</code> in your Supabase
+          project's SQL Editor if you haven't yet, then reload.
         </div>
-      )}
-
-      <div className="rounded-lg border bg-card">
-        {log.length ? (
-          <div className="divide-y">
-            {log.map((e) => {
-              const isUndoable = selectable && e.meta?.undoId && undoableIds.has(String(e.meta.undoId))
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-4 rounded-lg border bg-card p-3 text-sm">
+            {ACTIONS.map((a) => {
+              const c = log.filter((e) => e.action === a).length
               return (
-                <div key={e.id} className="flex items-start gap-3 p-3">
-                  {selectable && (
-                    <div className="pt-0.5">
-                      {isUndoable ? (
-                        <Checkbox checked={selectedLogIds.has(e.id)} onCheckedChange={() => toggleSelect(e.id)} />
-                      ) : (
-                        <div className="size-4" />
-                      )}
-                    </div>
-                  )}
-                  <span
-                    className="mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                    style={{ backgroundColor: ACTION_COLOR[e.action] }}
-                  >
-                    {e.action}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm">{e.detail}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {e.user}
-                      {e.role ? ` · ${e.role}` : ""} · {fmtDateTime(e.ts)}
-                    </div>
-                  </div>
+                <div key={a} className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full" style={{ backgroundColor: ACTION_COLOR[a] }} />
+                  <b>{c}</b> {a}
+                  {c === 1 ? "" : "s"}
                 </div>
               )
             })}
           </div>
-        ) : (
-          <div className="p-10 text-center text-muted-foreground">
-            <h4 className="font-medium text-foreground">No activity yet</h4>
-            <p className="text-sm">Imports, additions, edits and deletions will appear here.</p>
+
+          {selectable && undoableLog.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/50 p-2.5 text-sm">
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={(v) => setSelection(v ? new Set(undoableLog.map((e) => e.id)) : new Set())}
+                />
+                Select all undoable ({undoableLog.length})
+              </label>
+              {selectedLogIds.size > 0 && (
+                <>
+                  <span>
+                    <b>{selectedLogIds.size}</b> selected
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={clearSelection}>
+                    Clear
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
+                    <Undo2 /> Undo Selected
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="rounded-lg border bg-card">
+            {log.length ? (
+              <div className="divide-y">
+                {log.map((e) => {
+                  const isUndoable = selectable && e.meta?.undoId && undoableIds.has(String(e.meta.undoId))
+                  return (
+                    <div key={e.id} className="flex items-start gap-3 p-3">
+                      {selectable && (
+                        <div className="pt-0.5">
+                          {isUndoable ? (
+                            <Checkbox checked={selectedLogIds.has(e.id)} onCheckedChange={() => toggleSelect(e.id)} />
+                          ) : (
+                            <div className="size-4" />
+                          )}
+                        </div>
+                      )}
+                      <span
+                        className="mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                        style={{ backgroundColor: ACTION_COLOR[e.action] }}
+                      >
+                        {e.action}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm">{e.detail}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {e.user}
+                          {e.role ? ` · ${e.role}` : ""} · {fmtDateTime(e.ts)}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="p-10 text-center text-muted-foreground">
+                <h4 className="font-medium text-foreground">No activity yet</h4>
+                <p className="text-sm">Imports, additions, edits and deletions will appear here.</p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

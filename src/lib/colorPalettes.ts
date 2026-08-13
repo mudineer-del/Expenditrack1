@@ -55,6 +55,7 @@ export const PALETTES: Palette[] = [
 ]
 
 export const DEFAULT_PALETTE_ID = "ocean"
+export const CUSTOM_PALETTE_ID = "custom"
 
 export function getPalette(id: string): Palette {
   return PALETTES.find((p) => p.id === id) ?? PALETTES[0]
@@ -82,14 +83,28 @@ function varsBlock(v: PaletteVars): string {
 }
 
 /** Injects/updates a <style> tag overriding the default palette CSS vars for both light and dark mode. */
-export function applyPalette(paletteId: string): void {
+export function applyPaletteVars(light: PaletteVars, dark: PaletteVars): void {
   if (typeof document === "undefined") return
-  const palette = getPalette(paletteId)
   let el = document.getElementById(STYLE_TAG_ID) as HTMLStyleElement | null
   if (!el) {
     el = document.createElement("style")
     el.id = STYLE_TAG_ID
     document.head.appendChild(el)
   }
-  el.textContent = `:root{${varsBlock(palette.light)}}.dark{${varsBlock(palette.dark)}}`
+  el.textContent = `:root{${varsBlock(light)}}.dark{${varsBlock(dark)}}`
+}
+
+/**
+ * id is either a preset id (applies that preset's light/dark pair) or
+ * CUSTOM_PALETTE_ID (applies customVars to both light and dark — individually
+ * tuning light vs dark isn't exposed in the UI, to keep the Format dialog's
+ * "Advanced colors" section to one set of pickers rather than two).
+ */
+export function applyPalette(id: string, customVars?: PaletteVars): void {
+  if (id === CUSTOM_PALETTE_ID && customVars) {
+    applyPaletteVars(customVars, customVars)
+    return
+  }
+  const palette = getPalette(id)
+  applyPaletteVars(palette.light, palette.dark)
 }

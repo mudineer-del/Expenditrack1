@@ -1,5 +1,6 @@
 import { CheckCircle2, Download, List, Plus, Trash2, Upload, Wallet } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -45,6 +46,8 @@ type DrawerMode = "add" | "edit" | "view"
 
 export default function InvoicesPage() {
   const { can } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const invoicesQuery = useInvoicesQuery()
   const contractsQuery = useContractsQuery()
   const { ref: refLists } = useReferenceLists()
@@ -81,6 +84,11 @@ export default function InvoicesPage() {
     [invoices]
   )
 
+  const enteredByOptions = useMemo(
+    () => Array.from(new Set(invoices.map((r) => r.createdByName).filter((n): n is string => !!n))).sort(),
+    [invoices]
+  )
+
   const filteredRows = useMemo(() => filterAndSortInvoices(invoices, filters, sort), [invoices, filters, sort])
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
   const clampedPage = Math.min(pageNum, totalPages)
@@ -109,6 +117,17 @@ export default function InvoicesPage() {
     setEditingInvoice(inv)
     setDrawerOpen(true)
   }
+
+  // Deep-link support: Dashboard's Recent Invoices rows navigate here with
+  // { openInvoiceId } in router state to jump straight to that invoice.
+  useEffect(() => {
+    const openInvoiceId = (location.state as { openInvoiceId?: string } | null)?.openInvoiceId
+    if (!openInvoiceId || !invoices.length) return
+    const target = invoices.find((r) => r.id === openInvoiceId)
+    if (target) openView(target)
+    navigate(location.pathname, { replace: true, state: null })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, invoices])
 
   function handleSave(record: Invoice) {
     upsertInvoice.mutate(record, {
@@ -236,6 +255,7 @@ export default function InvoicesPage() {
             refLists={refLists}
             contractNumbers={contractNumbers}
             yearOptions={yearOptions}
+            enteredByOptions={enteredByOptions}
           />
           <div className="flex flex-wrap items-center gap-2">
             <DropdownMenu>
@@ -339,6 +359,7 @@ export default function InvoicesPage() {
         open={drawerOpen}
         mode={drawerMode}
         invoice={editingInvoice}
+        nextSrNo={Math.max(0, ...invoices.map((r) => Number(r.srNo) || 0)) + 1}
         refLists={refLists}
         contractNumbers={contractNumbers}
         canEdit={can("edit")}

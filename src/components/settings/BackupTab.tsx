@@ -13,12 +13,12 @@ import {
 import { Button } from "@/components/ui/button"
 import { buildBackup, downloadBackup, parseBackupFile, type Backup } from "@/lib/backup"
 import { saveStandaloneAppAsHtml } from "@/lib/singlefileExport"
+import { useActivityLogQuery } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { useRestoreBackup } from "@/hooks/useBackup"
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
 import { useReferenceLists } from "@/lib/referenceLists"
-import { useActivityStore } from "@/store/useActivityStore"
 
 /** Ported from the Data & Backup settings tab (index.html:5448-5493). */
 export function BackupTab() {
@@ -26,7 +26,7 @@ export function BackupTab() {
   const invoicesQuery = useInvoicesQuery()
   const contractsQuery = useContractsQuery()
   const { ref: refLists } = useReferenceLists()
-  const log = useActivityStore((s) => s.log)
+  const activityLogQuery = useActivityLogQuery()
   const restoreBackup = useRestoreBackup()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -34,7 +34,13 @@ export function BackupTab() {
   const [savingHtml, setSavingHtml] = useState(false)
 
   function handleDownloadBackup() {
-    const backup = buildBackup(invoicesQuery.data ?? [], contractsQuery.data ?? [], refLists, log, user?.email || "unknown")
+    const backup = buildBackup(
+      invoicesQuery.data ?? [],
+      contractsQuery.data ?? [],
+      refLists,
+      activityLogQuery.data ?? [],
+      user?.email || "unknown"
+    )
     downloadBackup(backup)
     toast.success(`Backup downloaded — ${backup.counts.invoices} invoices.`)
   }

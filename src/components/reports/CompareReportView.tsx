@@ -297,10 +297,10 @@ export function CompareReportView({
                         {shortContract(g.key)}
                       </TableCell>
                       <TableCell className="text-right">{g.count}</TableCell>
-                      <TableCell className="text-right font-mono">{fmtMoney(g.exclTax)}</TableCell>
-                      <TableCell className="text-right font-mono">{fmtMoney(g.incl)}</TableCell>
-                      <TableCell className="text-right font-mono text-green-700 dark:text-green-400">{fmtMoney(g.paid)}</TableCell>
-                      <TableCell className={`text-right font-mono ${g.outstanding > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-700 dark:text-green-400"}`}>
+                      <TableCell className="text-right tabular-nums">{fmtMoney(g.exclTax)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{fmtMoney(g.incl)}</TableCell>
+                      <TableCell className="text-right tabular-nums text-green-700 dark:text-green-400">{fmtMoney(g.paid)}</TableCell>
+                      <TableCell className={`text-right tabular-nums ${g.outstanding > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-700 dark:text-green-400"}`}>
                         {fmtMoney(g.outstanding)}
                       </TableCell>
                       <TableCell className="text-right">—</TableCell>
@@ -314,10 +314,10 @@ export function CompareReportView({
                   <TableRow>
                     <TableCell>Total ({groups.length})</TableCell>
                     <TableCell className="text-right">{tot.count}</TableCell>
-                    <TableCell className="text-right font-mono">{fmtMoney(tot.exclTax)}</TableCell>
-                    <TableCell className="text-right font-mono">{fmtMoney(tot.incl)}</TableCell>
-                    <TableCell className="text-right font-mono">{fmtMoney(tot.paid)}</TableCell>
-                    <TableCell className="text-right font-mono">{fmtMoney(tot.outstanding)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtMoney(tot.exclTax)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtMoney(tot.incl)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtMoney(tot.paid)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtMoney(tot.outstanding)}</TableCell>
                     <TableCell className="text-right">—</TableCell>
                     <TableCell className="text-right">—</TableCell>
                     <TableCell className="text-center">—</TableCell>

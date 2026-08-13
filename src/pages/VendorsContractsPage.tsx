@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet"
 import { ContractDrawer } from "@/components/contracts/ContractDrawer"
 import { ContractRow } from "@/components/contracts/ContractRow"
 import { VendorCard } from "@/components/contracts/VendorCard"
@@ -41,6 +42,7 @@ export default function VendorsContractsPage() {
   const [editingContract, setEditingContract] = useState<Contract | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Contract | null>(null)
   const [contractSearch, setContractSearch] = useState("")
+  const [viewingContract, setViewingContract] = useState<Contract | null>(null)
 
   const invoices = invoicesQuery.data ?? []
   const contracts = contractsQuery.data ?? []
@@ -192,6 +194,7 @@ export default function VendorsContractsPage() {
                   invoices={invoices}
                   canEdit={can("edit")}
                   canDelete={can("delete")}
+                  onView={() => setViewingContract(c)}
                   onEdit={() => openEdit(c)}
                   onDelete={() => setDeleteTarget(c)}
                 />
@@ -219,6 +222,18 @@ export default function VendorsContractsPage() {
         refLists={refLists}
         onOpenChange={setDrawerOpen}
         onSubmit={handleSave}
+      />
+
+      <ContractDetailSheet
+        open={!!viewingContract}
+        contract={viewingContract}
+        invoices={invoices}
+        canEdit={can("edit")}
+        onOpenChange={(v) => !v && setViewingContract(null)}
+        onEdit={() => {
+          if (viewingContract) openEdit(viewingContract)
+          setViewingContract(null)
+        }}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>

@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils"
 import { fmtMoney, vendorColor } from "@/lib/dashboard"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Invoice } from "@/types/invoice"
 
 function turnaround(r: Invoice): number | null {
@@ -60,6 +61,9 @@ export function InvoicesTable({
 }) {
   const allSelected = canBulk && rows.length > 0 && rows.every((r) => selected.has(r.id))
   const someSelected = canBulk && rows.some((r) => selected.has(r.id))
+  const tableBanded = useDisplayStore((s) => s.tableBanded)
+  const tableHeaderShaded = useDisplayStore((s) => s.tableHeaderShaded)
+  const tableGridLines = useDisplayStore((s) => s.tableGridLines)
 
   const columns = [
     columnHelper.display({
@@ -101,25 +105,38 @@ export function InvoicesTable({
       id: "amountExclTax",
       header: "Excl. Tax",
       size: 110,
-      cell: ({ row }) => <span className="font-mono">{fmtMoney(row.original.amountExclTax)}</span>,
+      cell: ({ row }) => <span className="tabular-nums">{fmtMoney(row.original.amountExclTax)}</span>,
     }),
     columnHelper.display({
       id: "amountInclTax",
       header: "Incl. Tax",
       size: 110,
-      cell: ({ row }) => <span className="font-mono font-medium">{fmtMoney(row.original.amountInclTax)}</span>,
+      cell: ({ row }) => <span className="tabular-nums font-medium">{fmtMoney(row.original.amountInclTax)}</span>,
     }),
     columnHelper.display({
       id: "amountPaid",
       header: "Paid",
       size: 110,
-      cell: ({ row }) => <span className="font-mono">{fmtMoney(row.original.amountPaid)}</span>,
+      cell: ({ row }) => <span className="tabular-nums">{fmtMoney(row.original.amountPaid)}</span>,
     }),
     columnHelper.display({
       id: "status",
       header: "Status",
       size: 140,
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    }),
+    columnHelper.display({
+      id: "enteredBy",
+      header: "Entered By",
+      size: 130,
+      cell: ({ row }) => {
+        const r = row.original
+        return (
+          <span className="truncate" title={r.updatedByName && r.updatedByName !== r.createdByName ? `Last edited by ${r.updatedByName}` : undefined}>
+            {r.createdByName || "—"}
+          </span>
+        )
+      },
     }),
     columnHelper.display({
       id: "tat",
@@ -167,9 +184,9 @@ export function InvoicesTable({
       <Table style={{ width: table.getTotalSize() }}>
         <TableHeader>
           {table.getHeaderGroups().map((hg) => (
-            <TableRow key={hg.id}>
+            <TableRow key={hg.id} className={cn(tableHeaderShaded && "bg-muted/60")}>
               {canBulk && (
-                <TableHead style={{ width: 36 }}>
+                <TableHead style={{ width: 36 }} className={cn(tableGridLines && "border-r")}>
                   <Checkbox
                     checked={allSelected ? true : someSelected ? "indeterminate" : false}
                     onCheckedChange={(v) => onToggleSelectAll(!!v)}
@@ -180,7 +197,7 @@ export function InvoicesTable({
                 <TableHead
                   key={header.id}
                   style={{ width: header.getSize(), position: "relative" }}
-                  className="select-none"
+                  className={cn("select-none", tableGridLines && "border-r last:border-r-0")}
                 >
                   {flexRender(header.column.columnDef.header, header.getContext())}
                   {header.column.getCanResize() && (
@@ -198,14 +215,18 @@ export function InvoicesTable({
         <TableBody>
           {rows.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} data-state={selected.has(row.original.id) ? "selected" : undefined}>
+              <TableRow
+                key={row.id}
+                data-state={selected.has(row.original.id) ? "selected" : undefined}
+                className={cn(tableBanded && "even:bg-muted/30")}
+              >
                 {canBulk && (
-                  <TableCell style={{ width: 36 }}>
+                  <TableCell style={{ width: 36 }} className={cn(tableGridLines && "border-r")}>
                     <Checkbox checked={selected.has(row.original.id)} onCheckedChange={() => onToggleSelect(row.original.id)} />
                   </TableCell>
                 )}
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
+                  <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className={cn(tableGridLines && "border-r last:border-r-0")}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

@@ -174,8 +174,8 @@ export function ContractReportView({
                     <TableCell className="text-center">
                       <TaBadge days={turnaroundDays(r)} />
                     </TableCell>
-                    <TableCell className="text-right font-mono">{fmtMoney(r.amountInclTax)}</TableCell>
-                    <TableCell className="text-right font-mono text-green-700 dark:text-green-400">{fmtMoney(r.amountPaid)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{fmtMoney(r.amountInclTax)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-green-700 dark:text-green-400">{fmtMoney(r.amountPaid)}</TableCell>
                     <TableCell>
                       <StatusBadge status={r.status} />
                     </TableCell>

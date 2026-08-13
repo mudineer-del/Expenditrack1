@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 export function KpiTile({
   icon,
   iconClassName,
+  accent,
   label,
   value,
   valueClassName,
@@ -13,6 +14,8 @@ export function KpiTile({
 }: {
   icon: ReactNode
   iconClassName?: string
+  /** CSS color (e.g. "var(--chart-1)") used for the left accent bar, icon tint, and a faint background wash — gives each tile its own color identity, matching VendorCard's per-vendor coloring. */
+  accent?: string
   label: string
   value: ReactNode
   valueClassName?: string
@@ -23,16 +26,23 @@ export function KpiTile({
   return (
     <div
       className={cn(
-        "flex flex-col gap-1 rounded-lg border bg-card p-[var(--tile-pad)]",
+        "ogdcl-hoverable relative flex flex-col gap-1 overflow-hidden rounded-lg border bg-card p-[var(--tile-pad)] pl-[calc(var(--tile-pad)+0.375rem)]",
         onClick && "cursor-pointer transition-colors hover:bg-muted/50"
       )}
+      style={
+        accent
+          ? { backgroundImage: `linear-gradient(to bottom right, color-mix(in oklch, ${accent} 7%, var(--card)), var(--card) 70%)` }
+          : undefined
+      }
       onClick={onClick}
     >
+      {accent && <span className="absolute top-0 left-0 h-full w-1" style={{ backgroundColor: accent }} />}
       <div
         className={cn(
           "mb-1 flex size-[var(--tile-icon)] items-center justify-center rounded-md [&_svg]:size-[var(--tile-icon-svg)]",
-          iconClassName ?? "bg-primary/10 text-primary"
+          iconClassName ?? (accent ? undefined : "bg-primary/10 text-primary")
         )}
+        style={accent && !iconClassName ? { backgroundColor: `color-mix(in oklch, ${accent} 16%, transparent)`, color: accent } : undefined}
       >
         {icon}
       </div>

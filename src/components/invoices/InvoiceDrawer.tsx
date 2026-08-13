@@ -60,9 +60,9 @@ function toDateInput(d: string | null | undefined): string {
   return String(d).slice(0, 10)
 }
 
-function toValues(inv: Invoice): FormInput {
+function toValues(inv: Invoice, nextSrNo?: number): FormInput {
   return {
-    srNo: Number(inv.srNo) || 0,
+    srNo: Number(inv.srNo) || nextSrNo || 0,
     vendor: inv.vendor,
     invoiceNo: inv.invoiceNo,
     contractNo: inv.contractNo,
@@ -138,6 +138,7 @@ export function InvoiceDrawer({
   open,
   mode,
   invoice,
+  nextSrNo,
   refLists,
   contractNumbers,
   canEdit,
@@ -148,6 +149,8 @@ export function InvoiceDrawer({
   open: boolean
   mode: "add" | "edit" | "view"
   invoice: Invoice | null
+  /** Suggested Sr. No. for a brand-new invoice — last existing Sr. No. + 1, kept current by the caller. */
+  nextSrNo?: number
   refLists: ReferenceLists
   contractNumbers: string[]
   canEdit: boolean
@@ -158,11 +161,11 @@ export function InvoiceDrawer({
   const readOnly = mode === "view"
   const form = useForm<FormInput, unknown, Values>({
     resolver: zodResolver(schema),
-    defaultValues: toValues(invoice ?? blankInvoice()),
+    defaultValues: toValues(invoice ?? blankInvoice(), nextSrNo),
   })
 
   useEffect(() => {
-    if (open) form.reset(toValues(invoice ?? blankInvoice()))
+    if (open) form.reset(toValues(invoice ?? blankInvoice(), nextSrNo))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, invoice])
 
@@ -216,6 +219,18 @@ export function InvoiceDrawer({
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription className="sr-only">Invoice entry form</SheetDescription>
+          {invoice?.createdByName && (
+            <p className="text-xs text-muted-foreground">
+              Entered by <b>{invoice.createdByName}</b>
+              {invoice.updatedByName && invoice.updatedByName !== invoice.createdByName && (
+                <>
+                  {" "}
+                  · last edited by <b>{invoice.updatedByName}</b>
+                </>
+              )}
+              {invoice.updatedAt && ` · ${invoice.updatedAt.slice(0, 10)}`}
+            </p>
+          )}
         </SheetHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-1 flex-col gap-4 overflow-y-auto px-4">
