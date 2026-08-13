@@ -4,6 +4,7 @@ import {
   History,
   LayoutGrid,
   List,
+  Settings,
   Users,
 } from "lucide-react"
 import { NavLink } from "react-router-dom"
@@ -13,6 +14,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -25,13 +27,29 @@ import { SidebarContractsWidget } from "@/components/shell/SidebarContractsWidge
 import { useAuth } from "@/hooks/useAuth"
 import { useLabelsStore } from "@/store/useLabelsStore"
 
-const NAV = [
-  { to: "/", label: "Dashboard", icon: LayoutGrid, end: true },
-  { to: "/invoices", label: "Invoices", icon: List },
-  { to: "/vendors", label: "Vendors & Contracts", icon: Building2 },
-  { to: "/reports", label: "Financial Reports", icon: BarChart3 },
-  { to: "/activity", label: "Activity Log", icon: History },
-  { to: "/users", label: "Users", icon: Users, adminOnly: true },
+/** Grouped the way a lot of finance-product dashboards do it — day-to-day work
+ *  separated from oversight/admin — instead of one flat list. */
+const NAV_GROUPS = [
+  {
+    label: "Workspace",
+    items: [
+      { to: "/", label: "Dashboard", icon: LayoutGrid, end: true },
+      { to: "/invoices", label: "Invoices", icon: List },
+      { to: "/vendors", label: "Vendors & Contracts", icon: Building2 },
+      { to: "/reports", label: "Financial Reports", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Admin",
+    items: [
+      { to: "/activity", label: "Activity Log", icon: History },
+      { to: "/users", label: "Users", icon: Users, adminOnly: true },
+    ],
+  },
+  {
+    label: "Settings",
+    items: [{ to: "/settings", label: "Settings", icon: Settings }],
+  },
 ] as const
 
 export function AppSidebar() {
@@ -51,40 +69,43 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {NAV.map((item) => {
-                const restricted = "adminOnly" in item && item.adminOnly && !isAdmin
-                return (
-                  <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton
-                      asChild={!restricted}
-                      disabled={restricted}
-                      tooltip={restricted ? "Only Admins can access Users" : item.label}
-                    >
-                      {restricted ? (
-                        <>
-                          <item.icon />
-                          <span>{item.label}</span>
-                        </>
-                      ) : (
-                        <NavLink
-                          to={item.to}
-                          end={"end" in item ? item.end : false}
-                          className={({ isActive }) => (isActive ? "bg-sidebar-accent font-medium" : "")}
-                        >
-                          <item.icon />
-                          <span>{item.label}</span>
-                        </NavLink>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {NAV_GROUPS.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel className="uppercase tracking-wide">{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const restricted = "adminOnly" in item && item.adminOnly && !isAdmin
+                  return (
+                    <SidebarMenuItem key={item.to}>
+                      <SidebarMenuButton
+                        asChild={!restricted}
+                        disabled={restricted}
+                        tooltip={restricted ? "Only Admins can access Users" : item.label}
+                      >
+                        {restricted ? (
+                          <>
+                            <item.icon />
+                            <span>{item.label}</span>
+                          </>
+                        ) : (
+                          <NavLink
+                            to={item.to}
+                            end={"end" in item ? item.end : false}
+                            className={({ isActive }) => (isActive ? "bg-sidebar-accent font-medium" : "")}
+                          >
+                            <item.icon />
+                            <span>{item.label}</span>
+                          </NavLink>
+                        )}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       {/* Rendered outside SidebarContent so it stays pinned above the footer instead of
           scrolling with the nav — SidebarContent's flex-1 already fills the gap above this. */}
