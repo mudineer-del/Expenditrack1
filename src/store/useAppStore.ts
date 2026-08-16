@@ -3,6 +3,11 @@ import { create } from "zustand"
 interface AppState {
   dashVendor: string
   setDashVendor: (v: string) => void
+  /** "ALL" or a department name — the one active-department selection shared by the
+   *  sidebar's DepartmentSwitcher and the Dashboard's top tabs, so switching either one
+   *  updates the other. Scopes invoices/contracts on every page, same as dashVendor. */
+  activeDept: string
+  setActiveDept: (v: string) => void
 }
 
 /**
@@ -13,4 +18,6 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   dashVendor: "ALL",
   setDashVendor: (v) => set({ dashVendor: v }),
+  activeDept: "ALL",
+  setActiveDept: (v) => set({ activeDept: v }),
 }))

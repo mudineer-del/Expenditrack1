@@ -37,13 +37,13 @@ interface DisplayPrefs {
   trendChartType: ChartType
   serviceChartType: ChartType
   vendorChartType: ChartType
-  contractorChartType: ChartType
+  breakdownChartType: ChartType
   tableBanded: boolean
   tableHeaderShaded: boolean
   tableGridLines: boolean
 }
 
-type ChartKey = "trendChartType" | "serviceChartType" | "vendorChartType" | "contractorChartType"
+type ChartKey = "trendChartType" | "serviceChartType" | "vendorChartType" | "breakdownChartType"
 
 interface DisplayState extends DisplayPrefs {
   setColorTheme: (id: string) => void
@@ -167,7 +167,7 @@ function loadPrefs(): DisplayPrefs {
     trendChartType: saved?.trendChartType || "bar",
     serviceChartType: saved?.serviceChartType || "bar",
     vendorChartType: saved?.vendorChartType || "bar",
-    contractorChartType: saved?.contractorChartType || "pie",
+    breakdownChartType: saved?.breakdownChartType || "pie",
     tableBanded: saved?.tableBanded ?? true,
     tableHeaderShaded: saved?.tableHeaderShaded ?? true,
     tableGridLines: saved?.tableGridLines ?? false,
@@ -207,7 +207,7 @@ function persist(state: DisplayPrefs): void {
     trendChartType,
     serviceChartType,
     vendorChartType,
-    contractorChartType,
+    breakdownChartType,
     tableBanded,
     tableHeaderShaded,
     tableGridLines,
@@ -228,7 +228,7 @@ function persist(state: DisplayPrefs): void {
     trendChartType,
     serviceChartType,
     vendorChartType,
-    contractorChartType,
+    breakdownChartType,
     tableBanded,
     tableHeaderShaded,
     tableGridLines,

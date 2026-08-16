@@ -15,6 +15,7 @@ export interface Invoice {
   qtr: string
   service: string
   type: string
+  department: string
   region: string
   rig: string
   location: string
@@ -52,6 +53,7 @@ const SB_FIELDS: Array<[keyof Invoice, string]> = [
   ["qtr", "qtr"],
   ["service", "service"],
   ["type", "type"],
+  ["department", "department"],
   ["region", "region"],
   ["rig", "rig"],
   ["location", "location"],
@@ -134,6 +136,7 @@ export function blankInvoice(): Invoice {
     qtr: "",
     service: "",
     type: "",
+    department: "",
     region: "",
     rig: "",
     location: "",

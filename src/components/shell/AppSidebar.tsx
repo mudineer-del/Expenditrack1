@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { OgdclMark } from "@/components/shared/OgdclMark"
+import { DepartmentSwitcher } from "@/components/shell/DepartmentSwitcher"
 import { SidebarContractsWidget } from "@/components/shell/SidebarContractsWidget"
 import { useAuth } from "@/hooks/useAuth"
 import { useLabelsStore } from "@/store/useLabelsStore"
@@ -69,6 +70,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        <DepartmentSwitcher />
         {NAV_GROUPS.map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel className="uppercase tracking-wide">{group.label}</SidebarGroupLabel>

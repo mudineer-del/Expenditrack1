@@ -19,6 +19,7 @@ import {
   type ReportMode,
 } from "@/lib/reports"
 import { useReferenceLists } from "@/lib/referenceLists"
+import { useAppStore } from "@/store/useAppStore"
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
 
@@ -39,8 +40,12 @@ export default function ReportsPage() {
   const [compareSelection, setCompareSelection] = useState<string[]>([])
   const [detail, setDetail] = useState<ReportDetail | null>(null)
 
-  const invoices = invoicesQuery.data ?? []
-  const contracts = contractsQuery.data ?? []
+  const activeDept = useAppStore((s) => s.activeDept)
+  const allInvoices = invoicesQuery.data ?? []
+  const allContracts = contractsQuery.data ?? []
+  // Scoped to the sidebar/dashboard's active department, same pattern as the Dashboard.
+  const invoices = activeDept === "ALL" ? allInvoices : allInvoices.filter((r) => r.department === activeDept)
+  const contracts = activeDept === "ALL" ? allContracts : allContracts.filter((c) => c.department === activeDept)
 
   const contractNumbers = Array.from(
     new Set([...contracts.map((c) => c.contractNo), ...invoices.map((r) => (r.contractNo || "").trim()).filter(Boolean)])

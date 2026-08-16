@@ -19,7 +19,7 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { activeChartPayload } from "@/lib/chartClick"
 import { fmtMoney, type CategoryTotal } from "@/lib/dashboard"
-import { useDisplayStore } from "@/store/useDisplayStore"
+import { useDisplayStore, type ChartType } from "@/store/useDisplayStore"
 
 const config = {
   total: { label: "Expenditure (incl. tax)", color: "var(--chart-2)" },
@@ -27,8 +27,19 @@ const config = {
 
 const PIE_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
 
-export function ServiceChart({ data, onDrill }: { data: CategoryTotal[]; onDrill: (title: string, invoices: CategoryTotal["invoices"]) => void }) {
-  const chartType = useDisplayStore((s) => s.serviceChartType)
+/** `chartType` is a prop rather than read from the store directly, so this same component
+ *  can back two independent chart-type toggles: the always-on "Expenditure by Service"
+ *  card, and the "Cost by Service" card that swaps in for the contractor breakdown once a
+ *  specific contractor is selected on the Dashboard. */
+export function ServiceChart({
+  data,
+  chartType,
+  onDrill,
+}: {
+  data: CategoryTotal[]
+  chartType: ChartType
+  onDrill: (title: string, invoices: CategoryTotal["invoices"]) => void
+}) {
   const animate = useDisplayStore((s) => s.animationsEnabled)
 
   if (!data.length) {

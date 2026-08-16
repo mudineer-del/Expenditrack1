@@ -70,7 +70,7 @@ export function useUpsertInvoice() {
         { name: user?.name || "Unknown", role: user?.role || "" },
         wasEdit ? "Edit" : "Add",
         `${wasEdit ? "Edited" : "Added"} invoice ${invoice.invoiceNo || `#${invoice.srNo}`}${invoice.vendor ? ` (${invoice.vendor})` : ""}`,
-        { invoiceNo: invoice.invoiceNo, vendor: invoice.vendor, undoId }
+        { invoiceNo: invoice.invoiceNo, vendor: invoice.vendor, department: invoice.department, undoId }
       )
 
       const cfg = loadNotifyConfig()
@@ -146,7 +146,7 @@ export function useDeleteInvoice() {
         { name: user?.name || "Unknown", role: user?.role || "" },
         "Delete",
         `Deleted invoice ${invoice.invoiceNo || `#${invoice.srNo}`}${invoice.vendor ? ` (${invoice.vendor})` : ""}`,
-        { invoiceNo: invoice.invoiceNo, vendor: invoice.vendor, undoId }
+        { invoiceNo: invoice.invoiceNo, vendor: invoice.vendor, department: invoice.department, undoId }
       )
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY }),

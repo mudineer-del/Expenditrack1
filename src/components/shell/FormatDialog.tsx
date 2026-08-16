@@ -327,8 +327,8 @@ export function FormatDialog() {
             <Section title="Invoice Value by Contractor">
               <SegmentedControl options={CHART_TYPES} value={store.vendorChartType} onChange={(t) => store.setChartType("vendorChartType", t)} />
             </Section>
-            <Section title="Invoice Status">
-              <SegmentedControl options={CHART_TYPES} value={store.contractorChartType} onChange={(t) => store.setChartType("contractorChartType", t)} />
+            <Section title="Contractor / Type Breakdown" hint="Shows contractor volume for 'All'; switches to that contractor's work-type mix once one is selected.">
+              <SegmentedControl options={CHART_TYPES} value={store.breakdownChartType} onChange={(t) => store.setChartType("breakdownChartType", t)} />
             </Section>
             <div className="flex items-center justify-between">
               <div>

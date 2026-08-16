@@ -313,14 +313,119 @@ export function vendorBreakdown(rows: Invoice[]): VendorTotal[] {
     .sort((a, b) => b.total - a.total)
 }
 
+export interface VendorServiceRow {
+  vendor: string
+  total: number
+  /** service -> $ total, spread onto the row's own keys too so Recharts' per-series dataKey lookup works directly. */
+  values: Record<string, number>
+  invoicesByService: Record<string, Invoice[]>
+}
+
+export interface VendorServiceBreakdown {
+  rows: VendorServiceRow[]
+  /** Every service present across the top contractors, ordered by overall $ — the stacking/legend order. */
+  services: string[]
+}
+
+/** Same contractor totals as vendorBreakdown, but each contractor's total is also split out
+ *  by service category so the "Invoice Value by Contractor" chart's bar mode can render a
+ *  stacked breakdown instead of one flat bar per contractor. Stacked by Service rather than
+ *  the invoice's Type field — Type is largely unfilled across real data, Service isn't. */
+export function vendorServiceBreakdown(rows: Invoice[]): VendorServiceBreakdown {
+  const byVendor: Record<string, Invoice[]> = {}
+  rows.forEach((r) => {
+    const v = r.vendor || "Unknown"
+    ;(byVendor[v] ||= []).push(r)
+  })
+
+  const serviceTotals: Record<string, number> = {}
+  const vendorRows: VendorServiceRow[] = Object.entries(byVendor)
+    .map(([vendor, invoices]) => {
+      const values: Record<string, number> = {}
+      const invoicesByService: Record<string, Invoice[]> = {}
+      let total = 0
+      invoices.forEach((r) => {
+        const s = r.service || "Unspecified"
+        const amt = Number(r.amountInclTax) || 0
+        values[s] = (values[s] || 0) + amt
+        ;(invoicesByService[s] ||= []).push(r)
+        total += amt
+        serviceTotals[s] = (serviceTotals[s] || 0) + amt
+      })
+      return { vendor, total, values, invoicesByService }
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10)
+
+  const services = Object.entries(serviceTotals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([service]) => service)
+
+  return { rows: vendorRows, services }
+}
+
+export interface VendorTypeRow {
+  vendor: string
+  total: number
+  /** type -> $ total, spread onto the row's own keys too so Recharts' per-series dataKey lookup works directly. */
+  values: Record<string, number>
+  invoicesByType: Record<string, Invoice[]>
+}
+
+export interface VendorTypeBreakdown {
+  rows: VendorTypeRow[]
+  /** Every type present across the top contractors, ordered by overall $ — the stacking/legend order. */
+  types: string[]
+}
+
+/** Same shape as vendorServiceBreakdown, but split by the invoice's Type field (Dewatering,
+ *  Sprinkling, Unspecified, etc.) instead of Service. Used once the Dashboard's contractor
+ *  filter narrows to a single contractor, so "Invoice Value — {Contractor}" can break that
+ *  one contractor's cost down by work type — the same dimension typeInvoiceCounts already
+ *  uses for that contractor's invoice-count chart. */
+export function vendorTypeBreakdown(rows: Invoice[]): VendorTypeBreakdown {
+  const byVendor: Record<string, Invoice[]> = {}
+  rows.forEach((r) => {
+    const v = r.vendor || "Unknown"
+    ;(byVendor[v] ||= []).push(r)
+  })
+
+  const typeTotals: Record<string, number> = {}
+  const vendorRows: VendorTypeRow[] = Object.entries(byVendor)
+    .map(([vendor, invoices]) => {
+      const values: Record<string, number> = {}
+      const invoicesByType: Record<string, Invoice[]> = {}
+      let total = 0
+      invoices.forEach((r) => {
+        const t = r.type || "Unspecified"
+        const amt = Number(r.amountInclTax) || 0
+        values[t] = (values[t] || 0) + amt
+        ;(invoicesByType[t] ||= []).push(r)
+        total += amt
+        typeTotals[t] = (typeTotals[t] || 0) + amt
+      })
+      return { vendor, total, values, invoicesByType }
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10)
+
+  const types = Object.entries(typeTotals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([type]) => type)
+
+  return { rows: vendorRows, types }
+}
+
 export interface VendorCount {
   vendor: string
   count: number
   invoices: Invoice[]
 }
 
-/** How many invoices are on file per contractor, for the "Invoices by Contractor" chart —
- *  the volume counterpart to vendorBreakdown's dollar totals. */
+/** How many invoices are on file per contractor — the volume counterpart to vendorBreakdown's
+ *  dollar totals. Shown for the "All" contractor view; once a specific contractor is picked,
+ *  the Dashboard swaps to typeInvoiceCounts instead (a single-bar contractor count isn't
+ *  useful once you've already filtered to one). */
 export function contractorInvoiceCounts(rows: Invoice[]): VendorCount[] {
   const byVendor: Record<string, Invoice[]> = {}
   rows.forEach((r) => {
@@ -329,5 +434,26 @@ export function contractorInvoiceCounts(rows: Invoice[]): VendorCount[] {
   })
   return Object.entries(byVendor)
     .map(([vendor, invoices]) => ({ vendor, count: invoices.length, invoices }))
+    .sort((a, b) => b.count - a.count)
+}
+
+export interface TypeCount {
+  type: string
+  count: number
+  invoices: Invoice[]
+}
+
+/** How many invoices fall under each work type (e.g. Dewatering, Mud Engineering, Local Mud
+ *  Chemicals — the invoice's Type field, distinct from its broader Service category) for an
+ *  individual contractor once one is selected on the Dashboard. `rows` is already narrowed
+ *  to that contractor by the time this runs. */
+export function typeInvoiceCounts(rows: Invoice[]): TypeCount[] {
+  const byType: Record<string, Invoice[]> = {}
+  rows.forEach((r) => {
+    const t = r.type || "Unspecified"
+    ;(byType[t] ||= []).push(r)
+  })
+  return Object.entries(byType)
+    .map(([type, invoices]) => ({ type, count: invoices.length, invoices }))
     .sort((a, b) => b.count - a.count)
 }

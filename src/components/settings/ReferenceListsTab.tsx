@@ -19,6 +19,7 @@ import { vendorColor } from "@/lib/dashboard"
 import { useReferenceLists, type ReferenceLists } from "@/lib/referenceLists"
 
 const LISTS: { key: keyof ReferenceLists; title: string }[] = [
+  { key: "departments", title: "Departments" },
   { key: "vendors", title: "Vendors / Contractors" },
   { key: "services", title: "Services" },
   { key: "types", title: "Types" },

@@ -30,6 +30,7 @@ const schema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   value: z.coerce.number().min(0).optional(),
+  department: z.string().optional(),
 })
 
 type FormInput = z.input<typeof schema>
@@ -40,7 +41,7 @@ function toDateInput(d: string | null | undefined): string {
   return String(d).slice(0, 10)
 }
 
-function toValues(c: Contract, vendors: string[]): FormInput {
+function toValues(c: Contract, vendors: string[], defaultDept?: string): FormInput {
   const knownVendor = vendors.includes(c.vendor)
   return {
     contractNo: c.contractNo,
@@ -51,6 +52,7 @@ function toValues(c: Contract, vendors: string[]): FormInput {
     startDate: toDateInput(c.startDate),
     endDate: toDateInput(c.endDate),
     value: c.value === "" ? undefined : Number(c.value),
+    department: c.department || defaultDept || "",
   }
 }
 
@@ -58,23 +60,27 @@ export function ContractDrawer({
   open,
   contract,
   refLists,
+  defaultDept,
   onOpenChange,
   onSubmit,
 }: {
   open: boolean
   contract: Contract | null
   refLists: ReferenceLists
+  /** Department to pre-select for a brand-new contract — the sidebar/dashboard's active
+   *  department, so switching there means one less field to fill in on every add. */
+  defaultDept?: string
   onOpenChange: (open: boolean) => void
   onSubmit: (values: Contract) => void
 }) {
   const isEdit = !!contract
   const form = useForm<FormInput, unknown, Values>({
     resolver: zodResolver(schema),
-    defaultValues: toValues(contract ?? blankContract(), refLists.vendors),
+    defaultValues: toValues(contract ?? blankContract(), refLists.vendors, defaultDept),
   })
 
   useEffect(() => {
-    if (open) form.reset(toValues(contract ?? blankContract(), refLists.vendors))
+    if (open) form.reset(toValues(contract ?? blankContract(), refLists.vendors, defaultDept))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, contract])
 
@@ -90,6 +96,7 @@ export function ContractDrawer({
       startDate: values.startDate || "",
       endDate: values.endDate || "",
       status: values.status,
+      department: values.department || "",
     }
     onSubmit(record)
   }
@@ -163,7 +170,30 @@ export function ContractDrawer({
                 )}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select…" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {refLists.departments.map((d) => (
+                          <SelectItem key={d} value={d}>
+                            {d}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="title"

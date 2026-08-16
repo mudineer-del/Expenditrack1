@@ -7,6 +7,7 @@ export interface Contract {
   startDate: string
   endDate: string
   status: string
+  department: string
 }
 
 export type ContractRow = Record<string, unknown> & { id: string }
@@ -29,6 +30,7 @@ export function toContractRow(c: Contract): ContractRow {
     start_date: c.startDate || null,
     end_date: c.endDate || null,
     status: c.status || null,
+    department: c.department || null,
   }
 }
 
@@ -42,6 +44,7 @@ export function fromContractRow(row: ContractRow): Contract {
     startDate: (row.start_date as string) || "",
     endDate: (row.end_date as string) || "",
     status: (row.status as string) || "",
+    department: (row.department as string) || "",
   }
 }
 
@@ -55,5 +58,6 @@ export function blankContract(): Contract {
     startDate: "",
     endDate: "",
     status: "Active",
+    department: "",
   }
 }

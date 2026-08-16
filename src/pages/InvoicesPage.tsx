@@ -31,6 +31,7 @@ import { BLANK_FILTERS, filterAndSortInvoices, type SortState } from "@/lib/invo
 import { exportInvoicesCsv, exportInvoicesXlsx } from "@/lib/invoiceIO"
 import { useContractorLogosQuery } from "@/lib/contractorLogos"
 import { useReferenceLists } from "@/lib/referenceLists"
+import { useAppStore } from "@/store/useAppStore"
 import { useAuth } from "@/hooks/useAuth"
 import { useContractsQuery } from "@/hooks/useContracts"
 import {
@@ -73,8 +74,19 @@ export default function InvoicesPage() {
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
 
-  const invoices = invoicesQuery.data ?? []
-  const contracts = contractsQuery.data ?? []
+  const activeDept = useAppStore((s) => s.activeDept)
+  const allInvoices = invoicesQuery.data ?? []
+  const allContracts = contractsQuery.data ?? []
+  // Scoped to the sidebar/dashboard's active department — same client-side filter pattern
+  // used everywhere else in the app (dashVendor on the Dashboard).
+  const invoices = useMemo(
+    () => (activeDept === "ALL" ? allInvoices : allInvoices.filter((r) => r.department === activeDept)),
+    [allInvoices, activeDept]
+  )
+  const contracts = useMemo(
+    () => (activeDept === "ALL" ? allContracts : allContracts.filter((c) => c.department === activeDept)),
+    [allContracts, activeDept]
+  )
 
   const contractNumbers = useMemo(() => {
     const known = contracts.map((c) => c.contractNo)
@@ -368,8 +380,9 @@ export default function InvoicesPage() {
         open={drawerOpen}
         mode={drawerMode}
         invoice={editingInvoice}
-        nextSrNo={Math.max(0, ...invoices.map((r) => Number(r.srNo) || 0)) + 1}
+        nextSrNo={Math.max(0, ...allInvoices.map((r) => Number(r.srNo) || 0)) + 1}
         refLists={refLists}
+        defaultDept={activeDept !== "ALL" ? activeDept : refLists.departments[0]}
         contractNumbers={contractNumbers}
         canEdit={can("edit")}
         onOpenChange={setDrawerOpen}
@@ -377,7 +390,7 @@ export default function InvoicesPage() {
         onSwitchToEdit={() => setDrawerMode("edit")}
       />
 
-      <ImportDialog open={importOpen} onOpenChange={setImportOpen} existingInvoices={invoices} onImport={handleImport} />
+      <ImportDialog open={importOpen} onOpenChange={setImportOpen} existingInvoices={allInvoices} onImport={handleImport} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent>

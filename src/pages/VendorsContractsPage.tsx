@@ -46,8 +46,18 @@ export default function VendorsContractsPage() {
   const [contractSearch, setContractSearch] = useState("")
   const [viewingContract, setViewingContract] = useState<Contract | null>(null)
 
-  const invoices = invoicesQuery.data ?? []
-  const contracts = contractsQuery.data ?? []
+  const activeDept = useAppStore((s) => s.activeDept)
+  const allInvoices = invoicesQuery.data ?? []
+  const allContracts = contractsQuery.data ?? []
+  // Scoped to the sidebar/dashboard's active department, same pattern as the Dashboard.
+  const invoices = useMemo(
+    () => (activeDept === "ALL" ? allInvoices : allInvoices.filter((r) => r.department === activeDept)),
+    [allInvoices, activeDept]
+  )
+  const contracts = useMemo(
+    () => (activeDept === "ALL" ? allContracts : allContracts.filter((c) => c.department === activeDept)),
+    [allContracts, activeDept]
+  )
 
   const vendorCards = useMemo(() => {
     const byVendor: Record<string, { count: number; total: number }> = {}
@@ -227,6 +237,7 @@ export default function VendorsContractsPage() {
         open={drawerOpen}
         contract={editingContract}
         refLists={refLists}
+        defaultDept={activeDept !== "ALL" ? activeDept : refLists.departments[0]}
         onOpenChange={setDrawerOpen}
         onSubmit={handleSave}
       />

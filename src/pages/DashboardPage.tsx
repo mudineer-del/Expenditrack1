@@ -19,6 +19,7 @@ import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
 import { KpiTile } from "@/components/dashboard/KpiTile"
 import { ServiceChart } from "@/components/dashboard/ServiceChart"
 import { SpendingTicker } from "@/components/dashboard/SpendingTicker"
+import { TypeCountChart } from "@/components/dashboard/TypeCountChart"
 import { TrendChart } from "@/components/dashboard/TrendChart"
 import { VendorChart } from "@/components/dashboard/VendorChart"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -31,14 +32,18 @@ import {
   fmtMoney,
   monthlyTrend,
   serviceBreakdown,
+  typeInvoiceCounts,
   vendorBreakdown,
   vendorColor,
   vendorContractCost,
+  vendorServiceBreakdown,
+  vendorTypeBreakdown,
 } from "@/lib/dashboard"
 import type { Invoice } from "@/types/invoice"
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
 import { getContractorLogo, useContractorLogosQuery } from "@/lib/contractorLogos"
+import { useReferenceLists } from "@/lib/referenceLists"
 import { useAppStore } from "@/store/useAppStore"
 import { checkContractNotifications, loadNotifyConfig, loadNotifyPrefs, maybeSendWeeklyDigest } from "@/lib/notifications"
 
@@ -59,10 +64,13 @@ export default function DashboardPage() {
   const contractorLogosQuery = useContractorLogosQuery()
   const dashVendor = useAppStore((s) => s.dashVendor)
   const setDashVendor = useAppStore((s) => s.setDashVendor)
+  const activeDept = useAppStore((s) => s.activeDept)
+  const setActiveDept = useAppStore((s) => s.setActiveDept)
+  const { ref: refLists } = useReferenceLists()
   const trendChartType = useDisplayStore((s) => s.trendChartType)
   const serviceChartType = useDisplayStore((s) => s.serviceChartType)
   const vendorChartType = useDisplayStore((s) => s.vendorChartType)
-  const contractorChartType = useDisplayStore((s) => s.contractorChartType)
+  const breakdownChartType = useDisplayStore((s) => s.breakdownChartType)
   const setChartType = useDisplayStore((s) => s.setChartType)
 
   const invoices = invoicesQuery.data ?? []
@@ -79,21 +87,35 @@ export default function DashboardPage() {
     void maybeSendWeeklyDigest(cfg, prefs, invoicesQuery.data)
   }, [invoicesQuery.data, contractsQuery.data])
 
-  const rows = useMemo(
-    () => (dashVendor === "ALL" ? invoices : invoices.filter((r) => r.vendor === dashVendor)),
-    [invoices, dashVendor]
+  // Department scoping happens first (the "universal dashboard" tab strip), contractor
+  // scoping second (the existing pills) — both client-side filters over the same
+  // full invoices/contracts arrays, same pattern dashVendor already used on its own.
+  const deptInvoices = useMemo(
+    () => (activeDept === "ALL" ? invoices : invoices.filter((r) => r.department === activeDept)),
+    [invoices, activeDept]
   )
-  const stats = useMemo(() => computeDashboardStats(rows, contracts), [rows, contracts])
+  const deptContracts = useMemo(
+    () => (activeDept === "ALL" ? contracts : contracts.filter((c) => c.department === activeDept)),
+    [contracts, activeDept]
+  )
+  const rows = useMemo(
+    () => (dashVendor === "ALL" ? deptInvoices : deptInvoices.filter((r) => r.vendor === dashVendor)),
+    [deptInvoices, dashVendor]
+  )
+  const stats = useMemo(() => computeDashboardStats(rows, deptContracts), [rows, deptContracts])
   const dataVendors = useMemo(
-    () => Array.from(new Set(invoices.map((r) => r.vendor).filter(Boolean))).sort(),
-    [invoices]
+    () => Array.from(new Set(deptInvoices.map((r) => r.vendor).filter(Boolean))).sort(),
+    [deptInvoices]
   )
   const recent = useMemo(() => rows.slice().sort((a, b) => (Number(b.srNo) || 0) - (Number(a.srNo) || 0)).slice(0, 6), [rows])
   const trend = useMemo(() => monthlyTrend(rows), [rows])
   const byService = useMemo(() => serviceBreakdown(rows), [rows])
   const byVendor = useMemo(() => vendorBreakdown(rows), [rows])
-  const byContractorCount = useMemo(() => contractorInvoiceCounts(rows), [rows])
-  const contractCost = dashVendor !== "ALL" ? vendorContractCost(contracts, dashVendor) : 0
+  const byVendorService = useMemo(() => vendorServiceBreakdown(rows), [rows])
+  const byVendorType = useMemo(() => vendorTypeBreakdown(rows), [rows])
+  const byVendorCount = useMemo(() => contractorInvoiceCounts(rows), [rows])
+  const byTypeCount = useMemo(() => typeInvoiceCounts(rows), [rows])
+  const contractCost = dashVendor !== "ALL" ? vendorContractCost(deptContracts, dashVendor) : 0
 
   const [drill, setDrill] = useState<{ title: string; invoices: Invoice[] } | null>(null)
   const onDrill = (title: string, drillInvoices: Invoice[]) => setDrill({ title, invoices: drillInvoices })
@@ -122,7 +144,29 @@ export default function DashboardPage() {
 
   return (
     <div className="grid gap-4">
-      <SpendingTicker contracts={contracts} invoices={invoices} />
+      <SpendingTicker contracts={deptContracts} invoices={deptInvoices} />
+
+      {refLists.departments.length > 1 && (
+        <div className="flex flex-wrap gap-2 border-b pb-3">
+          <Button
+            size="sm"
+            variant={activeDept === "ALL" ? "default" : "outline"}
+            onClick={() => setActiveDept("ALL")}
+          >
+            All Departments
+          </Button>
+          {refLists.departments.map((d) => (
+            <Button
+              key={d}
+              size="sm"
+              variant={activeDept === d ? "default" : "outline"}
+              onClick={() => setActiveDept(d)}
+            >
+              {d}
+            </Button>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Button
@@ -251,7 +295,7 @@ export default function DashboardPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {dataVendors.map((v) => {
-              const vRows = invoices.filter((r) => r.vendor === v)
+              const vRows = deptInvoices.filter((r) => r.vendor === v)
               const total = vRows.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0)
               const lead = avgLeadTime(vRows)
               return (
@@ -303,7 +347,7 @@ export default function DashboardPage() {
               <span className="text-xs font-medium text-muted-foreground">Expenditure by Service</span>
               <ChartTypeMenu value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />
             </div>
-            <ServiceChart data={byService} onDrill={onDrill} />
+            <ServiceChart data={byService} chartType={serviceChartType} onDrill={onDrill} />
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -312,14 +356,20 @@ export default function DashboardPage() {
               </span>
               <ChartTypeMenu value={vendorChartType} onChange={(t) => setChartType("vendorChartType", t)} />
             </div>
-            <VendorChart data={byVendor} onDrill={onDrill} />
+            <VendorChart data={byVendor} serviceBreakdown={byVendorService} typeBreakdown={byVendorType} onDrill={onDrill} />
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Invoices by Contractor</span>
-              <ChartTypeMenu value={contractorChartType} onChange={(t) => setChartType("contractorChartType", t)} />
+              <span className="text-xs font-medium text-muted-foreground">
+                {dashVendor === "ALL" ? "Invoices by Contractor" : `Invoices by Type — ${dashVendor}`}
+              </span>
+              <ChartTypeMenu value={breakdownChartType} onChange={(t) => setChartType("breakdownChartType", t)} />
             </div>
-            <ContractorInvoicesChart data={byContractorCount} onDrill={onDrill} />
+            {dashVendor === "ALL" ? (
+              <ContractorInvoicesChart data={byVendorCount} onDrill={onDrill} />
+            ) : (
+              <TypeCountChart data={byTypeCount} onDrill={onDrill} />
+            )}
           </div>
         </div>
       </div>

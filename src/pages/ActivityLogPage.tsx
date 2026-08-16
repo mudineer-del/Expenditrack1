@@ -18,6 +18,7 @@ import { useActivityLogQuery, useClearActivityLog } from "@/hooks/useActivityLog
 import { useAuth } from "@/hooks/useAuth"
 import { useUndo } from "@/hooks/useUndo"
 import { useActivityStore, type ActivityAction, type ActivityEntry } from "@/store/useActivityStore"
+import { useAppStore } from "@/store/useAppStore"
 
 /** The action badge says what happened; this says to what — an entry's own
  *  meta already carries invoiceNo or contractNo, so no string-parsing needed. */
@@ -48,7 +49,17 @@ function fmtDateTime(ts: number): string {
 export default function ActivityLogPage() {
   const { can, isAdmin } = useAuth()
   const activityLogQuery = useActivityLogQuery()
-  const log = useMemo(() => activityLogQuery.data ?? [], [activityLogQuery.data])
+  const activeDept = useAppStore((s) => s.activeDept)
+  // Entries logged before departments existed (or bulk import/delete, which spans more
+  // than one record) carry no department in their meta — keep those visible under any
+  // filter rather than silently hiding audit history.
+  const log = useMemo(
+    () =>
+      (activityLogQuery.data ?? []).filter(
+        (e) => activeDept === "ALL" || !e.meta?.department || e.meta.department === activeDept
+      ),
+    [activityLogQuery.data, activeDept]
+  )
   const undoStack = useActivityStore((s) => s.undoStack)
   const selectedLogIds = useActivityStore((s) => s.selectedLogIds)
   const toggleSelect = useActivityStore((s) => s.toggleSelect)

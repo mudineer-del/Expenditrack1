@@ -11,6 +11,7 @@ export interface ReferenceLists {
   quarters: string[]
   rigs: string[]
   wells: string[]
+  departments: string[]
 }
 
 /**
@@ -44,6 +45,7 @@ export const DEFAULT_REF: ReferenceLists = {
   quarters: ["Q1", "Q2", "Q3", "Q4"],
   rigs: [],
   wells: [],
+  departments: ["Drilling Fluids"],
 }
 
 const REF_KEYS = Object.keys(DEFAULT_REF) as (keyof ReferenceLists)[]
@@ -125,12 +127,12 @@ export function useReferenceLists() {
   const setList = useSetReferenceList()
   const ref = query.data ?? DEFAULT_REF
 
-  function addValue(key: keyof ReferenceLists, value: string) {
+  function addValue(key: keyof ReferenceLists, value: string, opts?: { onSuccess?: () => void; onError?: (e: unknown) => void }) {
     const next = addReferenceValue(ref, key, value)
-    if (next[key] !== ref[key]) setList.mutate({ key, values: next[key] })
+    if (next[key] !== ref[key]) setList.mutate({ key, values: next[key] }, opts)
   }
-  function removeValue(key: keyof ReferenceLists, value: string) {
-    setList.mutate({ key, values: ref[key].filter((v) => v !== value) })
+  function removeValue(key: keyof ReferenceLists, value: string, opts?: { onSuccess?: () => void; onError?: (e: unknown) => void }) {
+    setList.mutate({ key, values: ref[key].filter((v) => v !== value) }, opts)
   }
 
   return { ref, addValue, removeValue, isLoading: query.isLoading, isSaving: setList.isPending }

@@ -40,7 +40,7 @@ export function useUpsertContract() {
         { name: user?.name || "Unknown", role: user?.role || "" },
         wasEdit ? "Edit" : "Add",
         `${wasEdit ? "Edited" : "Added"} contract ${contract.contractNo}${contract.vendor ? ` (${contract.vendor})` : ""}`,
-        { contractNo: contract.contractNo, vendor: contract.vendor, undoId }
+        { contractNo: contract.contractNo, vendor: contract.vendor, department: contract.department, undoId }
       )
       return contract
     },
@@ -65,7 +65,7 @@ export function useDeleteContract() {
         { name: user?.name || "Unknown", role: user?.role || "" },
         "Delete",
         `Deleted contract ${contract.contractNo}${contract.vendor ? ` (${contract.vendor})` : ""}`,
-        { contractNo: contract.contractNo, vendor: contract.vendor, undoId }
+        { contractNo: contract.contractNo, vendor: contract.vendor, department: contract.department, undoId }
       )
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: CONTRACTS_QUERY_KEY }),

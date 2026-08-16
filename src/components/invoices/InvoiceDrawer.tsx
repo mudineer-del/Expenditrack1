@@ -38,6 +38,7 @@ const schema = z.object({
   loginDate: z.string().optional(),
   service: z.string().optional(),
   type: z.string().optional(),
+  department: z.string().optional(),
   region: z.string().optional(),
   rig: z.string().optional(),
   location: z.string().optional(),
@@ -60,7 +61,7 @@ function toDateInput(d: string | null | undefined): string {
   return String(d).slice(0, 10)
 }
 
-function toValues(inv: Invoice, nextSrNo?: number): FormInput {
+function toValues(inv: Invoice, nextSrNo?: number, defaultDept?: string): FormInput {
   return {
     srNo: Number(inv.srNo) || nextSrNo || 0,
     vendor: inv.vendor,
@@ -72,6 +73,7 @@ function toValues(inv: Invoice, nextSrNo?: number): FormInput {
     loginDate: toDateInput(inv.loginDate),
     service: inv.service,
     type: inv.type,
+    department: inv.department || defaultDept || "",
     region: inv.region,
     rig: inv.rig,
     location: inv.location,
@@ -141,6 +143,7 @@ export function InvoiceDrawer({
   nextSrNo,
   refLists,
   contractNumbers,
+  defaultDept,
   canEdit,
   onOpenChange,
   onSubmit,
@@ -153,6 +156,9 @@ export function InvoiceDrawer({
   nextSrNo?: number
   refLists: ReferenceLists
   contractNumbers: string[]
+  /** Department to pre-select for a brand-new invoice — the sidebar/dashboard's active
+   *  department, so switching there means one less field to fill in on every add. */
+  defaultDept?: string
   canEdit: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (values: Invoice) => void
@@ -161,11 +167,11 @@ export function InvoiceDrawer({
   const readOnly = mode === "view"
   const form = useForm<FormInput, unknown, Values>({
     resolver: zodResolver(schema),
-    defaultValues: toValues(invoice ?? blankInvoice(), nextSrNo),
+    defaultValues: toValues(invoice ?? blankInvoice(), nextSrNo, defaultDept),
   })
 
   useEffect(() => {
-    if (open) form.reset(toValues(invoice ?? blankInvoice(), nextSrNo))
+    if (open) form.reset(toValues(invoice ?? blankInvoice(), nextSrNo, defaultDept))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, invoice])
 
@@ -194,6 +200,7 @@ export function InvoiceDrawer({
       qtr: values.qtr || "",
       service: values.service || "",
       type: values.type || "",
+      department: values.department || "",
       region: values.region || "",
       rig: values.rig || "",
       location: values.location || "",
@@ -257,6 +264,7 @@ export function InvoiceDrawer({
                 )}
               />
               <SelectField name="vendor" label="Vendor" options={refLists.vendors} form={form} disabled={readOnly} />
+              <SelectField name="department" label="Department" options={refLists.departments} form={form} disabled={readOnly} />
               <FormField
                 control={form.control}
                 name="invoiceNo"
