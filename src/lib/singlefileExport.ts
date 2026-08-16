@@ -16,6 +16,8 @@
  * anywhere, with zero setup."
  */
 
+import { errorMessage } from "@/lib/utils"
+
 declare global {
   interface Window {
     showSaveFilePicker?: (options: {
@@ -55,7 +57,7 @@ export async function saveStandaloneAppAsHtml(): Promise<SaveHtmlResult> {
     }
     html = await res.text()
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: errorMessage(e) }
   }
 
   if (typeof window.showSaveFilePicker === "function") {
@@ -75,7 +77,7 @@ export async function saveStandaloneAppAsHtml(): Promise<SaveHtmlResult> {
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") return { ok: false, error: "Save cancelled." }
       savedFileHandle = null
-      return { ok: false, error: e instanceof Error ? e.message : String(e) }
+      return { ok: false, error: errorMessage(e) }
     }
   }
 

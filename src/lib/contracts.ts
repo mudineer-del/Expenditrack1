@@ -1,7 +1,43 @@
+import { shortContract } from "@/lib/reports"
+import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
 
 function normContract(s: string | null | undefined): string {
   return (s || "").trim().toLowerCase()
+}
+
+/** contractNo -> vendor, built from actual Contract records first (authoritative), then
+ *  falling back to whichever vendor an invoice referencing that contract number carries —
+ *  covers contract numbers that only exist via imported invoices, with no matching
+ *  Contract record created yet in Vendors & Contracts. */
+export function buildContractVendorMap(contracts: Contract[], invoices: Invoice[]): Record<string, string> {
+  const map: Record<string, string> = {}
+  contracts.forEach((c) => {
+    if (c.contractNo && c.vendor) map[c.contractNo] = c.vendor
+  })
+  invoices.forEach((r) => {
+    const key = (r.contractNo || "").trim()
+    if (key && !map[key] && r.vendor) map[key] = r.vendor
+  })
+  return map
+}
+
+/** "CONTRACT-NO — Vendor" label for a Contract No. dropdown option, so it's clear at a
+ *  glance which contractor a contract number belongs to. Falls back to the bare contract
+ *  number if no vendor is known for it. Uses shortContract's tail-truncation for the
+ *  number itself — OGDCL's contract numbers run 50+ characters, and without shortening,
+ *  a long number plus a long vendor name overflows the fixed-width Select controls that
+ *  render these options (see src/lib/reports.ts's shortContract). */
+export function contractOptionLabel(contractNo: string, vendorMap: Record<string, string>): string {
+  const vendor = vendorMap[contractNo]
+  return vendor ? `${shortContract(contractNo)} — ${vendor}` : contractNo
+}
+
+/** Ready-to-render contractNo -> label map (see contractOptionLabel), built in one call
+ *  for a list of contract numbers — the shape every Contract No. dropdown consumes. */
+export function buildContractLabels(contractNumbers: string[], contracts: Contract[], invoices: Invoice[]): Record<string, string> {
+  const vendorMap = buildContractVendorMap(contracts, invoices)
+  return Object.fromEntries(contractNumbers.map((c) => [c, contractOptionLabel(c, vendorMap)]))
 }
 
 /** Ported from invoicesForContract (index.html:2417-2420). */

@@ -93,6 +93,7 @@ function SelectField({
   name,
   label,
   options,
+  optionLabels,
   form,
   disabled,
   placeholder = "Select…",
@@ -100,6 +101,8 @@ function SelectField({
   name: keyof FormInput
   label: string
   options: string[]
+  /** Optional value -> display label override, e.g. a Contract No. shown as "No. — Vendor". */
+  optionLabels?: Record<string, string>
   form: ReturnType<typeof useForm<FormInput, unknown, Values>>
   disabled?: boolean
   placeholder?: string
@@ -117,14 +120,14 @@ function SelectField({
             onValueChange={field.onChange}
           >
             <FormControl>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={placeholder} />
+              <SelectTrigger className="w-full min-w-0">
+                <SelectValue placeholder={placeholder} className="block min-w-0 truncate" />
               </SelectTrigger>
             </FormControl>
             <SelectContent>
               {options.map((o) => (
                 <SelectItem key={o} value={o}>
-                  {o}
+                  {optionLabels?.[o] ?? o}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -143,6 +146,7 @@ export function InvoiceDrawer({
   nextSrNo,
   refLists,
   contractNumbers,
+  contractLabels,
   defaultDept,
   canEdit,
   onOpenChange,
@@ -156,6 +160,8 @@ export function InvoiceDrawer({
   nextSrNo?: number
   refLists: ReferenceLists
   contractNumbers: string[]
+  /** Contract No. -> "No. — Vendor" display label, so it's clear who each contract belongs to. */
+  contractLabels: Record<string, string>
   /** Department to pre-select for a brand-new invoice — the sidebar/dashboard's active
    *  department, so switching there means one less field to fill in on every add. */
   defaultDept?: string
@@ -282,6 +288,7 @@ export function InvoiceDrawer({
                 name="contractNo"
                 label="Contract No."
                 options={contractNumbers}
+                optionLabels={contractLabels}
                 form={form}
                 disabled={readOnly}
                 placeholder="— No Contract / Select… —"

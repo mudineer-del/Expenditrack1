@@ -10,6 +10,7 @@ export function KpiTile({
   valueClassName,
   sub,
   subClassName,
+  trend,
   onClick,
 }: {
   icon: ReactNode
@@ -21,6 +22,8 @@ export function KpiTile({
   valueClassName?: string
   sub?: ReactNode
   subClassName?: string
+  /** Optional sparkline (or any small element) pinned to the top-right corner, opposite the icon. */
+  trend?: ReactNode
   onClick?: () => void
 }) {
   return (
@@ -37,6 +40,7 @@ export function KpiTile({
       onClick={onClick}
     >
       {accent && <span className="absolute top-0 left-0 h-full w-1" style={{ backgroundColor: accent }} />}
+      {trend && <div className="absolute top-[var(--tile-pad)] right-[var(--tile-pad)]" style={accent ? { color: accent } : undefined}>{trend}</div>}
       <div
         className={cn(
           "mb-1 flex size-[var(--tile-icon)] items-center justify-center rounded-md [&_svg]:size-[var(--tile-icon-svg)]",

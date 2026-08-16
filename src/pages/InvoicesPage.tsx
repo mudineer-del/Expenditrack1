@@ -26,11 +26,13 @@ import { InvoiceDrawer } from "@/components/invoices/InvoiceDrawer"
 import { InvoiceFiltersBar } from "@/components/invoices/InvoiceFiltersBar"
 import { InvoicesTable } from "@/components/invoices/InvoicesTable"
 import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
+import { buildContractLabels } from "@/lib/contracts"
 import { fmtMoney } from "@/lib/dashboard"
 import { BLANK_FILTERS, filterAndSortInvoices, type SortState } from "@/lib/invoiceFilters"
 import { exportInvoicesCsv, exportInvoicesXlsx } from "@/lib/invoiceIO"
 import { useContractorLogosQuery } from "@/lib/contractorLogos"
 import { useReferenceLists } from "@/lib/referenceLists"
+import { errorMessage } from "@/lib/utils"
 import { useAppStore } from "@/store/useAppStore"
 import { useAuth } from "@/hooks/useAuth"
 import { useContractsQuery } from "@/hooks/useContracts"
@@ -94,6 +96,11 @@ export default function InvoicesPage() {
     return Array.from(new Set([...known, ...fromData])).sort()
   }, [contracts, invoices])
 
+  const contractLabels = useMemo(
+    () => buildContractLabels(contractNumbers, contracts, invoices),
+    [contractNumbers, contracts, invoices]
+  )
+
   const yearOptions = useMemo(
     () => Array.from(new Set(invoices.map((r) => r.year).filter(Boolean))).map(String).sort(),
     [invoices]
@@ -133,10 +140,17 @@ export default function InvoicesPage() {
     setDrawerOpen(true)
   }
 
-  // Deep-link support: Dashboard's Recent Invoices rows navigate here with
-  // { openInvoiceId } in router state to jump straight to that invoice.
+  // Deep-link support: Dashboard's Recent Invoices rows (and the command palette) navigate
+  // here with { openInvoiceId } in router state to jump straight to that invoice; the
+  // header's quick-add button navigates here with { openAdd: true } to open a blank one.
   useEffect(() => {
-    const openInvoiceId = (location.state as { openInvoiceId?: string } | null)?.openInvoiceId
+    const state = location.state as { openInvoiceId?: string; openAdd?: boolean } | null
+    if (state?.openAdd) {
+      openAdd()
+      navigate(location.pathname, { replace: true, state: null })
+      return
+    }
+    const openInvoiceId = state?.openInvoiceId
     if (!openInvoiceId || !invoices.length) return
     const target = invoices.find((r) => r.id === openInvoiceId)
     if (target) openView(target)
@@ -151,7 +165,7 @@ export default function InvoicesPage() {
         setDrawerOpen(false)
         setEditingInvoice(null)
       },
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save invoice."),
+      onError: (e) => toast.error(errorMessage(e, "Could not save invoice.")),
     })
   }
 
@@ -159,7 +173,7 @@ export default function InvoicesPage() {
     if (!deleteTarget) return
     deleteInvoice.mutate(deleteTarget, {
       onSuccess: () => toast.success("Invoice deleted."),
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Could not delete invoice."),
+      onError: (e) => toast.error(errorMessage(e, "Could not delete invoice.")),
     })
     setDeleteTarget(null)
   }
@@ -171,7 +185,7 @@ export default function InvoicesPage() {
         toast.success(`Deleted ${victims.length} invoice${victims.length !== 1 ? "s" : ""}.`)
         setSelected(new Set())
       },
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Could not delete invoices."),
+      onError: (e) => toast.error(errorMessage(e, "Could not delete invoices.")),
     })
     setBulkDeleteConfirm(false)
   }
@@ -195,7 +209,7 @@ export default function InvoicesPage() {
   function handleImport(newInvoices: Invoice[]) {
     bulkUpsert.mutate(newInvoices, {
       onSuccess: (count) => toast.success(`Imported ${count} invoice${count !== 1 ? "s" : ""}.`),
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Import failed."),
+      onError: (e) => toast.error(errorMessage(e, "Import failed.")),
     })
   }
 
@@ -269,6 +283,7 @@ export default function InvoicesPage() {
             onSortChange={setSort}
             refLists={refLists}
             contractNumbers={contractNumbers}
+            contractLabels={contractLabels}
             yearOptions={yearOptions}
             enteredByOptions={enteredByOptions}
           />
@@ -384,6 +399,7 @@ export default function InvoicesPage() {
         refLists={refLists}
         defaultDept={activeDept !== "ALL" ? activeDept : refLists.departments[0]}
         contractNumbers={contractNumbers}
+        contractLabels={contractLabels}
         canEdit={can("edit")}
         onOpenChange={setDrawerOpen}
         onSubmit={handleSave}

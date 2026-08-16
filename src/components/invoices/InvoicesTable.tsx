@@ -185,13 +185,25 @@ export function InvoicesTable({
   })
 
   return (
-    <div className="overflow-x-auto">
-      <Table style={{ width: table.getTotalSize() }}>
+    // Bounded height on Table's own scroll container (not a second wrapper div around it —
+    // nesting one would put a non-scrolling overflow-x-auto div between this and the sticky
+    // header, silently defeating position: sticky) — a genuine scrolling ancestor for the
+    // sticky header to stick against, since an unbounded-height auto-overflow div never
+    // actually scrolls.
+    <Table containerClassName="max-h-[65vh] overflow-y-auto rounded-md" style={{ width: table.getTotalSize() }}>
+        {/* Sticky while scrolling a long list. Applied per-<th> rather than on <thead> itself
+            — thead is more prone to browser layout quirks that silently defeat sticky, while
+            individual header cells stick reliably. Each needs its own opaque background
+            regardless of the tableHeaderShaded toggle, otherwise rows scrolling underneath
+            show through. */}
         <TableHeader>
           {table.getHeaderGroups().map((hg) => (
-            <TableRow key={hg.id} className={cn(tableHeaderShaded && "bg-muted/60")}>
+            <TableRow key={hg.id}>
               {canBulk && (
-                <TableHead style={{ width: 36 }} className={cn(tableGridLines && "border-r")}>
+                <TableHead
+                  style={{ width: 36 }}
+                  className={cn("sticky top-0 z-10", tableHeaderShaded ? "bg-muted" : "bg-card", tableGridLines && "border-r")}
+                >
                   <Checkbox
                     checked={allSelected ? true : someSelected ? "indeterminate" : false}
                     onCheckedChange={(v) => onToggleSelectAll(!!v)}
@@ -201,8 +213,12 @@ export function InvoicesTable({
               {hg.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  style={{ width: header.getSize(), position: "relative" }}
-                  className={cn("select-none", tableGridLines && "border-r last:border-r-0")}
+                  style={{ width: header.getSize() }}
+                  className={cn(
+                    "sticky top-0 z-10 select-none",
+                    tableHeaderShaded ? "bg-muted" : "bg-card",
+                    tableGridLines && "border-r last:border-r-0"
+                  )}
                 >
                   {flexRender(header.column.columnDef.header, header.getContext())}
                   {header.column.getCanResize() && (
@@ -223,15 +239,21 @@ export function InvoicesTable({
               <TableRow
                 key={row.id}
                 data-state={selected.has(row.original.id) ? "selected" : undefined}
-                className={cn(tableBanded && "even:bg-muted/30")}
+                className={cn("cursor-pointer", tableBanded && "even:bg-muted/30")}
+                onClick={() => onView(row.original)}
               >
                 {canBulk && (
-                  <TableCell style={{ width: 36 }} className={cn(tableGridLines && "border-r")}>
+                  <TableCell style={{ width: 36 }} className={cn(tableGridLines && "border-r")} onClick={(e) => e.stopPropagation()}>
                     <Checkbox checked={selected.has(row.original.id)} onCheckedChange={() => onToggleSelect(row.original.id)} />
                   </TableCell>
                 )}
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className={cn(tableGridLines && "border-r last:border-r-0")}>
+                  <TableCell
+                    key={cell.id}
+                    style={{ width: cell.column.getSize() }}
+                    className={cn(tableGridLines && "border-r last:border-r-0")}
+                    onClick={cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -246,6 +268,5 @@ export function InvoicesTable({
           )}
         </TableBody>
       </Table>
-    </div>
   )
 }

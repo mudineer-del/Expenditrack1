@@ -1,5 +1,6 @@
 import { Building2, Plus, Search } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -22,6 +23,7 @@ import { VendorCard } from "@/components/contracts/VendorCard"
 import { avgLeadTime, vendorColor } from "@/lib/dashboard"
 import { getContractorLogo, useContractorLogosQuery } from "@/lib/contractorLogos"
 import { useReferenceLists } from "@/lib/referenceLists"
+import { errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useContractsQuery, useDeleteContract, useUpsertContract } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
@@ -31,6 +33,8 @@ import type { Contract } from "@/types/contract"
 /** Ported from renderVendors (index.html:4144-4222). */
 export default function VendorsContractsPage() {
   const { can } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const invoicesQuery = useInvoicesQuery()
   const contractsQuery = useContractsQuery()
   const { ref: refLists } = useReferenceLists()
@@ -59,6 +63,17 @@ export default function VendorsContractsPage() {
     [allContracts, activeDept]
   )
 
+  // Deep-link support: the command palette navigates here with { openContractId } in
+  // router state to jump straight to that contract's detail sheet.
+  useEffect(() => {
+    const openContractId = (location.state as { openContractId?: string } | null)?.openContractId
+    if (!openContractId || !contracts.length) return
+    const target = contracts.find((c) => c.id === openContractId)
+    if (target) setViewingContract(target)
+    navigate(location.pathname, { replace: true, state: null })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, contracts])
+
   const vendorCards = useMemo(() => {
     const byVendor: Record<string, { count: number; total: number }> = {}
     invoices.forEach((r) => {
@@ -67,18 +82,25 @@ export default function VendorsContractsPage() {
       byVendor[v].count++
       byVendor[v].total += Number(r.amountInclTax) || 0
     })
+    // Only show a tile for a vendor that actually has an invoice or a contract in the
+    // current department scope — the vendor picklist itself is global (shared across every
+    // department), so without this a department with 2 real contractors would still show a
+    // tile for every vendor ever added anywhere else.
+    const vendorsWithContracts = new Set(contracts.map((c) => c.vendor).filter(Boolean))
     const grandTotal = Object.values(byVendor).reduce((s, d) => s + d.total, 0) || 1
-    return refLists.vendors.map((v) => {
-      const d = byVendor[v] || { count: 0, total: 0 }
-      return {
-        vendor: v,
-        total: d.total,
-        count: d.count,
-        sharePct: (d.total / grandTotal) * 100,
-        lead: avgLeadTime(invoices.filter((r) => r.vendor === v)),
-      }
-    })
-  }, [invoices, refLists.vendors])
+    return refLists.vendors
+      .filter((v) => byVendor[v] || vendorsWithContracts.has(v))
+      .map((v) => {
+        const d = byVendor[v] || { count: 0, total: 0 }
+        return {
+          vendor: v,
+          total: d.total,
+          count: d.count,
+          sharePct: (d.total / grandTotal) * 100,
+          lead: avgLeadTime(invoices.filter((r) => r.vendor === v)),
+        }
+      })
+  }, [invoices, contracts, refLists.vendors])
 
   const sortedContracts = useMemo(
     () => contracts.slice().sort((a, b) => a.contractNo.localeCompare(b.contractNo)),
@@ -109,7 +131,7 @@ export default function VendorsContractsPage() {
         setDrawerOpen(false)
         setEditingContract(null)
       },
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save contract."),
+      onError: (e) => toast.error(errorMessage(e, "Could not save contract.")),
     })
   }
 
@@ -117,7 +139,7 @@ export default function VendorsContractsPage() {
     if (!deleteTarget) return
     deleteContract.mutate(deleteTarget, {
       onSuccess: () => toast.success("Contract deleted."),
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Could not delete contract."),
+      onError: (e) => toast.error(errorMessage(e, "Could not delete contract.")),
     })
     setDeleteTarget(null)
   }
@@ -147,22 +169,30 @@ export default function VendorsContractsPage() {
     <div className="grid gap-4">
       <div>
         <div className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Contractors</div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {vendorCards.map((v) => (
-            <VendorCard
-              key={v.vendor}
-              vendor={v.vendor}
-              color={vendorColor(v.vendor)}
-              logo={getContractorLogo(contractorLogosQuery.data ?? {}, v.vendor)}
-              total={v.total}
-              sharePct={v.sharePct}
-              count={v.count}
-              leadDays={v.lead}
-              active={dashVendor === v.vendor}
-              onClick={() => setDashVendor(dashVendor === v.vendor ? "ALL" : v.vendor)}
-            />
-          ))}
-        </div>
+        {vendorCards.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {vendorCards.map((v) => (
+              <VendorCard
+                key={v.vendor}
+                vendor={v.vendor}
+                color={vendorColor(v.vendor)}
+                logo={getContractorLogo(contractorLogosQuery.data ?? {}, v.vendor)}
+                total={v.total}
+                sharePct={v.sharePct}
+                count={v.count}
+                leadDays={v.lead}
+                active={dashVendor === v.vendor}
+                onClick={() => setDashVendor(dashVendor === v.vendor ? "ALL" : v.vendor)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2 rounded-lg border p-10 text-center text-muted-foreground">
+            <Building2 className="size-8" />
+            <h4 className="font-medium text-foreground">No contractors yet in this department</h4>
+            <p className="text-sm">Add an invoice or contract under this department to see it here.</p>
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg border bg-card">

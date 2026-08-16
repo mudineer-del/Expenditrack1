@@ -17,6 +17,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -26,7 +27,9 @@ import { OgdclMark } from "@/components/shared/OgdclMark"
 import { DepartmentSwitcher } from "@/components/shell/DepartmentSwitcher"
 import { SidebarContractsWidget } from "@/components/shell/SidebarContractsWidget"
 import { useAuth } from "@/hooks/useAuth"
+import { useActivityLogQuery } from "@/hooks/useActivityLog"
 import { useLabelsStore } from "@/store/useLabelsStore"
+import { useLastSeenStore } from "@/store/useLastSeenStore"
 
 /** Grouped the way a lot of finance-product dashboards do it — day-to-day work
  *  separated from oversight/admin — instead of one flat list. */
@@ -57,6 +60,11 @@ export function AppSidebar() {
   const { user, isAdmin } = useAuth()
   const sidebarTitle = useLabelsStore((s) => s.sidebarTitle)
   const sidebarSubtitle = useLabelsStore((s) => s.sidebarSubtitle)
+  const activityLogQuery = useActivityLogQuery()
+  const lastSeenTs = useLastSeenStore((s) => s.lastSeenTs)
+  // Live (not snapshotted) — clears itself the moment the user actually visits Activity Log,
+  // since that page's own markSeen() call updates the same stored timestamp this reads.
+  const unreadActivity = lastSeenTs > 0 ? (activityLogQuery.data ?? []).filter((e) => e.ts > lastSeenTs).length : 0
 
   return (
     <Sidebar collapsible="icon">
@@ -78,6 +86,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {group.items.map((item) => {
                   const restricted = "adminOnly" in item && item.adminOnly && !isAdmin
+                  const badgeCount = item.to === "/activity" ? unreadActivity : 0
                   return (
                     <SidebarMenuItem key={item.to}>
                       <SidebarMenuButton
@@ -101,6 +110,7 @@ export function AppSidebar() {
                           </NavLink>
                         )}
                       </SidebarMenuButton>
+                      {badgeCount > 0 && <SidebarMenuBadge className="bg-primary text-primary-foreground">{badgeCount}</SidebarMenuBadge>}
                     </SidebarMenuItem>
                   )
                 })}

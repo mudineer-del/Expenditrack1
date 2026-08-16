@@ -2,6 +2,7 @@ import { storeGet, storeSet } from "@/lib/localCache"
 import { fmtMoney } from "@/lib/dashboard"
 import { contractExpenditure } from "@/lib/contracts"
 import { shortContract } from "@/lib/reports"
+import { errorMessage } from "@/lib/utils"
 import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
 
@@ -85,7 +86,7 @@ export async function sendNotificationEmail(
     const text = await res.text().catch(() => "")
     return { ok: false, error: `HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ""}` }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: errorMessage(e) }
   }
 }
 

@@ -36,6 +36,7 @@ function FilterSelect({
   color,
   value,
   options,
+  optionLabels,
   onChange,
 }: {
   label: string
@@ -43,6 +44,8 @@ function FilterSelect({
   color: string
   value: string
   options: string[]
+  /** Optional value -> display label override, e.g. a Contract No. shown as "No. — Vendor". */
+  optionLabels?: Record<string, string>
   onChange: (v: string) => void
 }) {
   return (
@@ -61,7 +64,7 @@ function FilterSelect({
           <SelectItem value="__all__">All</SelectItem>
           {options.map((o) => (
             <SelectItem key={o} value={o}>
-              {o}
+              {optionLabels?.[o] ?? o}
             </SelectItem>
           ))}
         </SelectContent>
@@ -77,6 +80,7 @@ export function InvoiceFiltersBar({
   onSortChange,
   refLists,
   contractNumbers,
+  contractLabels,
   yearOptions,
   enteredByOptions,
 }: {
@@ -86,6 +90,8 @@ export function InvoiceFiltersBar({
   onSortChange: (s: SortState) => void
   refLists: ReferenceLists
   contractNumbers: string[]
+  /** Contract No. -> "No. — Vendor" display label, so it's clear who each contract belongs to. */
+  contractLabels: Record<string, string>
   yearOptions: string[]
   enteredByOptions: string[]
 }) {
@@ -121,14 +127,14 @@ export function InvoiceFiltersBar({
             {activeCount > 0 && <Badge variant="secondary">{activeCount}</Badge>}
           </Button>
         </DialogTrigger>
-        <DialogContent className="border-t-4 sm:max-w-lg" style={{ borderTopColor: "var(--chart-1)" }}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Filter invoices</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <FilterSelect label="Vendor" icon={Building2} color={FILTER_COLORS[0]} value={filters.vendor} options={refLists.vendors} onChange={(v) => set("vendor", v)} />
             <FilterSelect label="Service" icon={Wrench} color={FILTER_COLORS[1]} value={filters.service} options={refLists.services} onChange={(v) => set("service", v)} />
-            <FilterSelect label="Contract" icon={FileText} color={FILTER_COLORS[2]} value={filters.contract} options={contractNumbers} onChange={(v) => set("contract", v)} />
+            <FilterSelect label="Contract" icon={FileText} color={FILTER_COLORS[2]} value={filters.contract} options={contractNumbers} optionLabels={contractLabels} onChange={(v) => set("contract", v)} />
             <FilterSelect label="Status" icon={CircleCheck} color={FILTER_COLORS[3]} value={filters.status} options={refLists.statuses} onChange={(v) => set("status", v)} />
             <FilterSelect label="Region" icon={MapPin} color={FILTER_COLORS[4]} value={filters.region} options={refLists.regions} onChange={(v) => set("region", v)} />
             <FilterSelect label="Year" icon={Calendar} color={FILTER_COLORS[0]} value={filters.year} options={yearOptions} onChange={(v) => set("year", v)} />

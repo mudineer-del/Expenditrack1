@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SetPasswordDialog } from "@/components/users/SetPasswordDialog"
+import { errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useProfilesQuery, useUpdateProfileRole } from "@/hooks/useProfiles"
 import type { AppUser, Role } from "@/types/user"
@@ -35,7 +36,7 @@ export default function UsersPage() {
       { id, role },
       {
         onSuccess: () => toast.success("Role updated."),
-        onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update role."),
+        onError: (e) => toast.error(errorMessage(e, "Could not update role.")),
       }
     )
   }

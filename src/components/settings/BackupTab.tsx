@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { buildBackup, downloadBackup, parseBackupFile, type Backup } from "@/lib/backup"
 import { saveStandaloneAppAsHtml } from "@/lib/singlefileExport"
+import { errorMessage } from "@/lib/utils"
 import { useActivityLogQuery } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { useRestoreBackup } from "@/hooks/useBackup"
@@ -70,7 +71,7 @@ export function BackupTab() {
     if (!pendingRestore) return
     restoreBackup.mutate(pendingRestore, {
       onSuccess: () => toast.success(`Restored ${pendingRestore.data.invoices.length} invoices from backup.`),
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Restore failed."),
+      onError: (e) => toast.error(errorMessage(e, "Restore failed.")),
     })
     setPendingRestore(null)
   }

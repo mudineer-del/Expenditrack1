@@ -88,6 +88,13 @@ export function toRow(inv: Invoice): InvoiceRow {
   }
   if (row.year !== null && row.year !== undefined) row.year = String(row.year)
   if (row.rig !== null && row.rig !== undefined) row.rig = String(row.rig)
+  // `department` is NOT NULL in the DB (see supabase/departments_setup.sql) — unlike
+  // every other field here, an explicit null would violate that constraint rather than
+  // just falling back to the column's own default, since a provided value (even null)
+  // always overrides a DEFAULT in an insert/upsert. This covers any invoice that never
+  // went through the department picker — imports from a file with no Department column,
+  // in particular, which is every pre-existing spreadsheet.
+  if (!row.department) row.department = "Drilling Fluids"
   return row
 }
 

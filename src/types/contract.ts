@@ -30,7 +30,10 @@ export function toContractRow(c: Contract): ContractRow {
     start_date: c.startDate || null,
     end_date: c.endDate || null,
     status: c.status || null,
-    department: c.department || null,
+    // NOT NULL in the DB (see supabase/departments_setup.sql) — an explicit null would
+    // violate that constraint rather than falling back to the column's own default,
+    // since a provided value always overrides a DEFAULT in an insert/upsert.
+    department: c.department || "Drilling Fluids",
   }
 }
 

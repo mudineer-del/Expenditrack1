@@ -1,5 +1,5 @@
 import { FileSignature, Layers, Receipt, Undo2 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -14,11 +14,13 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
+import { errorMessage } from "@/lib/utils"
 import { useActivityLogQuery, useClearActivityLog } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { useUndo } from "@/hooks/useUndo"
 import { useActivityStore, type ActivityAction, type ActivityEntry } from "@/store/useActivityStore"
 import { useAppStore } from "@/store/useAppStore"
+import { useLastSeenStore } from "@/store/useLastSeenStore"
 
 /** The action badge says what happened; this says to what — an entry's own
  *  meta already carries invoiceNo or contractNo, so no string-parsing needed. */
@@ -60,6 +62,17 @@ export default function ActivityLogPage() {
       ),
     [activityLogQuery.data, activeDept]
   )
+  const lastSeenTs = useLastSeenStore((s) => s.lastSeenTs)
+  const markSeen = useLastSeenStore((s) => s.markSeen)
+  // Snapshot once on mount — the "N new" count should stay stable for this whole visit,
+  // not shrink to zero the instant markSeen updates the store below.
+  const [sessionLastSeen] = useState(lastSeenTs)
+  useEffect(() => {
+    if (activityLogQuery.data) markSeen(Date.now())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityLogQuery.data])
+  const newCount = sessionLastSeen > 0 ? log.filter((e) => e.ts > sessionLastSeen).length : 0
+
   const undoStack = useActivityStore((s) => s.undoStack)
   const selectedLogIds = useActivityStore((s) => s.selectedLogIds)
   const toggleSelect = useActivityStore((s) => s.toggleSelect)
@@ -101,7 +114,7 @@ export default function ActivityLogPage() {
   function handleClearLog() {
     clearLog.mutate(undefined, {
       onSuccess: () => toast.success("Activity log cleared for everyone."),
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Could not clear the activity log."),
+      onError: (e) => toast.error(errorMessage(e, "Could not clear the activity log.")),
     })
   }
 
@@ -112,6 +125,12 @@ export default function ActivityLogPage() {
 
   return (
     <div className="grid gap-4">
+      {newCount > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary">
+          <span className="flex size-2 shrink-0 rounded-full bg-primary" />
+          {newCount} new change{newCount !== 1 ? "s" : ""} since your last visit
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">Activity &amp; Change Log</h2>
         <div className="flex gap-2">

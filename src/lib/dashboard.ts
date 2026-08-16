@@ -84,6 +84,50 @@ export function kpis(rows: Invoice[]): Kpis {
   return { count: rows.length, totalIncl, totalPaid, outstanding: totalIncl - totalPaid, cleared, pending }
 }
 
+/** Same predicate as kpis()'s `cleared` count — kept as its own function so the KPI tile's
+ *  drill-down dialog shows exactly the rows the displayed number was computed from. */
+export function clearedInvoices(rows: Invoice[]): Invoice[] {
+  return rows.filter((r) => (r.status || "").toLowerCase().includes("cleared"))
+}
+
+/** Same predicate as kpis()'s `pending` count. */
+export function pendingInvoices(rows: Invoice[]): Invoice[] {
+  return rows.filter((r) => {
+    const s = (r.status || "").toLowerCase()
+    return s.includes("under") || s.includes("sent") || s.includes("budget")
+  })
+}
+
+/** Rows in the given fiscal year/quarter — matches the thisQTotal/qoqPct calculation below. */
+export function invoicesInQuarter(rows: Invoice[], yr: string | null, qtr: string | null): Invoice[] {
+  if (!yr || !qtr) return []
+  return rows.filter((r) => r.yr === yr && r.qtr === qtr)
+}
+
+/** Rows in the given fiscal year — matches the ytdTotal/yoyPct calculation below. */
+export function invoicesInYear(rows: Invoice[], yr: string | null): Invoice[] {
+  if (!yr) return []
+  return rows.filter((r) => r.yr === yr)
+}
+
+/** Rows with a valid invoice-to-clearance span — matches the avgDaysToClear calculation below. */
+export function invoicesWithClearTime(rows: Invoice[]): Invoice[] {
+  return rows.filter((r) => {
+    if (!r.invoiceDate || !r.clearanceDate) return false
+    const d1 = new Date(r.invoiceDate)
+    const d2 = new Date(r.clearanceDate)
+    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return false
+    const days = (d2.getTime() - d1.getTime()) / 86400000
+    return days >= 0 && days < 3650
+  })
+}
+
+/** Rows for one vendor name — matches the topVendor grouping below ("Unknown" fallback included). */
+export function invoicesForVendorName(rows: Invoice[], vendor: string | null): Invoice[] {
+  if (!vendor) return []
+  return rows.filter((r) => (r.vendor || "Unknown") === vendor)
+}
+
 function fyKey(yr: string, qtr: string): number | null {
   if (!yr || !qtr) return null
   const startYear = parseInt(String(yr).split("-")[0], 10)

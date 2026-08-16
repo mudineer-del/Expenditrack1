@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtMoney } from "@/lib/dashboard"
-import { aggregate, groupRows, reportGroupLabel, reportRows, type ReportFilters, type ReportGroup } from "@/lib/reports"
+import { aggregate, groupRows, reportGroupLabel, reportRows, turnaroundDays, type ReportFilters, type ReportGroup } from "@/lib/reports"
 import { PeriodPaidChart, PeriodValueChart } from "@/components/reports/PeriodCharts"
 import type { Invoice } from "@/types/invoice"
 
@@ -44,27 +44,39 @@ export function PeriodReportView({
   return (
     <div className="grid gap-4">
       <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 md:grid-cols-5">
-        <div>
+        <button type="button" className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60" onClick={() => onDrill(rows, "Invoices in scope")}>
           <div className="text-xs text-muted-foreground">Invoices in scope</div>
           <div className="text-lg font-semibold">{tot.count}</div>
-        </div>
-        <div>
+        </button>
+        <button type="button" className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60" onClick={() => onDrill(rows, "Invoices in scope")}>
           <div className="text-xs text-muted-foreground">Total value</div>
           <div className="text-lg font-semibold">{fmtMoney(tot.incl)}</div>
-        </div>
-        <div>
+        </button>
+        <button
+          type="button"
+          className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+          onClick={() => onDrill(rows.filter((r) => (Number(r.amountPaid) || 0) > 0), "Paid Invoices")}
+        >
           <div className="text-xs text-muted-foreground">Total paid</div>
           <div className="text-lg font-semibold text-green-700 dark:text-green-400">{fmtMoney(tot.paid)}</div>
-        </div>
-        <div>
+        </button>
+        <button
+          type="button"
+          className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+          onClick={() => onDrill(rows.filter((r) => (Number(r.amountInclTax) || 0) - (Number(r.amountPaid) || 0) > 0), "Outstanding Invoices")}
+        >
           <div className="text-xs text-muted-foreground">Outstanding</div>
           <div className="text-lg font-semibold text-amber-600 dark:text-amber-400">{fmtMoney(tot.outstanding)}</div>
-        </div>
-        <div>
+        </button>
+        <button
+          type="button"
+          className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+          onClick={() => onDrill(rows.filter((r) => turnaroundDays(r) !== null), "Invoices with recorded turnaround")}
+        >
           <div className="text-xs text-muted-foreground">Avg turnaround</div>
           <div className="text-lg font-semibold">{tot.taAvg !== null ? `${Math.round(tot.taAvg)}d` : "—"}</div>
           <div className="text-xs text-muted-foreground">{tot.delayed} delayed &gt;30d</div>
-        </div>
+        </button>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

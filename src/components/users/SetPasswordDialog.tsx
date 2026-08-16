@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/ui/password-input"
+import { errorMessage } from "@/lib/utils"
 import { useSetUserPassword } from "@/hooks/useAdminPassword"
 import type { AppUser } from "@/types/user"
 
@@ -54,7 +55,7 @@ export function SetPasswordDialog({
           toast.success(`Password updated for ${user.name}.`)
           handleOpenChange(false)
         },
-        onError: (e) => toast.error(e instanceof Error ? e.message : "Could not set password."),
+        onError: (e) => toast.error(errorMessage(e, "Could not set password.")),
       }
     )
   }

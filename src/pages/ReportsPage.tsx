@@ -6,6 +6,7 @@ import { ContractReportView } from "@/components/reports/ContractReportView"
 import { PeriodReportView } from "@/components/reports/PeriodReportView"
 import { ReportDetailDrawer, type ReportDetail } from "@/components/reports/ReportDetailDrawer"
 import { ReportFiltersBar } from "@/components/reports/ReportFiltersBar"
+import { buildContractLabels } from "@/lib/contracts"
 import {
   BLANK_REPORT_FILTERS,
   downloadCsv,
@@ -50,7 +51,12 @@ export default function ReportsPage() {
   const contractNumbers = Array.from(
     new Set([...contracts.map((c) => c.contractNo), ...invoices.map((r) => (r.contractNo || "").trim()).filter(Boolean)])
   ).sort()
+  const contractLabels = buildContractLabels(contractNumbers, contracts, invoices)
   const yearOptions = yearsInData(invoices)
+  // The "wells" reference list starts empty and is rarely (if ever) hand-populated by an
+  // Admin, unlike vendors/services — so derive well options from actual invoice data
+  // instead, same as contractNumbers/yearOptions above.
+  const wellOptions = Array.from(new Set(invoices.map((r) => r.wellName).filter(Boolean))).sort()
 
   function openDrill(rows: typeof invoices, title: string) {
     setDetail({ title, rows })
@@ -125,7 +131,9 @@ export default function ReportsPage() {
           onFiltersChange={setFilters}
           refLists={refLists}
           contractNumbers={contractNumbers}
+          contractLabels={contractLabels}
           yearOptions={yearOptions}
+          wellOptions={wellOptions}
           onExportCsv={exportCsv}
         />
       </div>

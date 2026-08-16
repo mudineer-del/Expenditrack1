@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
+import { cn, errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useRenameDepartment } from "@/hooks/useDepartments"
 import { useReferenceLists } from "@/lib/referenceLists"
@@ -59,7 +59,7 @@ export function DepartmentSwitcher() {
     }
     addValue("departments", name, {
       onSuccess: () => toast.success(`${name} added.`),
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Could not add department — check Supabase permissions."),
+      onError: (e) => toast.error(errorMessage(e, "Could not add department — check Supabase permissions.")),
     })
     setNewName("")
     setAdding(false)
@@ -72,7 +72,7 @@ export function DepartmentSwitcher() {
       onSuccess: () => {
         if (activeDept === name) setActiveDept(ALL_DEPARTMENTS)
       },
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Could not remove department."),
+      onError: (e) => toast.error(errorMessage(e, "Could not remove department.")),
     })
     setRemoveTarget(null)
   }
@@ -101,7 +101,7 @@ export function DepartmentSwitcher() {
           toast.success(`Renamed to ${name}.`)
           if (activeDept === from) setActiveDept(name)
         },
-        onError: (e) => toast.error(e instanceof Error ? e.message : "Could not rename department."),
+        onError: (e) => toast.error(errorMessage(e, "Could not rename department.")),
       }
     )
     setEditTarget(null)

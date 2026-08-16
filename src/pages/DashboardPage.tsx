@@ -18,6 +18,7 @@ import { ContractorInvoicesChart } from "@/components/dashboard/ContractorInvoic
 import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
 import { KpiTile } from "@/components/dashboard/KpiTile"
 import { ServiceChart } from "@/components/dashboard/ServiceChart"
+import { Sparkline } from "@/components/dashboard/Sparkline"
 import { SpendingTicker } from "@/components/dashboard/SpendingTicker"
 import { TypeCountChart } from "@/components/dashboard/TypeCountChart"
 import { TrendChart } from "@/components/dashboard/TrendChart"
@@ -27,10 +28,16 @@ import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import {
   avgLeadTime,
+  clearedInvoices,
   computeDashboardStats,
   contractorInvoiceCounts,
   fmtMoney,
+  invoicesForVendorName,
+  invoicesInQuarter,
+  invoicesInYear,
+  invoicesWithClearTime,
   monthlyTrend,
+  pendingInvoices,
   serviceBreakdown,
   typeInvoiceCounts,
   vendorBreakdown,
@@ -109,6 +116,12 @@ export default function DashboardPage() {
   )
   const recent = useMemo(() => rows.slice().sort((a, b) => (Number(b.srNo) || 0) - (Number(a.srNo) || 0)).slice(0, 6), [rows])
   const trend = useMemo(() => monthlyTrend(rows), [rows])
+  // Last 6 months' worth of trend points, for the KPI tiles' sparklines — same source data
+  // as the Monthly Expenditure Trend chart, just sliced down and summarized differently.
+  const recentTrend = trend.slice(-6)
+  const valueSparkline = recentTrend.map((t) => t.total)
+  const countSparkline = recentTrend.map((t) => t.invoices.length)
+  const avgSparkline = recentTrend.map((t) => (t.invoices.length ? t.total / t.invoices.length : 0))
   const byService = useMemo(() => serviceBreakdown(rows), [rows])
   const byVendor = useMemo(() => vendorBreakdown(rows), [rows])
   const byVendorService = useMemo(() => vendorServiceBreakdown(rows), [rows])
@@ -196,8 +209,18 @@ export default function DashboardPage() {
           label="Total invoices"
           value={stats.k.count.toLocaleString()}
           sub={dashVendor === "ALL" ? `${new Set(rows.map((r) => r.vendor)).size} contractors` : dashVendor}
+          trend={countSparkline.length > 1 ? <Sparkline data={countSparkline} /> : undefined}
+          onClick={() => onDrill(dashVendor === "ALL" ? "All Invoices" : `Invoices — ${dashVendor}`, rows)}
         />
-        <KpiTile icon={<Wallet />} accent="var(--chart-2)" label="Total value (incl. tax)" value={fmtMoney(stats.k.totalIncl)} sub="USD" />
+        <KpiTile
+          icon={<Wallet />}
+          accent="var(--chart-2)"
+          label="Total value (incl. tax)"
+          value={fmtMoney(stats.k.totalIncl)}
+          sub="USD"
+          trend={valueSparkline.length > 1 ? <Sparkline data={valueSparkline} /> : undefined}
+          onClick={() => onDrill(dashVendor === "ALL" ? "All Invoices" : `Invoices — ${dashVendor}`, rows)}
+        />
         <KpiTile
           icon={<CheckCircle2 />}
           iconClassName="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
@@ -206,6 +229,7 @@ export default function DashboardPage() {
           value={stats.k.cleared.toLocaleString()}
           valueClassName="text-green-700 dark:text-green-400"
           sub={`${((stats.k.cleared / stats.k.count) * 100 || 0).toFixed(0)}% of invoices`}
+          onClick={() => onDrill("Cleared Invoices", clearedInvoices(rows))}
         />
         <KpiTile
           icon={<Clock3 />}
@@ -215,10 +239,18 @@ export default function DashboardPage() {
           value={stats.k.pending.toLocaleString()}
           valueClassName="text-amber-700 dark:text-amber-400"
           sub="Awaiting clearance"
+          onClick={() => onDrill("Pending Invoices", pendingInvoices(rows))}
         />
         {dashVendor !== "ALL" && contractCost > 0 && (
           <>
-            <KpiTile icon={<DollarSign />} accent="var(--chart-3)" label="Contract cost" value={fmtMoney(contractCost)} sub={`All ${dashVendor} contracts`} />
+            <KpiTile
+              icon={<DollarSign />}
+              accent="var(--chart-3)"
+              label="Contract cost"
+              value={fmtMoney(contractCost)}
+              sub={`All ${dashVendor} contracts`}
+              onClick={() => onDrill(`Invoices — ${dashVendor}`, rows)}
+            />
             <KpiTile
               icon={<Wallet />}
               accent="var(--chart-4)"
@@ -226,6 +258,7 @@ export default function DashboardPage() {
               value={fmtMoney(contractCost - stats.k.totalIncl)}
               valueClassName={contractCost - stats.k.totalIncl < 0 ? "text-red-600" : "text-green-600"}
               sub={`${Math.min(100, (stats.k.totalIncl / contractCost) * 100).toFixed(1)}% utilized`}
+              onClick={() => onDrill(`Invoices — ${dashVendor}`, rows)}
             />
           </>
         )}
@@ -238,6 +271,9 @@ export default function DashboardPage() {
           label="This quarter"
           value={fmtMoney(stats.thisQTotal)}
           sub={<PctSub pct={stats.qoqPct} label="vs last quarter" />}
+          onClick={() =>
+            onDrill(`Invoices — ${stats.latestQtrYr ?? ""} ${stats.latestQtrStr ?? ""}`.trim(), invoicesInQuarter(rows, stats.latestQtrYr, stats.latestQtrStr))
+          }
         />
         <KpiTile
           icon={<History />}
@@ -245,6 +281,7 @@ export default function DashboardPage() {
           label={`Fiscal year ${stats.latestYr || "—"}`}
           value={fmtMoney(stats.ytdTotal)}
           sub={<PctSub pct={stats.yoyPct} label="vs prior year" />}
+          onClick={() => onDrill(`Invoices — FY ${stats.latestYr ?? ""}`, invoicesInYear(rows, stats.latestYr))}
         />
         <KpiTile
           icon={<DollarSign />}
@@ -253,6 +290,8 @@ export default function DashboardPage() {
           label="Avg invoice value"
           value={fmtMoney(stats.avgInvoiceValue)}
           sub={`Across ${stats.k.count.toLocaleString()} invoices`}
+          trend={avgSparkline.length > 1 ? <Sparkline data={avgSparkline} /> : undefined}
+          onClick={() => onDrill(dashVendor === "ALL" ? "All Invoices" : `Invoices — ${dashVendor}`, rows)}
         />
         <KpiTile
           icon={<Clock3 />}
@@ -261,6 +300,7 @@ export default function DashboardPage() {
           label="Avg days to clear"
           value={stats.avgDaysToClear == null ? "—" : `${stats.avgDaysToClear.toFixed(1)}d`}
           sub={`${stats.clearDaysCount} invoices with dates`}
+          onClick={() => onDrill("Invoices with recorded clearance time", invoicesWithClearTime(rows))}
         />
         <KpiTile
           icon={<Building2 />}
@@ -269,6 +309,7 @@ export default function DashboardPage() {
           label="Top contractor share"
           value={stats.topVendorPct == null ? "—" : `${stats.topVendorPct.toFixed(0)}%`}
           sub={stats.topVendor ? stats.topVendor[0] : "No data"}
+          onClick={() => stats.topVendor && onDrill(`Invoices — ${stats.topVendor[0]}`, invoicesForVendorName(rows, stats.topVendor[0]))}
         />
         <KpiTile
           icon={<ShieldCheck />}
@@ -282,6 +323,7 @@ export default function DashboardPage() {
               "None expiring soon"
             )
           }
+          onClick={() => navigate("/vendors")}
         />
       </div>
 

@@ -1,5 +1,5 @@
 import { AlertTriangle, Upload } from "lucide-react"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import {
   finalizeImportedRecord,
   invoiceDupKey,
@@ -18,6 +17,7 @@ import {
   parseImportFile,
   type ImportedRecord,
 } from "@/lib/invoiceIO"
+import { errorMessage } from "@/lib/utils"
 import type { Invoice } from "@/types/invoice"
 
 export function ImportDialog({
@@ -36,6 +36,7 @@ export function ImportDialog({
   const [unmatched, setUnmatched] = useState<string[]>([])
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const existingKeys = new Set(existingInvoices.map(invoiceDupKey))
   const dupCount = records.filter((r) => existingKeys.has(invoiceDupKey(r))).length
@@ -61,7 +62,7 @@ export function ImportDialog({
       setRecords(mapped)
       setUnmatched(unmatchedHeaders)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not read this file.")
+      setError(errorMessage(e, "Could not read this file."))
       setRecords([])
     }
   }
@@ -100,7 +101,20 @@ export function ImportDialog({
 
         {!records.length ? (
           <div className="grid gap-3">
-            <Input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="justify-self-start">
+              <Upload /> Browse for file…
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ""
+                if (file) handleFile(file)
+              }}
+            />
             {error && (
               <p className="flex items-center gap-1.5 text-sm text-destructive">
                 <AlertTriangle className="size-4" /> {error}

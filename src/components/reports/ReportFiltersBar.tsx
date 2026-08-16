@@ -49,7 +49,9 @@ export function ReportFiltersBar({
   onFiltersChange,
   refLists,
   contractNumbers,
+  contractLabels,
   yearOptions,
+  wellOptions,
   onExportCsv,
 }: {
   mode: ReportMode
@@ -57,7 +59,11 @@ export function ReportFiltersBar({
   onFiltersChange: (f: ReportFilters) => void
   refLists: ReferenceLists
   contractNumbers: string[]
+  /** Contract No. -> "No. — Vendor" display label, so it's clear who each contract belongs to. */
+  contractLabels: Record<string, string>
   yearOptions: string[]
+  /** Well names actually present in the current invoices — refLists.wells is usually empty. */
+  wellOptions: string[]
   onExportCsv: () => void
 }) {
   function set<K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) {
@@ -81,7 +87,7 @@ export function ReportFiltersBar({
                 <SelectItem value="__none__">— Select a contract —</SelectItem>
                 {contractNumbers.map((c) => (
                   <SelectItem key={c} value={c}>
-                    {c}
+                    {contractLabels[c] ?? c}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -110,7 +116,7 @@ export function ReportFiltersBar({
         <FilterSelect label="Type" value={filters.type} options={refLists.types} onChange={(v) => set("type", v)} />
         <FilterSelect label="Region" value={filters.region} options={refLists.regions} onChange={(v) => set("region", v)} />
         <FilterSelect label="Status" value={filters.status} options={refLists.statuses} onChange={(v) => set("status", v)} />
-        <FilterSelect label="Well" value={filters.well} options={refLists.wells} onChange={(v) => set("well", v)} />
+        <FilterSelect label="Well" value={filters.well} options={wellOptions} onChange={(v) => set("well", v)} />
         <FilterSelect label="Year" value={filters.year} options={yearOptions} onChange={(v) => set("year", v)} />
         <FilterSelect label="Quarter" value={filters.qtr} options={refLists.quarters} onChange={(v) => set("qtr", v)} />
         <div className="grid gap-1.5">

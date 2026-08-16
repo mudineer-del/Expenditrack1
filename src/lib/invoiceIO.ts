@@ -4,7 +4,7 @@ import type { Invoice } from "@/types/invoice"
 const EXPORT_COLS: Array<[keyof Invoice, string]> = [
   ["srNo", "Sr No"], ["vendor", "Vendor"], ["invoiceNo", "Invoice No"], ["contractNo", "Contract No"],
   ["wellName", "Well Name"], ["invoiceDate", "Invoice Date"], ["receivingDate", "Receiving Date"], ["clearanceDate", "Clearance Date"],
-  ["service", "Service"], ["type", "Type"], ["region", "Region"], ["rig", "Rig"], ["location", "Location"], ["description", "Description"],
+  ["service", "Service"], ["type", "Type"], ["department", "Department"], ["region", "Region"], ["rig", "Rig"], ["location", "Location"], ["description", "Description"],
   ["amountExclTax", "Amount Excl Tax"], ["gstPst", "GST/PST"], ["tax", "Tax"], ["amountInclTax", "Amount Incl Tax"], ["amountPaid", "Amount Paid"],
   ["status", "Status"], ["qtr", "Quarter"], ["year", "Year"],
 ]
@@ -67,7 +67,8 @@ const IMPORT_ALIASES: Record<string, string> = {
   "receiving date": "receivingDate", receivingdate: "receivingDate", received: "receivingDate", "received date": "receivingDate", "rcv date": "receivingDate",
   "clearance date": "clearanceDate", clearancedate: "clearanceDate", cleared: "clearanceDate", "clearing date": "clearanceDate", "clear date": "clearanceDate",
   "log-in date": "loginDate", "login date": "loginDate", "log in date": "loginDate", logindate: "loginDate",
-  service: "service", type: "type", region: "region", rig: "rig", location: "location", site: "location",
+  service: "service", type: "type", department: "department", dept: "department", "department name": "department",
+  region: "region", rig: "rig", location: "location", site: "location",
   yr: "yr", "receiving mnth": "receivingMonth", "receiving month": "receivingMonth", "rec mnth": "receivingMonth", "receiving mth": "receivingMonth",
   "service month": "serviceMonth", servicemonth: "serviceMonth", "svc month": "serviceMonth",
   description: "description", desc: "description", details: "description", narration: "description", particulars: "description",
@@ -247,7 +248,7 @@ export function finalizeImportedRecord(rec: ImportedRecord, nextSrNo: () => numb
     srNo: (rec.srNo as number) || nextSrNo(),
     vendor: "", invoiceNo: "", contractNo: "", wellName: "",
     invoiceDate: "", receivingDate: "", clearanceDate: "", loginDate: "", yr: "", receivingMonth: "", serviceMonth: "",
-    service: "", type: "", region: "", rig: "", location: "",
+    service: "", type: "", department: "", region: "", rig: "", location: "",
     description: "", gstPst: g, year: String(new Date().getFullYear()), qtr: "", status: "Under Process",
     ...rec,
     amountExclTax: a,

@@ -64,6 +64,7 @@ function AddContractPopover({
           {options.length ? (
             options.map((g) => {
               const already = isSelected(g.key)
+              const vendor = g.rows[0]?.vendor || ""
               return (
                 <button
                   key={g.key}
@@ -72,8 +73,11 @@ function AddContractPopover({
                   disabled={already}
                   className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-muted disabled:cursor-default disabled:opacity-50"
                 >
-                  <span className="truncate" title={g.key}>
-                    {shortContract(g.key)}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate" title={g.key}>
+                      {shortContract(g.key)}
+                    </span>
+                    {vendor && <span className="block truncate text-[10px] text-muted-foreground">{vendor}</span>}
                   </span>
                   {already ? (
                     <Check className="size-3.5 shrink-0 text-primary" />
@@ -252,22 +256,43 @@ export function CompareReportView({
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 md:grid-cols-4">
-            <div>
+            <button
+              type="button"
+              className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+              onClick={() => onDrill(groups.flatMap((g) => g.rows), "Invoices — compared contracts")}
+            >
               <div className="text-xs text-muted-foreground">Contracts compared</div>
               <div className="text-lg font-semibold">{groups.length}</div>
-            </div>
-            <div>
+            </button>
+            <button
+              type="button"
+              className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+              onClick={() => onDrill(groups.flatMap((g) => g.rows), "Invoices — compared contracts")}
+            >
               <div className="text-xs text-muted-foreground">Combined value</div>
               <div className="text-lg font-semibold">{fmtMoney(totalIncl)}</div>
-            </div>
-            <div>
+            </button>
+            <button
+              type="button"
+              className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+              onClick={() => onDrill(groups.flatMap((g) => g.rows.filter((r) => (Number(r.amountPaid) || 0) > 0)), "Paid Invoices — compared contracts")}
+            >
               <div className="text-xs text-muted-foreground">Combined paid</div>
               <div className="text-lg font-semibold text-green-700 dark:text-green-400">{fmtMoney(tot.paid)}</div>
-            </div>
-            <div>
+            </button>
+            <button
+              type="button"
+              className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+              onClick={() =>
+                onDrill(
+                  groups.flatMap((g) => g.rows.filter((r) => (Number(r.amountInclTax) || 0) - (Number(r.amountPaid) || 0) > 0)),
+                  "Outstanding Invoices — compared contracts"
+                )
+              }
+            >
               <div className="text-xs text-muted-foreground">Combined outstanding</div>
               <div className="text-lg font-semibold text-amber-600 dark:text-amber-400">{fmtMoney(tot.outstanding)}</div>
-            </div>
+            </button>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">

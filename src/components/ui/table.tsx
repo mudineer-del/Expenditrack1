@@ -2,11 +2,19 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  containerClassName,
+  ...props
+}: React.ComponentProps<"table"> & { containerClassName?: string }) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      // containerClassName merges into this same wrapper rather than a caller adding its
+      // own extra div around <Table> — nesting a second overflow-auto div here would put a
+      // non-scrolling container between this one and any sticky header inside, silently
+      // defeating position: sticky (it binds to the *nearest* scrolling ancestor).
+      className={cn("relative w-full overflow-x-auto", containerClassName)}
     >
       <table
         data-slot="table"

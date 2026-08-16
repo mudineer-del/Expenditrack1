@@ -1,4 +1,5 @@
 import { Building2 } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { fmtMoney } from "@/lib/dashboard"
@@ -33,6 +34,8 @@ export function ContractReportView({
   filters: ReportFilters
   onDrill: (rows: Invoice[], title: string) => void
 }) {
+  const navigate = useNavigate()
+
   if (!filters.contract) {
     return (
       <div className="rounded-lg border bg-card p-10 text-center text-muted-foreground">
@@ -63,36 +66,44 @@ export function ContractReportView({
           {c?.status && <StatusBadge status={c.status} />}
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
-          <div>
+          <button type="button" className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60" onClick={() => onDrill(rows, `Invoices — ${filters.contract}`)}>
             <div className="text-xs text-muted-foreground">Invoices</div>
             <div className="text-lg font-semibold">{a.count}</div>
             <div className="text-xs text-muted-foreground">{a.cleared} cleared</div>
-          </div>
-          <div>
+          </button>
+          <button type="button" className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60" onClick={() => onDrill(rows, `Invoices — ${filters.contract}`)}>
             <div className="text-xs text-muted-foreground">Value (incl. tax)</div>
             <div className="text-lg font-semibold">{fmtMoney(a.incl)}</div>
             <div className="text-xs text-muted-foreground">excl: {fmtMoney(a.exclTax)}</div>
-          </div>
-          <div>
+          </button>
+          <button
+            type="button"
+            className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+            onClick={() => onDrill(rows.filter((r) => (Number(r.amountPaid) || 0) > 0), `Paid Invoices — ${filters.contract}`)}
+          >
             <div className="text-xs text-muted-foreground">Paid</div>
             <div className="text-lg font-semibold text-green-700 dark:text-green-400">{fmtMoney(a.paid)}</div>
             <div className="text-xs text-muted-foreground">{a.count ? ((a.paid / a.incl) * 100 || 0).toFixed(0) : 0}% of value</div>
-          </div>
-          <div>
+          </button>
+          <button
+            type="button"
+            className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+            onClick={() => onDrill(rows.filter((r) => (Number(r.amountInclTax) || 0) - (Number(r.amountPaid) || 0) > 0), `Outstanding Invoices — ${filters.contract}`)}
+          >
             <div className="text-xs text-muted-foreground">Outstanding</div>
             <div className={`text-lg font-semibold ${a.outstanding > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-700 dark:text-green-400"}`}>
               {fmtMoney(a.outstanding)}
             </div>
             <div className="text-xs text-muted-foreground">unpaid balance</div>
-          </div>
+          </button>
           {cost > 0 && (
-            <div>
+            <button type="button" className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60" onClick={() => onDrill(rows, `Invoices — ${filters.contract}`)}>
               <div className="text-xs text-muted-foreground">Contract value</div>
               <div className="text-lg font-semibold">{fmtMoney(cost)}</div>
               <div className="text-xs" style={{ color: utilColor }}>
                 {util!.toFixed(1)}% utilized
               </div>
-            </div>
+            </button>
           )}
         </div>
         {cost > 0 && (
@@ -164,7 +175,11 @@ export function ContractReportView({
             <TableBody>
               {rows.length ? (
                 rows.slice(0, 300).map((r) => (
-                  <TableRow key={r.id}>
+                  <TableRow
+                    key={r.id}
+                    className="cursor-pointer"
+                    onClick={() => navigate("/invoices", { state: { openInvoiceId: r.id } })}
+                  >
                     <TableCell>{r.srNo}</TableCell>
                     <TableCell>{r.invoiceNo}</TableCell>
                     <TableCell>{r.vendor}</TableCell>
