@@ -231,6 +231,41 @@ export function invoiceDupKey(r: { vendor?: unknown; invoiceNo?: unknown; amount
   return `${vendor}::${invNo}::${amt}`
 }
 
+/** Fields eligible to be backfilled onto an existing invoice during an
+ *  update-import. Deliberately excludes vendor/invoiceNo (part of the dup
+ *  key, so they already match) and the financial fields (amountExclTax is
+ *  part of the dup key; tax/amountInclTax/amountPaid/gstPst default to 0,
+ *  which is indistinguishable from a deliberately-recorded zero). */
+const MERGEABLE_FIELDS: Array<keyof Invoice> = [
+  "contractNo", "wellName", "invoiceDate", "receivingDate", "clearanceDate", "loginDate",
+  "yr", "receivingMonth", "serviceMonth", "qtr", "service", "type", "department",
+  "region", "rig", "location", "year", "description", "status",
+]
+
+function isBlank(v: unknown): boolean {
+  return v === undefined || v === null || String(v).trim() === ""
+}
+
+/** Fills only currently-blank fields on an existing invoice from a matched
+ *  imported row, so re-importing a refreshed spreadsheet backfills missing
+ *  details (well name, dates, department, …) without ever overwriting a
+ *  field that already has a value and without creating a duplicate row. */
+export function mergeMissingFields(
+  existing: Invoice,
+  rec: ImportedRecord
+): { invoice: Invoice; filledFields: Array<keyof Invoice> } {
+  const filledFields: Array<keyof Invoice> = []
+  const invoice: Invoice = { ...existing }
+  for (const key of MERGEABLE_FIELDS) {
+    if (!isBlank(existing[key])) continue
+    const incoming = rec[key as string]
+    if (isBlank(incoming)) continue
+    ;(invoice as unknown as Record<string, unknown>)[key] = incoming
+    filledFields.push(key)
+  }
+  return { invoice, filledFields }
+}
+
 /** Ported from finalizeImported (index.html:2659-2677). */
 export function finalizeImportedRecord(rec: ImportedRecord, nextSrNo: () => number): Invoice {
   const a = Number(rec.amountExclTax) || 0

@@ -208,7 +208,7 @@ export default function InvoicesPage() {
 
   function handleImport(newInvoices: Invoice[]) {
     bulkUpsert.mutate(newInvoices, {
-      onSuccess: (count) => toast.success(`Imported ${count} invoice${count !== 1 ? "s" : ""}.`),
+      onSuccess: (count) => toast.success(`Imported/updated ${count} invoice${count !== 1 ? "s" : ""}.`),
       onError: (e) => toast.error(errorMessage(e, "Import failed.")),
     })
   }
@@ -303,10 +303,14 @@ export default function InvoicesPage() {
               variant="outline"
               size="sm"
               disabled={!can("add")}
-              title={can("add") ? "Import invoices" : "Only Editors and Admins can import invoices"}
+              title={
+                can("add")
+                  ? "Import new invoices, or update existing ones with missing details"
+                  : "Only Editors and Admins can import invoices"
+              }
               onClick={() => setImportOpen(true)}
             >
-              <Upload /> Import
+              <Upload /> Import / Update
             </Button>
             <Button
               size="sm"
