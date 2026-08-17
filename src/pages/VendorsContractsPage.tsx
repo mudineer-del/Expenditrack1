@@ -210,8 +210,8 @@ export default function VendorsContractsPage() {
             </div>
             <Button
               size="sm"
-              disabled={!can("add")}
-              title={can("add") ? "Add contract" : "Only Editors and Admins can add contracts"}
+              disabled={!can("add", "contract")}
+              title={can("add", "contract") ? "Add contract" : "Only Admins can add contracts"}
               onClick={openAdd}
             >
               <Plus /> New Contract
@@ -238,8 +238,8 @@ export default function VendorsContractsPage() {
                   key={c.id}
                   contract={c}
                   invoices={invoices}
-                  canEdit={can("edit")}
-                  canDelete={can("delete")}
+                  canEdit={can("edit", "contract")}
+                  canDelete={can("delete", "contract")}
                   logo={getContractorLogo(contractorLogosQuery.data ?? {}, c.vendor.split("/")[0].trim())}
                   onView={() => setViewingContract(c)}
                   onEdit={() => openEdit(c)}
@@ -276,7 +276,7 @@ export default function VendorsContractsPage() {
         open={!!viewingContract}
         contract={viewingContract}
         invoices={invoices}
-        canEdit={can("edit")}
+        canEdit={can("edit", "contract")}
         logo={getContractorLogo(contractorLogosQuery.data ?? {}, viewingContract?.vendor.split("/")[0].trim() || "")}
         onOpenChange={(v) => !v && setViewingContract(null)}
         onEdit={() => {

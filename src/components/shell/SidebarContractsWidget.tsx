@@ -179,7 +179,7 @@ export function SidebarContractsWidget() {
         open={!!viewingContract}
         contract={viewingContract}
         invoices={invoices}
-        canEdit={can("edit")}
+        canEdit={can("edit", "contract")}
         logo={getContractorLogo(contractorLogosQuery.data ?? {}, viewingContract?.vendor.split("/")[0].trim() || "")}
         onOpenChange={(v) => !v && setViewingContract(null)}
         onEdit={() => {

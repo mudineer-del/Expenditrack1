@@ -76,7 +76,7 @@ export function ContractRow({
         <div className="flex justify-end gap-1">
           <button
               className="rounded p-1 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-              title={canEdit ? "Edit" : "Only Editors and Admins can edit contracts"}
+              title={canEdit ? "Edit" : "Only Admins can edit contracts"}
               disabled={!canEdit}
               onClick={(e) => {
                 e.stopPropagation()

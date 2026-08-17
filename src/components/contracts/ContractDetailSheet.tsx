@@ -153,7 +153,7 @@ export function ContractDetailSheet({
           <Button
             onClick={onEdit}
             disabled={!canEdit}
-            title={canEdit ? "Edit contract" : "Only Editors and Admins can edit contracts"}
+            title={canEdit ? "Edit contract" : "Only Admins can edit contracts"}
           >
             Edit Contract
           </Button>

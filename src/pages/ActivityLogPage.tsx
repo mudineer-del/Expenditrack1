@@ -82,13 +82,18 @@ export default function ActivityLogPage() {
   const { undoStackLength, lastUndoLabel, undoLast, undoSelected } = useUndo()
 
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [actionFilter, setActionFilter] = useState<ActivityAction | null>(null)
+  const visibleLog = useMemo(
+    () => (actionFilter ? log.filter((e) => e.action === actionFilter) : log),
+    [log, actionFilter]
+  )
 
   const selectable = can("add")
 
   const undoableIds = useMemo(() => new Set(undoStack.map((u) => u.id)), [undoStack])
   const undoableLog = useMemo(
-    () => log.filter((e) => e.meta?.undoId && undoableIds.has(String(e.meta.undoId))),
-    [log, undoableIds]
+    () => visibleLog.filter((e) => e.meta?.undoId && undoableIds.has(String(e.meta.undoId))),
+    [visibleLog, undoableIds]
   )
   const allSelected = undoableLog.length > 0 && selectedLogIds.size === undoableLog.length
 
@@ -160,15 +165,34 @@ export default function ActivityLogPage() {
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap gap-4 rounded-lg border bg-card p-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3 text-sm">
+            <button
+              type="button"
+              onClick={() => setActionFilter(null)}
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                actionFilter === null ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              All ({log.length})
+            </button>
             {ACTIONS.map((a) => {
               const c = log.filter((e) => e.action === a).length
+              const active = actionFilter === a
               return (
-                <div key={a} className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  key={a}
+                  disabled={!c}
+                  onClick={() => setActionFilter(active ? null : a)}
+                  title={active ? `Showing ${a} only — click to clear` : `Show only ${a} entries`}
+                  className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                    active ? "bg-muted font-semibold text-foreground ring-1 ring-inset ring-border" : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
                   <span className="size-2 rounded-full" style={{ backgroundColor: ACTION_COLOR[a] }} />
-                  <b>{c}</b> {a}
+                  <b className="text-foreground">{c}</b> {a}
                   {c === 1 ? "" : "s"}
-                </div>
+                </button>
               )
             })}
           </div>
@@ -198,9 +222,9 @@ export default function ActivityLogPage() {
           )}
 
           <div className="rounded-lg border bg-card">
-            {log.length ? (
+            {visibleLog.length ? (
               <div className="divide-y">
-                {log.map((e) => {
+                {visibleLog.map((e) => {
                   const isUndoable = selectable && e.meta?.undoId && undoableIds.has(String(e.meta.undoId))
                   return (
                     <div key={e.id} className="flex items-start gap-3 p-3">
@@ -232,6 +256,17 @@ export default function ActivityLogPage() {
                     </div>
                   )
                 })}
+              </div>
+            ) : actionFilter ? (
+              <div className="p-10 text-center text-muted-foreground">
+                <h4 className="font-medium text-foreground">No {actionFilter.toLowerCase()} entries</h4>
+                <p className="text-sm">
+                  Try a different filter, or{" "}
+                  <button type="button" className="underline underline-offset-2" onClick={() => setActionFilter(null)}>
+                    clear this one
+                  </button>
+                  .
+                </p>
               </div>
             ) : (
               <div className="p-10 text-center text-muted-foreground">

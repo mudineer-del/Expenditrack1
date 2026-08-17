@@ -1,6 +1,6 @@
 import { useAuthStore } from "@/store/useAuthStore"
 import { can } from "@/lib/can"
-import type { Action } from "@/types/user"
+import type { Action, Resource } from "@/types/user"
 
 export function useAuth() {
   const status = useAuthStore((s) => s.status)
@@ -22,7 +22,7 @@ export function useAuth() {
     isRecovery,
     clearRecovery,
     isAdmin: user?.role === "Admin",
-    can: (action: Action) => can(user?.role, action),
+    can: (action: Action, resource?: Resource) => can(user?.role, action, resource),
     signIn,
     signUp,
     signOut,
