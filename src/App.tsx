@@ -15,6 +15,7 @@ const InvoicesPage = lazy(() => import("@/pages/InvoicesPage"))
 const VendorsContractsPage = lazy(() => import("@/pages/VendorsContractsPage"))
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"))
 const ActivityLogPage = lazy(() => import("@/pages/ActivityLogPage"))
+const MessageCentrePage = lazy(() => import("@/pages/MessageCentrePage"))
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"))
 const UsersPage = lazy(() => import("@/pages/UsersPage"))
 
@@ -51,6 +52,7 @@ function App() {
             <Route path="vendors" element={<VendorsContractsPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="activity" element={<ActivityLogPage />} />
+            <Route path="messages" element={<MessageCentrePage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route element={<RequireAdmin />}>
               <Route path="users" element={<UsersPage />} />

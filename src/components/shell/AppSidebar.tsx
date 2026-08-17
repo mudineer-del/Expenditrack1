@@ -4,6 +4,7 @@ import {
   History,
   LayoutGrid,
   List,
+  MessagesSquare,
   Settings,
   Users,
 } from "lucide-react"
@@ -28,8 +29,11 @@ import { DepartmentSwitcher } from "@/components/shell/DepartmentSwitcher"
 import { SidebarContractsWidget } from "@/components/shell/SidebarContractsWidget"
 import { useAuth } from "@/hooks/useAuth"
 import { useActivityLogQuery } from "@/hooks/useActivityLog"
+import { useMessagesQuery } from "@/hooks/useMessages"
+import { useAppStore } from "@/store/useAppStore"
 import { useLabelsStore } from "@/store/useLabelsStore"
 import { useLastSeenStore } from "@/store/useLastSeenStore"
+import { useMessagesLastSeenStore } from "@/store/useMessagesLastSeenStore"
 
 /** Grouped the way a lot of finance-product dashboards do it — day-to-day work
  *  separated from oversight/admin — instead of one flat list. */
@@ -41,6 +45,7 @@ const NAV_GROUPS = [
       { to: "/invoices", label: "Invoices", icon: List },
       { to: "/vendors", label: "Vendors & Contracts", icon: Building2 },
       { to: "/reports", label: "Financial Reports", icon: BarChart3 },
+      { to: "/messages", label: "Message Centre", icon: MessagesSquare },
     ],
   },
   {
@@ -66,6 +71,19 @@ export function AppSidebar() {
   // since that page's own markSeen() call updates the same stored timestamp this reads.
   const unreadActivity = lastSeenTs > 0 ? (activityLogQuery.data ?? []).filter((e) => e.ts > lastSeenTs).length : 0
 
+  const activeDept = useAppStore((s) => s.activeDept)
+  const messagesQuery = useMessagesQuery()
+  const lastSeenMessagesTs = useMessagesLastSeenStore((s) => s.lastSeenTs)
+  const unreadMessages =
+    lastSeenMessagesTs > 0
+      ? (messagesQuery.data ?? []).filter(
+          (m) =>
+            m.createdAt > lastSeenMessagesTs &&
+            m.senderId !== user?.id &&
+            (m.recipientId === user?.id || (m.recipientId === null && (activeDept === "ALL" || m.department === activeDept)))
+        ).length
+      : 0
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -86,7 +104,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {group.items.map((item) => {
                   const restricted = "adminOnly" in item && item.adminOnly && !isAdmin
-                  const badgeCount = item.to === "/activity" ? unreadActivity : 0
+                  const badgeCount = item.to === "/activity" ? unreadActivity : item.to === "/messages" ? unreadMessages : 0
                   return (
                     <SidebarMenuItem key={item.to}>
                       <SidebarMenuButton
