@@ -26,6 +26,7 @@ import { VendorChart } from "@/components/dashboard/VendorChart"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { useIsMobile } from "@/hooks/use-mobile"
 import {
   avgLeadTime,
   clearedInvoices,
@@ -66,6 +67,7 @@ function PctSub({ pct, label }: { pct: number | null; label: string }) {
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const invoicesQuery = useInvoicesQuery()
   const contractsQuery = useContractsQuery()
   const contractorLogosQuery = useContractorLogosQuery()
@@ -202,7 +204,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2 md:grid-cols-4"}`}>
         <KpiTile
           icon={<List />}
           accent="var(--chart-1)"
@@ -264,7 +266,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <div className={`grid gap-3 ${isMobile ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-6"}`}>
         <KpiTile
           icon={<History />}
           accent="var(--chart-1)"
@@ -372,11 +374,11 @@ export default function DashboardPage() {
       )}
 
       <div className="rounded-lg border bg-card p-4">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-sm font-semibold">Expenditure Analysis</h3>
           <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
         </div>
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className={`grid gap-6 ${isMobile ? "grid-cols-1" : "lg:grid-cols-2"}`}>
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Monthly Expenditure Trend</span>

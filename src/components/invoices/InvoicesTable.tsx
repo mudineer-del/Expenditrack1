@@ -13,6 +13,8 @@ import { fmtMoney, vendorColor } from "@/lib/dashboard"
 import { getContractorLogo, type ContractorLogos } from "@/lib/contractorLogos"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { InvoiceCard } from "@/components/invoices/InvoiceCard"
 import type { Invoice } from "@/types/invoice"
 
 function turnaround(r: Invoice): number | null {
@@ -63,6 +65,7 @@ export function InvoicesTable({
   onEdit: (inv: Invoice) => void
   onDelete: (inv: Invoice) => void
 }) {
+  const isMobile = useIsMobile()
   const allSelected = canBulk && rows.length > 0 && rows.every((r) => selected.has(r.id))
   const someSelected = canBulk && rows.some((r) => selected.has(r.id))
   const tableBanded = useDisplayStore((s) => s.tableBanded)
@@ -183,6 +186,33 @@ export function InvoicesTable({
     columnResizeMode: "onChange",
     getCoreRowModel: getCoreRowModel(),
   })
+
+  // Mobile card view
+  if (isMobile) {
+    return (
+      <div className="space-y-3 pb-20">
+        {rows.length ? (
+          rows.map((invoice) => (
+            <InvoiceCard
+              key={invoice.id}
+              invoice={invoice}
+              contractorLogos={contractorLogos}
+              isSelected={selected.has(invoice.id)}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              onView={onView}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))
+        ) : (
+          <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+            <p className="text-sm">No matching invoices. Try adjusting your filters or search terms.</p>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     // Bounded height on Table's own scroll container (not a second wrapper div around it —
