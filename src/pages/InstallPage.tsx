@@ -4,17 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const STORE_LINKS = {
-  // Mobile App Stores
+  // Mobile App Stores (Live Now)
   appStore: 'https://apps.apple.com/app/expenditrack/id6475892345',
   playStore: 'https://play.google.com/store/apps/details?id=com.ogdcl.expenditrack',
 
-  // Desktop App Stores
+  // Desktop App Stores (Coming Soon - Under Development)
   microsoftStore: 'https://www.microsoft.com/store/apps/9NXB2XXYB2XT',
 
-  // Direct Downloads
-  windows: 'https://github.com/mudineer-del/Expenditrack1/releases/download/latest/Expenditrack-Setup.exe',
-  macos: 'https://github.com/mudineer-del/Expenditrack1/releases/download/latest/Expenditrack.dmg',
-  linux: 'https://github.com/mudineer-del/Expenditrack1/releases/download/latest/expenditrack_amd64.deb',
+  // Direct Downloads (Build from source for now)
+  buildGuide: 'https://github.com/mudineer-del/Expenditrack1/blob/react-rewrite/ELECTRON_SETUP.md',
+  releases: 'https://github.com/mudineer-del/Expenditrack1/releases',
 }
 
 const handleDownload = (url: string) => {
@@ -169,14 +168,14 @@ export default function InstallPage() {
             <Button
               className="w-full gap-2"
               variant="default"
-              onClick={() => handleDownload(STORE_LINKS.windows)}
+              onClick={() => handleDownload(STORE_LINKS.buildGuide)}
             >
               <Download className="size-4" />
-              Download
+              Build Instructions
               <ArrowRight className="size-4" />
             </Button>
             <p className="text-xs text-muted-foreground">
-              ~150MB installer
+              Follow guide to build installers
             </p>
           </CardContent>
         </Card>
@@ -194,7 +193,7 @@ export default function InstallPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Button
                 className="gap-2"
-                onClick={() => handleDownload(STORE_LINKS.windows)}
+                onClick={() => handleDownload(STORE_LINKS.buildGuide)}
               >
                 <Download className="size-4" />
                 Windows (EXE)
@@ -202,7 +201,7 @@ export default function InstallPage() {
               <Button
                 variant="outline"
                 className="gap-2"
-                onClick={() => handleDownload(STORE_LINKS.macos)}
+                onClick={() => handleDownload(STORE_LINKS.buildGuide)}
               >
                 <Download className="size-4" />
                 macOS (DMG)
@@ -210,7 +209,7 @@ export default function InstallPage() {
               <Button
                 variant="outline"
                 className="gap-2"
-                onClick={() => handleDownload(STORE_LINKS.linux)}
+                onClick={() => handleDownload(STORE_LINKS.buildGuide)}
               >
                 <Download className="size-4" />
                 Linux (DEB)
