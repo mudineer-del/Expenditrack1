@@ -18,6 +18,7 @@ import { FormatDialog } from "@/components/shell/FormatDialog"
 import { QuickAddButton } from "@/components/shell/QuickAddButton"
 import { ThemeToggle } from "@/components/shell/ThemeToggle"
 import { MobileBottomNav } from "@/components/shell/MobileBottomNav"
+import { InstallPrompt } from "@/components/shell/InstallPrompt"
 import { OgdclLogoFull } from "@/components/shared/OgdclMark"
 import { useAuth } from "@/hooks/useAuth"
 import { useAppStore } from "@/store/useAppStore"
@@ -130,6 +131,7 @@ export function AppShell() {
         <QuickAddButton />
       </SidebarProvider>
       {isMobile && <MobileBottomNav />}
+      <InstallPrompt />
     </>
   )
 }
