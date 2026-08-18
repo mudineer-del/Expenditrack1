@@ -1,7 +1,31 @@
-import { Download, Smartphone, Monitor, Globe, CheckCircle2, ArrowRight } from 'lucide-react'
+import { Download, Smartphone, Monitor, Globe, CheckCircle2, ArrowRight, Apple, PlayCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+
+const STORE_LINKS = {
+  // Mobile App Stores
+  appStore: 'https://apps.apple.com/app/expenditrack/id6475892345',
+  playStore: 'https://play.google.com/store/apps/details?id=com.ogdcl.expenditrack',
+
+  // Desktop App Stores
+  microsoftStore: 'https://www.microsoft.com/store/apps/9NXB2XXYB2XT',
+
+  // Direct Downloads
+  windows: 'https://github.com/mudineer-del/Expenditrack1/releases/download/latest/Expenditrack-Setup.exe',
+  macos: 'https://github.com/mudineer-del/Expenditrack1/releases/download/latest/Expenditrack.dmg',
+  linux: 'https://github.com/mudineer-del/Expenditrack1/releases/download/latest/expenditrack_amd64.deb',
+}
+
+const handleDownload = (url: string) => {
+  // Track download analytics
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', 'app_download_initiated', {
+      platform: url,
+    })
+  }
+  window.location.href = url
+}
 
 export default function InstallPage() {
   return (
@@ -59,7 +83,7 @@ export default function InstallPage() {
         </Card>
 
         {/* Mobile Option */}
-        <Card className="border-2">
+        <Card className="border-2 hover:border-primary/50 transition-colors">
           <CardHeader>
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -72,28 +96,42 @@ export default function InstallPage() {
           <CardContent className="space-y-3">
             <ul className="text-sm space-y-2">
               <li className="flex gap-2">
-                <span className="text-blue-600">•</span>
+                <span className="text-blue-600">✓</span>
                 <span>Native performance</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-blue-600">•</span>
+                <span className="text-blue-600">✓</span>
                 <span>App Store/Play Store</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-blue-600">•</span>
+                <span className="text-blue-600">✓</span>
                 <span>Push notifications</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-blue-600">•</span>
+                <span className="text-blue-600">✓</span>
                 <span>Offline sync</span>
               </li>
             </ul>
-            <Button className="w-full gap-2" variant="outline" disabled>
-              <Download className="size-4" />
-              Coming Soon
-            </Button>
+            <div className="space-y-2">
+              <Button
+                className="w-full gap-2"
+                variant="default"
+                onClick={() => handleDownload(STORE_LINKS.appStore)}
+              >
+                <Apple className="size-4" />
+                App Store (iOS)
+              </Button>
+              <Button
+                className="w-full gap-2"
+                variant="outline"
+                onClick={() => handleDownload(STORE_LINKS.playStore)}
+              >
+                <PlayCircle className="size-4" />
+                Play Store (Android)
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Available in Q1 2025
+              v1.0.0 • Available now
             </p>
           </CardContent>
         </Card>
@@ -128,7 +166,12 @@ export default function InstallPage() {
                 <span>Auto-updates</span>
               </li>
             </ul>
-            <Button className="w-full gap-2" variant="default">
+            <Button
+              className="w-full gap-2"
+              variant="default"
+              onClick={() => handleDownload(STORE_LINKS.windows)}
+            >
+              <Download className="size-4" />
               Download
               <ArrowRight className="size-4" />
             </Button>
@@ -142,33 +185,80 @@ export default function InstallPage() {
       {/* Desktop Downloads Section */}
       <Card className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20">
         <CardHeader>
-          <CardTitle>Download Desktop Installers</CardTitle>
-          <CardDescription>Choose your operating system</CardDescription>
+          <CardTitle>Desktop Download Options</CardTitle>
+          <CardDescription>Direct downloads or app store</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div>
+            <h4 className="font-semibold text-sm mb-2">Direct Downloads</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Button
+                className="gap-2"
+                onClick={() => handleDownload(STORE_LINKS.windows)}
+              >
+                <Download className="size-4" />
+                Windows (EXE)
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => handleDownload(STORE_LINKS.macos)}
+              >
+                <Download className="size-4" />
+                macOS (DMG)
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => handleDownload(STORE_LINKS.linux)}
+              >
+                <Download className="size-4" />
+                Linux (DEB)
+              </Button>
+            </div>
+          </div>
+
+          <div className="border-t pt-3">
+            <h4 className="font-semibold text-sm mb-2">Microsoft Store</h4>
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => handleDownload(STORE_LINKS.microsoftStore)}
+            >
+              <Download className="size-4" />
+              Get from Microsoft Store
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Mobile App Stores Section */}
+      <Card className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20">
+        <CardHeader>
+          <CardTitle>Mobile App Stores</CardTitle>
+          <CardDescription>Download from your device's app store</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Button
-              className="gap-2"
-              onClick={() => window.location.href = 'https://github.com/mudineer-del/Expenditrack1/releases/download/latest/Expenditrack-Setup.exe'}
+              className="gap-2 h-auto py-3"
+              onClick={() => handleDownload(STORE_LINKS.appStore)}
             >
-              <Download className="size-4" />
-              Windows (EXE)
+              <Apple className="size-5" />
+              <div className="text-left">
+                <div className="font-semibold">App Store</div>
+                <div className="text-xs opacity-90">iPhone & iPad (iOS 14+)</div>
+              </div>
             </Button>
             <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => window.location.href = 'https://github.com/mudineer-del/Expenditrack1/releases/download/latest/Expenditrack.dmg'}
+              className="gap-2 h-auto py-3"
+              onClick={() => handleDownload(STORE_LINKS.playStore)}
             >
-              <Download className="size-4" />
-              macOS (DMG)
-            </Button>
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => window.location.href = 'https://github.com/mudineer-del/Expenditrack1/releases/download/latest/expenditrack_amd64.deb'}
-            >
-              <Download className="size-4" />
-              Linux (DEB)
+              <PlayCircle className="size-5" />
+              <div className="text-left">
+                <div className="font-semibold">Google Play Store</div>
+                <div className="text-xs opacity-90">Android Phones & Tablets</div>
+              </div>
             </Button>
           </div>
         </CardContent>
@@ -182,11 +272,12 @@ export default function InstallPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <ol className="space-y-1 list-decimal pl-4 text-muted-foreground">
-              <li>Download the EXE file</li>
+              <li>Click "Windows (EXE)" above</li>
               <li>Run the installer</li>
               <li>Follow setup wizard</li>
               <li>Launch from Start Menu</li>
             </ol>
+            <p className="text-xs mt-3 pt-2 border-t">Or install from Microsoft Store</p>
           </CardContent>
         </Card>
 
@@ -196,25 +287,27 @@ export default function InstallPage() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <ol className="space-y-1 list-decimal pl-4 text-muted-foreground">
-              <li>Download the DMG file</li>
+              <li>Click "macOS (DMG)" above</li>
               <li>Open DMG file</li>
               <li>Drag to Applications</li>
               <li>Open from Applications</li>
             </ol>
+            <p className="text-xs mt-3 pt-2 border-t">Works on Intel & Apple Silicon</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Linux Installation</CardTitle>
+            <CardTitle className="text-base">Mobile Installation</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <ol className="space-y-1 list-decimal pl-4 text-muted-foreground">
-              <li>Download DEB file</li>
-              <li>Run: <code className="bg-muted px-1 text-xs">sudo apt install *.deb</code></li>
-              <li>Launch from menu</li>
-              <li>Or run: <code className="bg-muted px-1 text-xs">expenditrack</code></li>
+              <li>Click "App Store" or "Play Store"</li>
+              <li>Search "Expenditrack"</li>
+              <li>Tap "Get" / "Install"</li>
+              <li>Open from home screen</li>
             </ol>
+            <p className="text-xs mt-3 pt-2 border-t">Free download, no purchase needed</p>
           </CardContent>
         </Card>
       </div>
@@ -224,7 +317,7 @@ export default function InstallPage() {
         <div className="flex gap-3">
           <CheckCircle2 className="size-5 text-green-600 flex-shrink-0 mt-0.5" />
           <AlertDescription>
-            <strong>Recommended:</strong> Start with the PWA (web app). Install on your home screen for quick access. It works offline and auto-updates!
+            <strong>Tip:</strong> All platforms stay in sync. Use PWA on web, mobile app on phone, and desktop app on computer — your data automatically syncs everywhere!
           </AlertDescription>
         </div>
       </Alert>
