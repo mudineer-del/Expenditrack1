@@ -17,6 +17,7 @@ const ReportsPage = lazy(() => import("@/pages/ReportsPage"))
 const ActivityLogPage = lazy(() => import("@/pages/ActivityLogPage"))
 const MessageCentrePage = lazy(() => import("@/pages/MessageCentrePage"))
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"))
+const InstallPage = lazy(() => import("@/pages/InstallPage"))
 const UsersPage = lazy(() => import("@/pages/UsersPage"))
 
 function RouteFallback() {
@@ -53,6 +54,7 @@ function App() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="activity" element={<ActivityLogPage />} />
             <Route path="messages" element={<MessageCentrePage />} />
+            <Route path="install" element={<InstallPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route element={<RequireAdmin />}>
               <Route path="users" element={<UsersPage />} />

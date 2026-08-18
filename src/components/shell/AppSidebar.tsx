@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Building2,
+  Download,
   History,
   LayoutGrid,
   List,
@@ -56,8 +57,11 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: "Settings",
-    items: [{ to: "/settings", label: "Settings", icon: Settings }],
+    label: "App",
+    items: [
+      { to: "/install", label: "Install App", icon: Download },
+      { to: "/settings", label: "Settings", icon: Settings },
+    ],
   },
 ] as const
 
