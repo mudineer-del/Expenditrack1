@@ -1,9 +1,10 @@
-import { Bell, Cloud, Database, Key, Shield, Tags, Type, User } from "lucide-react"
+import { Bell, Cloud, Database, Key, Shield, Tags, Type, User, Download } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { BackupTab } from "@/components/settings/BackupTab"
 import { CloudSyncTab } from "@/components/settings/CloudSyncTab"
+import { DesktopAppTab } from "@/components/settings/DesktopAppTab"
 import { LabelsTab } from "@/components/settings/LabelsTab"
 import { NotificationsTab } from "@/components/settings/NotificationsTab"
 import { PasswordTab } from "@/components/settings/PasswordTab"
@@ -11,7 +12,7 @@ import { ProfileTab } from "@/components/settings/ProfileTab"
 import { ReferenceListsTab } from "@/components/settings/ReferenceListsTab"
 import { SecurityTab } from "@/components/settings/SecurityTab"
 
-type TabKey = "profile" | "security" | "password" | "notifications" | "labels" | "backup" | "lists" | "cloud"
+type TabKey = "profile" | "security" | "password" | "notifications" | "labels" | "backup" | "desktop" | "lists" | "cloud"
 
 const BASE_TABS: { key: TabKey; label: string; icon: typeof User }[] = [
   { key: "profile", label: "Profile", icon: User },
@@ -20,6 +21,7 @@ const BASE_TABS: { key: TabKey; label: string; icon: typeof User }[] = [
   { key: "notifications", label: "Notifications", icon: Bell },
   { key: "labels", label: "Labels", icon: Type },
   { key: "backup", label: "Data & Backup", icon: Database },
+  { key: "desktop", label: "Desktop App", icon: Download },
 ]
 const ADMIN_TABS: { key: TabKey; label: string; icon: typeof User }[] = [
   { key: "lists", label: "Reference Lists", icon: Tags },
@@ -58,6 +60,7 @@ export default function SettingsPage() {
         {tab === "notifications" && <NotificationsTab />}
         {tab === "labels" && <LabelsTab />}
         {tab === "backup" && <BackupTab />}
+        {tab === "desktop" && <DesktopAppTab />}
         {tab === "lists" && isAdmin && <ReferenceListsTab />}
         {tab === "cloud" && isAdmin && <CloudSyncTab />}
       </div>
