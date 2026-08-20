@@ -17,7 +17,9 @@ export function QuickAddButton() {
   return (
     <Button
       size="icon-lg"
-      className="fixed right-6 bottom-6 z-40 size-12 rounded-full shadow-2xl"
+      // hidden below md: MobileBottomNav already carries a "New" action, and at
+      // bottom-6 this FAB sits on top of that nav's right-hand controls
+      className="fixed right-6 bottom-6 z-40 hidden size-12 rounded-full shadow-2xl md:inline-flex"
       title="New invoice"
       onClick={() => navigate("/invoices", { state: { openAdd: true } })}
     >
