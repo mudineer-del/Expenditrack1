@@ -253,3 +253,124 @@ svg.lucide {
         animation: none;
     }
 }
+
+/* ====== Mobile Browser Optimizations ====== */
+
+/* Dynamic viewport height for mobile browsers (address bar expansion) */
+@supports (height: 100dvh) {
+  html, body {
+    height: 100dvh;
+  }
+}
+
+/* Touch-friendly interactive elements */
+button, a, input, [role="button"], [role="link"] {
+  @apply min-h-[44px] min-w-[44px];
+  touch-action: manipulation;
+}
+
+/* Smooth scrolling and prevent rubber-band effect */
+* {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Remove tap highlight on iOS */
+a, button, input, textarea, select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+  .sidebar-inset {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Mobile table optimization: cards layout */
+@media (max-width: 768px) {
+  table.mobile-table {
+    @apply w-full border-collapse;
+  }
+  table.mobile-table thead {
+    @apply hidden;
+  }
+  table.mobile-table tbody, table.mobile-table tr {
+    @apply block w-full;
+  }
+  table.mobile-table tr {
+    @apply mb-4 rounded-lg border bg-card;
+  }
+  table.mobile-table td {
+    @apply block w-full px-3 py-2 text-sm;
+    content: attr(data-label);
+  }
+  table.mobile-table td::before {
+    @apply block text-xs font-semibold text-muted-foreground;
+    content: attr(data-label);
+  }
+  table.mobile-table td[data-label=""]::before {
+    @apply hidden;
+  }
+}
+
+/* Glassmorphism effect for cards */
+.card-glass {
+  @apply backdrop-blur-md bg-white/80 dark:bg-slate-900/80;
+}
+
+/* Mobile header optimization */
+@media (max-width: 640px) {
+  header {
+    @apply sticky top-0 z-50;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+  h1 {
+    @apply text-sm;
+  }
+}
+
+/* Mobile-friendly form inputs */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="date"],
+textarea,
+select {
+  @apply text-base; /* Prevent zoom on iOS */
+  font-size: 16px;
+}
+
+/* Landscape phone optimizations */
+@media (max-height: 480px) and (orientation: landscape) {
+  header {
+    @apply h-12;
+  }
+  main {
+    @apply max-h-[calc(100vh-3rem)];
+  }
+}
+
+/* Prevent horizontal scroll */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Touch-target enhancement for mobile nav */
+.mobile-nav-item {
+  @apply py-3 px-4 min-h-[48px] flex items-center;
+}
+
+/* Responsive grid adjustment */
+@media (max-width: 640px) {
+  [role="grid"],
+  .grid {
+    @apply gap-2;
+  }
+}
