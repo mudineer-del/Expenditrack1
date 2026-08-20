@@ -1,10 +1,16 @@
 const CACHE_NAME = 'expenditrack-v1';
 const RUNTIME_CACHE = 'expenditrack-runtime';
+// Derived from the SW's own registration scope rather than hardcoded root
+// paths — this file is a static public/ asset with no build-time templating,
+// so it has no way to know the app is served from a GitHub Pages subpath
+// (e.g. "/Expenditrack1/") otherwise. self.registration.scope always
+// reflects wherever this worker actually got registered.
+const SCOPE = self.registration.scope;
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/favicon.svg',
-  '/manifest.json'
+  SCOPE,
+  `${SCOPE}index.html`,
+  `${SCOPE}favicon.svg`,
+  `${SCOPE}manifest.json`
 ];
 
 // Install event - cache essential assets

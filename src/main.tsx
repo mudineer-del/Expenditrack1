@@ -15,11 +15,16 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// Register Service Worker for PWA support
+// Register Service Worker for PWA support. Uses BASE_URL (Vite's configured
+// `base`, e.g. "/Expenditrack1/" on GitHub Pages vs "/" locally) rather than
+// a bare "/sw.js" — this is a GitHub Pages *project* site served from a
+// subpath, so an absolute-root registration 404s outright, and a plain
+// relative "sw.js" would resolve against whatever route the SPA happens to
+// be on (e.g. "/Expenditrack1/invoices/sw.js" on a hard refresh there).
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
       .then((registration) => {
         console.log('[PWA] Service Worker registered:', registration);
         // Check for updates every hour
