@@ -6,11 +6,16 @@ export function Sparkline({
   width = 72,
   height = 24,
   color = "currentColor",
+  responsive,
 }: {
   data: number[]
   width?: number
   height?: number
   color?: string
+  /** Renders at width="100%" instead of a fixed pixel width, stretching to
+   *  fill its container — width/height still define the viewBox's aspect
+   *  ratio and point math, they just stop being the literal rendered size. */
+  responsive?: boolean
 }) {
   if (data.length < 2) return null
 
@@ -33,7 +38,14 @@ export function Sparkline({
   const lastY = pad + (1 - (last - min) / range) * (height - pad * 2)
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible" aria-hidden="true">
+    <svg
+      width={responsive ? "100%" : width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      className="overflow-visible"
+      aria-hidden="true"
+    >
       <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.7} />
       <circle cx={lastX} cy={lastY} r={2} fill={color} />
     </svg>

@@ -211,21 +211,31 @@ export default function DashboardPage() {
 
       <div className="min-w-0 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <KpiTile
+          hero
           icon={<List />}
           accent="var(--chart-1)"
           label="Total invoices"
           value={stats.k.count.toLocaleString()}
           sub={dashVendor === "ALL" ? `${new Set(rows.map((r) => r.vendor)).size} contractors` : dashVendor}
-          trend={countSparkline.length > 1 ? <Sparkline data={countSparkline} /> : undefined}
+          trend={
+            countSparkline.length > 1 ? (
+              <Sparkline data={countSparkline} width={280} height={44} responsive />
+            ) : undefined
+          }
           onClick={() => onDrill(dashVendor === "ALL" ? "All Invoices" : `Invoices — ${dashVendor}`, rows)}
         />
         <KpiTile
+          hero
           icon={<Wallet />}
           accent="var(--chart-2)"
           label="Total value (incl. tax)"
           value={fmtMoney(stats.k.totalIncl)}
           sub="USD"
-          trend={valueSparkline.length > 1 ? <Sparkline data={valueSparkline} /> : undefined}
+          trend={
+            valueSparkline.length > 1 ? (
+              <Sparkline data={valueSparkline} width={280} height={44} responsive />
+            ) : undefined
+          }
           onClick={() => onDrill(dashVendor === "ALL" ? "All Invoices" : `Invoices — ${dashVendor}`, rows)}
         />
         <KpiTile
