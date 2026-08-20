@@ -26,7 +26,6 @@ import { VendorChart } from "@/components/dashboard/VendorChart"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { useDisplayStore } from "@/store/useDisplayStore"
-import { useIsMobile } from "@/hooks/use-mobile"
 import {
   avgLeadTime,
   clearedInvoices,
@@ -67,7 +66,6 @@ function PctSub({ pct, label }: { pct: number | null; label: string }) {
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const isMobile = useIsMobile()
   const invoicesQuery = useInvoicesQuery()
   const contractsQuery = useContractsQuery()
   const contractorLogosQuery = useContractorLogosQuery()
@@ -204,7 +202,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className={`grid gap-3 ${isMobile ? "grid-cols-1" : "grid-cols-2 md:grid-cols-4"}`}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <KpiTile
           icon={<List />}
           accent="var(--chart-1)"
@@ -266,7 +264,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className={`grid gap-3 ${isMobile ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-6"}`}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
         <KpiTile
           icon={<History />}
           accent="var(--chart-1)"
@@ -378,7 +376,7 @@ export default function DashboardPage() {
           <h3 className="text-sm font-semibold">Expenditure Analysis</h3>
           <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
         </div>
-        <div className={`grid gap-6 ${isMobile ? "grid-cols-1" : "lg:grid-cols-2"}`}>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">Monthly Expenditure Trend</span>
@@ -425,7 +423,38 @@ export default function DashboardPage() {
             <Link to="/invoices">View all</Link>
           </Button>
         </div>
-        <Table>
+        {/* Card list below md — a 7-column table forces horizontal scroll on a
+            phone; this shows the same rows and the same drill-down navigation
+            as a tap-friendly list instead. Table (unchanged) takes over at md+. */}
+        {recent.length ? (
+          <div className="divide-y md:hidden">
+            {recent.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted/50"
+                onClick={() => navigate("/invoices", { state: { openInvoiceId: r.id } })}
+              >
+                <ContractorLogo vendor={r.vendor || "Unknown"} logo={getContractorLogo(contractorLogosQuery.data ?? {}, r.vendor)} color={vendorColor(r.vendor)} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{r.vendor || "Unknown vendor"}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {r.invoiceNo || `Sr# ${r.srNo}`}
+                    {r.service ? ` · ${r.service}` : ""}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="text-sm font-semibold tabular-nums">{fmtMoney(r.amountInclTax)}</span>
+                  <StatusBadge status={r.status} />
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="p-6 text-center text-sm text-muted-foreground md:hidden">No invoices for this contractor yet.</div>
+        )}
+
+        <Table containerClassName="hidden md:block">
           <TableHeader>
             <TableRow>
               <TableHead>Sr#</TableHead>
