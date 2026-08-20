@@ -3,13 +3,49 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/main.ts",
+  "homepage": "./",
   "scripts": {
     "dev": "node node_modules/vite/bin/vite.js",
     "build": "node node_modules/typescript/bin/tsc -b && npm run build:singlefile && node node_modules/vite/bin/vite.js build",
     "build:singlefile": "node node_modules/vite/bin/vite.js build --config vite.config.singlefile.ts && node scripts/copy-singlefile.mjs",
     "build:app-only": "node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build",
+    "build:electron": "npm run build:app-only && electron-builder",
     "lint": "node node_modules/oxlint/bin/oxlint",
     "preview": "node node_modules/vite/bin/vite.js preview"
+  },
+  "build": {
+    "appId": "com.ogdcl.expenditrack",
+    "productName": "Expenditrack",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "public"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "certificateFile": null,
+      "certificatePassword": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.business",
+      "hardenedRuntime": false
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Office"
+    }
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
