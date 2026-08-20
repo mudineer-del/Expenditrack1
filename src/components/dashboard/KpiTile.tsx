@@ -29,12 +29,14 @@ export function KpiTile({
   return (
     <div
       className={cn(
-        // Horizontal row (icon | label+value+sub | ) below md — reads as a clean
-        // list row like the mobile design's summary cards. Reverts to the
-        // original vertical tile at md+. Pure breakpoint classes, no JS
-        // isMobile check, so it can't desync from the actual viewport.
-        "ogdcl-hoverable relative flex flex-row items-center gap-3 overflow-hidden rounded-lg border bg-card p-[var(--tile-pad)] pl-[calc(var(--tile-pad)+0.375rem)] md:flex-col md:items-stretch md:gap-1",
-        onClick && "cursor-pointer transition-colors hover:bg-muted/50"
+        // Horizontal row (icon | label+value+sub | ) below md — a bolder, more
+        // deliberately "app-like" card than the desktop tile: bigger radius,
+        // real shadow instead of just a border, more generous padding, and a
+        // hero-sized number. Reverts to the original compact vertical tile at
+        // md+. Pure breakpoint classes, no JS isMobile check, so it can't
+        // desync from the actual viewport.
+        "ogdcl-hoverable relative flex flex-row items-center gap-3.5 overflow-hidden rounded-2xl border bg-card p-4 pl-[1.375rem] shadow-sm md:flex-col md:items-stretch md:gap-1 md:rounded-lg md:p-[var(--tile-pad)] md:pl-[calc(var(--tile-pad)+0.375rem)] md:shadow-none",
+        onClick && "cursor-pointer transition-colors hover:bg-muted/50 active:scale-[0.99] md:active:scale-100"
       )}
       style={
         accent
@@ -43,7 +45,7 @@ export function KpiTile({
       }
       onClick={onClick}
     >
-      {accent && <span className="absolute top-0 left-0 h-full w-1" style={{ backgroundColor: accent }} />}
+      {accent && <span className="absolute top-0 left-0 h-full w-1.5 md:w-1" style={{ backgroundColor: accent }} />}
       {trend && (
         <div className="hidden md:block md:absolute md:top-[var(--tile-pad)] md:right-[var(--tile-pad)]" style={accent ? { color: accent } : undefined}>
           {trend}
@@ -51,7 +53,7 @@ export function KpiTile({
       )}
       <div
         className={cn(
-          "flex size-[var(--tile-icon)] shrink-0 items-center justify-center rounded-md [&_svg]:size-[var(--tile-icon-svg)] md:mb-1",
+          "flex size-11 shrink-0 items-center justify-center rounded-xl [&_svg]:size-5 md:mb-1 md:size-[var(--tile-icon)] md:rounded-md md:[&_svg]:size-[var(--tile-icon-svg)]",
           iconClassName ?? (accent ? undefined : "bg-primary/10 text-primary")
         )}
         style={accent && !iconClassName ? { backgroundColor: `color-mix(in oklch, ${accent} 16%, transparent)`, color: accent } : undefined}
@@ -60,11 +62,11 @@ export function KpiTile({
       </div>
       <div className="min-w-0 flex-1 md:flex-none">
         <div className="flex items-baseline justify-between gap-2 md:block">
-          <span className="min-w-0 truncate text-xs text-muted-foreground">{label}</span>
-          <span className={cn("shrink-0 text-[length:var(--tile-value)] font-semibold tabular-nums md:hidden", valueClassName)}>{value}</span>
+          <span className="min-w-0 truncate text-[13px] text-muted-foreground md:text-xs">{label}</span>
+          <span className={cn("shrink-0 text-xl font-bold tabular-nums md:hidden", valueClassName)}>{value}</span>
         </div>
         <div className={cn("hidden text-[length:var(--tile-value)] font-semibold tabular-nums md:block", valueClassName)}>{value}</div>
-        {sub && <div className={cn("mt-0.5 text-xs text-muted-foreground md:mt-0", subClassName)}>{sub}</div>}
+        {sub && <div className={cn("mt-0.5 text-[13px] text-muted-foreground md:mt-0 md:text-xs", subClassName)}>{sub}</div>}
       </div>
     </div>
   )

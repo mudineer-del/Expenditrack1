@@ -163,7 +163,7 @@ export default function DashboardPage() {
   // was silently overflowing every child (KPI tiles, department tabs, vendor
   // pills) by ~60px on narrow phones.
   return (
-    <div className="grid grid-cols-1 gap-4">
+    <div className="grid grid-cols-1 gap-5 md:gap-4">
       <SpendingTicker contracts={deptContracts} invoices={deptInvoices} />
 
       {refLists.departments.length > 1 && (
@@ -335,9 +335,9 @@ export default function DashboardPage() {
       </div>
 
       {dashVendor === "ALL" && dataVendors.length > 0 && (
-        <div className="rounded-lg border bg-card p-4">
+        <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Contractor Expenditure Overview</h3>
+            <h3 className="text-base font-bold md:text-sm md:font-semibold">Contractor Expenditure Overview</h3>
             <Button size="sm" variant="ghost" asChild>
               <Link to="/vendors">Manage contracts</Link>
             </Button>
@@ -378,9 +378,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="rounded-lg border bg-card p-4">
+      <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="text-sm font-semibold">Expenditure Analysis</h3>
+          <h3 className="text-base font-bold md:text-sm md:font-semibold">Expenditure Analysis</h3>
           <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -423,9 +423,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="overflow-hidden rounded-2xl border bg-card shadow-sm md:rounded-lg md:shadow-none">
         <div className="flex items-center justify-between border-b p-4">
-          <h3 className="text-sm font-semibold">Recent Invoices{dashVendor !== "ALL" ? ` — ${dashVendor}` : ""}</h3>
+          <h3 className="text-base font-bold md:text-sm md:font-semibold">Recent Invoices{dashVendor !== "ALL" ? ` — ${dashVendor}` : ""}</h3>
           <Button size="sm" variant="ghost" asChild>
             <Link to="/invoices">View all</Link>
           </Button>
@@ -439,19 +439,19 @@ export default function DashboardPage() {
               <button
                 key={r.id}
                 type="button"
-                className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted/50"
+                className="flex w-full items-center gap-3.5 p-4 text-left transition-colors hover:bg-muted/50 active:bg-muted"
                 onClick={() => navigate("/invoices", { state: { openInvoiceId: r.id } })}
               >
-                <ContractorLogo vendor={r.vendor || "Unknown"} logo={getContractorLogo(contractorLogosQuery.data ?? {}, r.vendor)} color={vendorColor(r.vendor)} size="sm" />
+                <ContractorLogo vendor={r.vendor || "Unknown"} logo={getContractorLogo(contractorLogosQuery.data ?? {}, r.vendor)} color={vendorColor(r.vendor)} size="md" />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{r.vendor || "Unknown vendor"}</div>
-                  <div className="truncate text-xs text-muted-foreground">
+                  <div className="truncate text-[15px] font-semibold">{r.vendor || "Unknown vendor"}</div>
+                  <div className="truncate text-[13px] text-muted-foreground">
                     {r.invoiceNo || `Sr# ${r.srNo}`}
                     {r.service ? ` · ${r.service}` : ""}
                   </div>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-sm font-semibold tabular-nums">{fmtMoney(r.amountInclTax)}</span>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <span className="text-[15px] font-bold tabular-nums">{fmtMoney(r.amountInclTax)}</span>
                   <StatusBadge status={r.status} />
                 </div>
               </button>
