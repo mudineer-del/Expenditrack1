@@ -56,7 +56,10 @@ export function MobileBottomNav() {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 border-t bg-background">
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background md:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+    >
       <div className="flex items-center justify-around gap-1 px-2 py-2">
         {mainNav.map((item) => (
           <NavLink

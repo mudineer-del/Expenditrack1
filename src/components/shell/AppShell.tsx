@@ -23,8 +23,6 @@ import { OgdclLogoFull } from "@/components/shared/OgdclMark"
 import { useAuth } from "@/hooks/useAuth"
 import { useAppStore } from "@/store/useAppStore"
 import { useCommandPaletteStore } from "@/store/useCommandPaletteStore"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { cn } from "@/lib/utils"
 
 const TITLES: Record<string, string> = {
   "/": "Dashboard",
@@ -56,8 +54,6 @@ export function AppShell() {
   const { user, signOut } = useAuth()
   const activeDept = useAppStore((s) => s.activeDept)
   const openPalette = useCommandPaletteStore((s) => s.setOpen)
-  const isMobile = useIsMobile()
-
   return (
     <>
       <SidebarProvider>
@@ -123,14 +119,14 @@ export function AppShell() {
               </DropdownMenu>
             </div>
           </header>
-          <main className={cn("flex-1 overflow-auto p-4", isMobile && "pb-24")}>
+          <main className="flex-1 overflow-auto p-4 pb-24 md:pb-4">
             <Outlet />
           </main>
         </SidebarInset>
         <CommandPalette />
         <QuickAddButton />
       </SidebarProvider>
-      {isMobile && <MobileBottomNav />}
+      <MobileBottomNav />
       <InstallPrompt />
     </>
   )
