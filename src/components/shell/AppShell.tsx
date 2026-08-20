@@ -66,14 +66,28 @@ export function AppShell() {
             <SidebarTrigger />
             <Separator orientation="vertical" className="mr-2 h-4 bg-white/20" />
             <OgdclLogoFull className="hidden h-8 w-auto rounded-none shadow-none sm:block" />
-            <h1 className="text-base font-semibold">{pageTitle(location.pathname)}</h1>
+            {/* min-w-0 matters: h1 is a flex item in a fixed-height (h-14) row
+                with no explicit width — flex items default to min-width:auto,
+                refusing to shrink below their own unwrapped text width, so a
+                long title (e.g. "Vendors & Contracts") wrapped to multiple
+                lines and overflowed the header's fixed height instead of
+                truncating. Same root cause as the Dashboard grid overflow,
+                just the flex-row flavor of it. */}
+            <h1 className="min-w-0 flex-1 truncate text-base font-semibold sm:flex-none">{pageTitle(location.pathname)}</h1>
             {isDeptScoped(location.pathname) && (
+              // Hidden below sm — this badge and the h1 both wanted the same
+              // shrinking flex space, and since it has no min-w-0 of its own
+              // (just shrink-0 + a max-w cap), the *entire* squeeze landed on
+              // the title instead, collapsing it to 0 width. The department
+              // is already visible in the sidebar switcher, so this is
+              // redundant context worth dropping on the narrowest screens
+              // rather than fighting the title for room.
               <span
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80"
+                className="hidden shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80 sm:inline-flex sm:max-w-40 lg:max-w-none"
                 title="This page is scoped to the sidebar's active department"
               >
-                <Layers className="size-3" />
-                {activeDept === "ALL" ? "All Departments" : activeDept}
+                <Layers className="size-3 shrink-0" />
+                <span className="truncate">{activeDept === "ALL" ? "All Departments" : activeDept}</span>
               </span>
             )}
             <div className="ml-auto flex items-center gap-1">
