@@ -1135,10 +1135,63 @@ button, a, input, select, textarea, label, summary,
     transition-duration:.01ms !important; scroll-behavior:auto !important;
   }
 }
+
+/* ---- Dark Mode (Fundcy-inspired) ---- */
+html.dark-mode{color-scheme:dark;}
+html.dark-mode body{background:#0f1419; color:#f8f9ff; transition:background .3s ease, color .3s ease;}
+html.dark-mode{
+  --bg:#0f1419;
+  --card:#1a202c;
+  --ink:#f8f9ff;
+  --border:#2d3748;
+  --border-soft:#374151;
+  --navy-950:#1a202c;
+  --navy-900:#0f1419;
+  --navy-800:#16283a;
+  --navy-700:#22384c;
+  --teal-600:#10b981;
+  --teal-500:#14a3a6;
+  --teal-100:#1a4d4e;
+  --accent:#10b981;
+  --accent-bg:rgba(16,185,129,.15);
+  --indigo:#3b82f6;
+  --indigo-bg:rgba(59,130,246,.15);
+  --amber:#f97316;
+  --amber-bg:rgba(249,115,22,.15);
+  --green:#10b981;
+  --green-bg:rgba(16,185,129,.15);
+  --red:#ef4444;
+  --red-bg:rgba(239,68,68,.15);
+  --blue-bg:rgba(59,130,246,.15);
+  --muted:#9ca3af;
+  --shadow:0 1px 2px rgba(0,0,0,.2), 0 2px 8px rgba(0,0,0,.2);
+}
+.theme-toggle{position:fixed; top:20px; right:20px; width:50px; height:28px; border-radius:14px; border:2px solid var(--border); background:var(--card); cursor:pointer; z-index:1000; display:flex; align-items:center; justify-content:center; transition:all .3s ease; box-shadow:var(--shadow);}
+.theme-toggle:hover{transform:scale(1.05);}
+html.dark-mode .theme-toggle{border-color:#2d3748; background:#1a202c;}
+.theme-toggle::before{content:'☀️'; position:absolute; font-size:18px; transition:opacity .3s ease; opacity:1;}
+html.dark-mode .theme-toggle::before{opacity:0;}
+.theme-toggle::after{content:'🌙'; position:absolute; font-size:18px; transition:opacity .3s ease; opacity:0;}
+html.dark-mode .theme-toggle::after{opacity:1;}
 </style>
 </head>
 <body>
 <div id="app"><div class="loading-screen"><div class="spinner"></div><div>Loading Expenditure Tracker…</div></div></div>
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle theme"></button>
+
+<script>
+// Theme initialization
+const html = document.documentElement;
+const themeToggle = document.getElementById('themeToggle');
+const savedTheme = localStorage.getItem('theme') || 'light';
+html.classList.toggle('dark-mode', savedTheme === 'dark');
+if(themeToggle){
+  themeToggle.addEventListener('click', ()=>{
+    const isDark = html.classList.toggle('dark-mode');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  });
+}
+</script>
 
 <script>
 /* ============================================================
