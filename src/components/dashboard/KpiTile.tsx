@@ -60,7 +60,7 @@ export function KpiTile({
       </div>
       <div className="min-w-0 flex-1 md:flex-none">
         <div className="flex items-baseline justify-between gap-2 md:block">
-          <span className="truncate text-xs text-muted-foreground">{label}</span>
+          <span className="min-w-0 truncate text-xs text-muted-foreground">{label}</span>
           <span className={cn("shrink-0 text-[length:var(--tile-value)] font-semibold tabular-nums md:hidden", valueClassName)}>{value}</span>
         </div>
         <div className={cn("hidden text-[length:var(--tile-value)] font-semibold tabular-nums md:block", valueClassName)}>{value}</div>

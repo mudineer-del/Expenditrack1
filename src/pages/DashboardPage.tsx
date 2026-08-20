@@ -137,7 +137,7 @@ export default function DashboardPage() {
     return (
       <div className="grid gap-4">
         <Skeleton className="h-20 w-full" />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-28 w-full" />
           ))}
@@ -155,12 +155,19 @@ export default function DashboardPage() {
     )
   }
 
+  // grid-cols-1 (not just `grid`) matters on the root below: with no explicit
+  // column count, the browser's default single implicit column sizes to
+  // `auto` (content's max-content width), which can render wider than the
+  // container's own box regardless of its own width — grid-cols-1 uses
+  // Tailwind's minmax(0,1fr) track instead, which actually respects it. This
+  // was silently overflowing every child (KPI tiles, department tabs, vendor
+  // pills) by ~60px on narrow phones.
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 gap-4">
       <SpendingTicker contracts={deptContracts} invoices={deptInvoices} />
 
       {refLists.departments.length > 1 && (
-        <div className="flex flex-wrap gap-2 border-b pb-3">
+        <div className="min-w-0 flex flex-wrap gap-2 border-b pb-3">
           <Button
             size="sm"
             variant={activeDept === "ALL" ? "default" : "outline"}
@@ -181,7 +188,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="min-w-0 flex flex-wrap gap-2">
         <Button
           size="sm"
           variant={dashVendor === "ALL" ? "default" : "outline"}
@@ -202,7 +209,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+      <div className="min-w-0 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <KpiTile
           icon={<List />}
           accent="var(--chart-1)"
@@ -264,7 +271,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+      <div className="min-w-0 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
         <KpiTile
           icon={<History />}
           accent="var(--chart-1)"
