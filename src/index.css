@@ -263,10 +263,14 @@ svg.lucide {
   }
 }
 
-/* Touch-friendly interactive elements */
-button, a, input, [role="button"], [role="link"] {
-  @apply min-h-[44px] min-w-[44px];
-  touch-action: manipulation;
+/* Touch-friendly interactive elements — mobile/small-tablet only; unscoped
+   this would also blow up every compact desktop icon button (size-6/size-7
+   throughout the app) to 44px. */
+@media (max-width: 768px) {
+  button, a, input, [role="button"], [role="link"] {
+    @apply min-h-[44px] min-w-[44px];
+    touch-action: manipulation;
+  }
 }
 
 /* Smooth scrolling and prevent rubber-band effect */
@@ -286,9 +290,20 @@ a, button, input, textarea, select {
     padding-left: max(0px, env(safe-area-inset-left));
     padding-right: max(0px, env(safe-area-inset-right));
   }
-  .sidebar-inset {
+  [data-slot="sidebar-inset"] {
     padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
+}
+
+/* Bridges env(safe-area-inset-*) into readable custom properties — JS can't
+   resolve a raw env() call via getComputedStyle().getPropertyValue(), only
+   an actual custom property, which is what useSafeAreaInsets()
+   (useMobileOptimizations.ts) reads. */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
 }
 
 /* Mobile table optimization: cards layout */
@@ -307,7 +322,6 @@ a, button, input, textarea, select {
   }
   table.mobile-table td {
     @apply block w-full px-3 py-2 text-sm;
-    content: attr(data-label);
   }
   table.mobile-table td::before {
     @apply block text-xs font-semibold text-muted-foreground;
@@ -335,15 +349,19 @@ a, button, input, textarea, select {
   }
 }
 
-/* Mobile-friendly form inputs */
-input[type="text"],
-input[type="email"],
-input[type="number"],
-input[type="date"],
-textarea,
-select {
-  @apply text-base; /* Prevent zoom on iOS */
-  font-size: 16px;
+/* Mobile-friendly form inputs — scoped to mobile so it doesn't override the
+   deliberate md:text-sm desktop sizing already set on these fields (see
+   textarea.tsx / select.tsx). */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="date"],
+  textarea,
+  select {
+    @apply text-base; /* Prevent zoom on iOS */
+    font-size: 16px;
+  }
 }
 
 /* Landscape phone optimizations */
