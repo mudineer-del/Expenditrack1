@@ -22,10 +22,10 @@ import { fmtMoney, type CategoryTotal } from "@/lib/dashboard"
 import { useDisplayStore, type ChartType } from "@/store/useDisplayStore"
 
 const config = {
-  total: { label: "Expenditure (incl. tax)", color: "var(--chart-2)" },
+  total: { label: "Expenditure (incl. tax)", color: "var(--dataviz-3)" },
 } satisfies ChartConfig
 
-const PIE_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
+const PIE_COLORS = ["var(--dataviz-1)", "var(--dataviz-2)", "var(--dataviz-3)", "var(--dataviz-4)", "var(--dataviz-5)", "var(--dataviz-6)"]
 
 /** `chartType` is a prop rather than read from the store directly, so this same component
  *  can back two independent chart-type toggles: the always-on "Expenditure by Service"
@@ -97,7 +97,7 @@ export function ServiceChart({
           <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} />
           <YAxis dataKey="service" type="category" tickLine={false} axisLine={false} fontSize={11} width={110} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Bar dataKey="total" fill="var(--color-total)" radius={4} isAnimationActive={animate} />
+          <Bar dataKey="total" fill="var(--color-total)" radius={[0, 8, 8, 0]} isAnimationActive={animate} />
         </BarChart>
       </ChartContainer>
     )

@@ -87,7 +87,7 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
           <XAxis dataKey="vendor" tickLine={false} axisLine={false} fontSize={11} interval={0} angle={-20} textAnchor="end" height={50} />
           <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} width={32} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="count" radius={4} isAnimationActive={animate}>
+          <Bar dataKey="count" radius={[8, 8, 3, 3]} isAnimationActive={animate}>
             {top.map((d, i) => (
               <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />
             ))}

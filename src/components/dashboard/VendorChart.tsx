@@ -34,7 +34,7 @@ const config = {
   total: { label: "Expenditure (incl. tax)" },
 } satisfies ChartConfig
 
-const SERVICE_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
+const SERVICE_COLORS = ["var(--dataviz-1)", "var(--dataviz-2)", "var(--dataviz-3)", "var(--dataviz-4)", "var(--dataviz-5)", "var(--dataviz-6)"]
 
 interface TypeSlice {
   type: string
@@ -146,7 +146,7 @@ export function VendorChart({
             <PolarAngleAxis dataKey="type" fontSize={10} />
             <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
             <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-            <Radar dataKey="total" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
+            <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
           </RadarChart>
         </ChartContainer>
       )
@@ -158,7 +158,7 @@ export function VendorChart({
           <PolarAngleAxis dataKey="vendor" fontSize={10} />
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Radar dataKey="total" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
+          <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
         </RadarChart>
       </ChartContainer>
     )
@@ -192,7 +192,7 @@ export function VendorChart({
                 name={t}
                 stackId="type"
                 fill={SERVICE_COLORS[i % SERVICE_COLORS.length]}
-                radius={i === types.length - 1 ? [4, 4, 0, 0] : 0}
+                radius={i === types.length - 1 ? [8, 8, 0, 0] : 0}
                 isAnimationActive={animate}
                 cursor="pointer"
                 onClick={() => drillTypeSegment(t)}
@@ -232,7 +232,7 @@ export function VendorChart({
               name={s}
               stackId="service"
               fill={SERVICE_COLORS[i % SERVICE_COLORS.length]}
-              radius={i === services.length - 1 ? [4, 4, 0, 0] : 0}
+              radius={i === services.length - 1 ? [8, 8, 0, 0] : 0}
               isAnimationActive={animate}
               cursor="pointer"
               onClick={(d) => drillSegment((d as { payload?: VendorServiceRow })?.payload, s)}
@@ -261,7 +261,7 @@ export function VendorChart({
             <Line
               type="monotone"
               dataKey="total"
-              stroke="var(--chart-1)"
+              stroke="var(--dataviz-4)"
               strokeWidth={2.75}
               strokeLinecap="round"
               dot={{ r: 3.5 }}
@@ -275,14 +275,14 @@ export function VendorChart({
             <>
               <defs>
                 <linearGradient id="vendorGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.45} />
-                  <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="var(--dataviz-4)" stopOpacity={0.45} />
+                  <stop offset="100%" stopColor="var(--dataviz-4)" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
               <Area
                 type="monotone"
                 dataKey="total"
-                stroke="var(--chart-1)"
+                stroke="var(--dataviz-4)"
                 strokeWidth={2.75}
                 strokeLinecap="round"
                 fill="url(#vendorGradient)"
@@ -307,7 +307,7 @@ export function VendorChart({
           <Line
             type="monotone"
             dataKey="total"
-            stroke="var(--chart-1)"
+            stroke="var(--dataviz-4)"
             strokeWidth={2.75}
             strokeLinecap="round"
             dot={{ r: 3.5 }}
@@ -321,14 +321,14 @@ export function VendorChart({
           <>
             <defs>
               <linearGradient id="vendorGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.02} />
+                <stop offset="0%" stopColor="var(--dataviz-4)" stopOpacity={0.45} />
+                <stop offset="100%" stopColor="var(--dataviz-4)" stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <Area
               type="monotone"
               dataKey="total"
-              stroke="var(--chart-1)"
+              stroke="var(--dataviz-4)"
               strokeWidth={2.75}
               strokeLinecap="round"
               fill="url(#vendorGradient)"

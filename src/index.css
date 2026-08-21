@@ -81,6 +81,16 @@
     --chart-3: #2c5f8a;
     --chart-4: #0e8a8c;
     --chart-5: #0a2540;
+    /* Warm, vibrant data-viz palette — deliberately separate from --chart-1..5
+       (all blue/teal, used for the KPI tile accents) so the actual charts get
+       a genuinely different, contemporary feel instead of the same cold blues
+       repeated everywhere. */
+    --dataviz-1: #FF6B4A;
+    --dataviz-2: #FFAB2E;
+    --dataviz-3: #F0507B;
+    --dataviz-4: #8B5CF6;
+    --dataviz-5: #1FB88E;
+    --dataviz-6: #F2C94C;
     --radius: 0.625rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
@@ -116,6 +126,12 @@
     --chart-3: #6fa3c4;
     --chart-4: #2f9e94;
     --chart-5: #8fb4c9;
+    --dataviz-1: #FF8566;
+    --dataviz-2: #FFC14D;
+    --dataviz-3: #FF6B93;
+    --dataviz-4: #A78BFA;
+    --dataviz-5: #34D399;
+    --dataviz-6: #FDE047;
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: #3BA3E0;

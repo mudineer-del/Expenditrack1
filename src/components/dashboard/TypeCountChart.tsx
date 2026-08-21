@@ -22,10 +22,10 @@ import type { TypeCount } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
 
 const config = {
-  count: { label: "Invoices", color: "var(--chart-2)" },
+  count: { label: "Invoices", color: "var(--dataviz-2)" },
 } satisfies ChartConfig
 
-const PIE_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
+const PIE_COLORS = ["var(--dataviz-1)", "var(--dataviz-2)", "var(--dataviz-3)", "var(--dataviz-4)", "var(--dataviz-5)", "var(--dataviz-6)"]
 
 /** How many invoices fall under each work type (Dewatering, Mud Engineering, Local Mud
  *  Chemicals, etc.) — shown once a specific contractor is picked on the Dashboard, scoped
@@ -89,7 +89,7 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
           <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
           <YAxis dataKey="type" type="category" tickLine={false} axisLine={false} fontSize={11} width={110} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="count" fill="var(--color-count)" radius={4} isAnimationActive={animate} />
+          <Bar dataKey="count" fill="var(--color-count)" radius={[0, 8, 8, 0]} isAnimationActive={animate} />
         </BarChart>
       </ChartContainer>
     )
