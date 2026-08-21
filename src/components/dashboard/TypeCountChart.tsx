@@ -1,3 +1,4 @@
+import { useId } from "react"
 import {
   Area,
   Bar,
@@ -13,6 +14,7 @@ import {
   PolarRadiusAxis,
   Radar,
   RadarChart,
+  Treemap,
   XAxis,
   YAxis,
 } from "recharts"
@@ -20,6 +22,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { activeChartPayload } from "@/lib/chartClick"
 import type { TypeCount } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { useIsMobile } from "@/hooks/useIsMobile"
+import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, DonutDefs, donutActiveShape, donutGradientId } from "./donut3d"
 
 const config = {
   count: { label: "Invoices", color: "var(--dataviz-2)" },
@@ -33,6 +37,8 @@ const PIE_COLORS = ["var(--dataviz-1)", "var(--dataviz-2)", "var(--dataviz-3)", 
 export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: (title: string, invoices: TypeCount["invoices"]) => void }) {
   const chartType = useDisplayStore((s) => s.breakdownChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
+  const isMobile = useIsMobile()
+  const gid = useId()
 
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No type data</div>
@@ -47,6 +53,7 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <PieChart>
+          {isMobile && <DonutDefs idBase={gid} colors={PIE_COLORS} />}
           <ChartTooltip content={<ChartTooltipContent />} />
           <Pie
             data={top}
@@ -54,12 +61,20 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
             nameKey="type"
             innerRadius="45%"
             outerRadius="80%"
+            paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
+            cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
+            activeShape={isMobile ? donutActiveShape : undefined}
             isAnimationActive={animate}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
           >
             {top.map((d, i) => (
-              <Cell key={d.type} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+              <Cell
+                key={d.type}
+                fill={isMobile ? `url(#${donutGradientId(gid, i % PIE_COLORS.length)})` : PIE_COLORS[i % PIE_COLORS.length]}
+                stroke={isMobile ? "var(--card)" : undefined}
+                strokeWidth={isMobile ? 2 : undefined}
+              />
             ))}
           </Pie>
         </PieChart>
@@ -77,6 +92,43 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
           <ChartTooltip content={<ChartTooltipContent />} />
           <Radar dataKey="count" stroke="var(--color-count)" fill="var(--color-count)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
         </RadarChart>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "treemap") {
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <Treemap
+          data={top.map((d) => ({ type: d.type, count: d.count }))}
+          dataKey="count"
+          nameKey="type"
+          type="flat"
+          aspectRatio={1.7}
+          colorPanel={PIE_COLORS}
+          stroke="var(--card)"
+          isAnimationActive={animate}
+          onClick={(node) => {
+            const item = top.find((d) => d.type === node.name)
+            if (item) drill(item)
+          }}
+        >
+          <ChartTooltip content={<ChartTooltipContent />} />
+        </Treemap>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "horizontalBar") {
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <BarChart data={top} layout="vertical" margin={{ left: 8 }} onClick={(e) => drill(activeChartPayload<TypeCount>(e))} className="cursor-pointer">
+          <CartesianGrid horizontal={false} />
+          <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+          <YAxis dataKey="type" type="category" tickLine={false} axisLine={false} fontSize={11} width={110} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <Bar dataKey="count" fill="var(--color-count)" radius={[0, 8, 8, 0]} isAnimationActive={animate} />
+        </BarChart>
       </ChartContainer>
     )
   }

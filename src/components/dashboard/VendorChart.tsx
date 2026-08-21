@@ -1,3 +1,4 @@
+import { useId } from "react"
 import {
   Area,
   Bar,
@@ -14,6 +15,7 @@ import {
   PolarRadiusAxis,
   Radar,
   RadarChart,
+  Treemap,
   XAxis,
   YAxis,
 } from "recharts"
@@ -28,7 +30,9 @@ import {
   type VendorTypeBreakdown,
 } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { useIsMobile } from "@/hooks/useIsMobile"
 import type { Invoice } from "@/types/invoice"
+import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, DonutDefs, donutActiveShape, donutGradientId } from "./donut3d"
 
 const config = {
   total: { label: "Expenditure (incl. tax)" },
@@ -57,6 +61,8 @@ export function VendorChart({
 }) {
   const chartType = useDisplayStore((s) => s.vendorChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
+  const isMobile = useIsMobile()
+  const gid = useId()
 
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No vendor data</div>
@@ -90,6 +96,7 @@ export function VendorChart({
       return (
         <ChartContainer config={legendConfig} className="h-[var(--chart-h)] w-full">
           <PieChart>
+            {isMobile && <DonutDefs idBase={gid} colors={SERVICE_COLORS} />}
             <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
             <Pie
               data={bySingleVendorType}
@@ -97,12 +104,20 @@ export function VendorChart({
               nameKey="type"
               innerRadius="45%"
               outerRadius="80%"
+              paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
+              cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
+              activeShape={isMobile ? donutActiveShape : undefined}
               isAnimationActive={animate}
               cursor="pointer"
               onClick={(_, index) => drillType(bySingleVendorType[index])}
             >
               {bySingleVendorType.map((d, i) => (
-                <Cell key={d.type} fill={SERVICE_COLORS[i % SERVICE_COLORS.length]} />
+                <Cell
+                  key={d.type}
+                  fill={isMobile ? `url(#${donutGradientId(gid, i % SERVICE_COLORS.length)})` : SERVICE_COLORS[i % SERVICE_COLORS.length]}
+                  stroke={isMobile ? "var(--card)" : undefined}
+                  strokeWidth={isMobile ? 2 : undefined}
+                />
               ))}
             </Pie>
             <ChartLegend content={<ChartLegendContent nameKey="type" />} />
@@ -116,6 +131,7 @@ export function VendorChart({
     return (
       <ChartContainer config={vendorLegendConfig} className="h-[var(--chart-h)] w-full">
         <PieChart>
+          {isMobile && <DonutDefs idBase={`${gid}-v`} colors={top.map((d, i) => vendorColor(d.vendor, i))} />}
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
           <Pie
             data={top}
@@ -123,12 +139,20 @@ export function VendorChart({
             nameKey="vendor"
             innerRadius="45%"
             outerRadius="80%"
+            paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
+            cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
+            activeShape={isMobile ? donutActiveShape : undefined}
             isAnimationActive={animate}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
           >
             {top.map((d, i) => (
-              <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />
+              <Cell
+                key={d.vendor}
+                fill={isMobile ? `url(#${donutGradientId(`${gid}-v`, i)})` : vendorColor(d.vendor, i)}
+                stroke={isMobile ? "var(--card)" : undefined}
+                strokeWidth={isMobile ? 2 : undefined}
+              />
             ))}
           </Pie>
           <ChartLegend content={<ChartLegendContent nameKey="vendor" />} />
@@ -160,6 +184,71 @@ export function VendorChart({
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
           <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
         </RadarChart>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "treemap") {
+    const treemapData = bySingleVendorType
+      ? bySingleVendorType.map((d) => ({ type: d.type, total: d.total }))
+      : top.map((d) => ({ vendor: d.vendor, total: d.total }))
+    const nameKey = bySingleVendorType ? "type" : "vendor"
+    const dataKey = "total"
+    const colors = bySingleVendorType ? SERVICE_COLORS : top.map((d, i) => vendorColor(d.vendor, i))
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <Treemap
+          data={treemapData}
+          dataKey={dataKey}
+          nameKey={nameKey}
+          type="flat"
+          aspectRatio={1.7}
+          colorPanel={colors}
+          stroke="var(--card)"
+          isAnimationActive={animate}
+          onClick={(node) => {
+            if (bySingleVendorType) {
+              const item = bySingleVendorType.find((d) => d.type === node.name)
+              if (item) drillType(item)
+            } else {
+              const item = top.find((d) => d.vendor === node.name)
+              if (item) drill(item)
+            }
+          }}
+        >
+          <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+        </Treemap>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "horizontalBar") {
+    if (bySingleVendorType) {
+      return (
+        <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+          <BarChart data={bySingleVendorType} layout="vertical" margin={{ left: 8 }} onClick={(e) => drillType(activeChartPayload<TypeSlice>(e))} className="cursor-pointer">
+            <CartesianGrid horizontal={false} />
+            <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} />
+            <YAxis dataKey="type" type="category" tickLine={false} axisLine={false} fontSize={11} width={110} />
+            <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+            <Bar dataKey="total" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
+              {bySingleVendorType.map((d, i) => <Cell key={d.type} fill={SERVICE_COLORS[i % SERVICE_COLORS.length]} />)}
+            </Bar>
+          </BarChart>
+        </ChartContainer>
+      )
+    }
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <BarChart data={top} layout="vertical" margin={{ left: 8 }} onClick={(e) => drill(activeChartPayload<VendorTotal>(e))} className="cursor-pointer">
+          <CartesianGrid horizontal={false} />
+          <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} />
+          <YAxis dataKey="vendor" type="category" tickLine={false} axisLine={false} fontSize={11} width={115} />
+          <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+          <Bar dataKey="total" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
+            {top.map((d, i) => <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />)}
+          </Bar>
+        </BarChart>
       </ChartContainer>
     )
   }

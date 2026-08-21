@@ -35,29 +35,30 @@ export function KpiTile({
   return (
     <div
       className={cn(
-        "ogdcl-hoverable relative overflow-hidden rounded-2xl md:flex md:flex-col md:items-stretch md:gap-1 md:rounded-lg md:border md:bg-card md:p-[var(--tile-pad)] md:pl-[calc(var(--tile-pad)+0.375rem)] md:shadow-none",
+        "ogdcl-hoverable relative transform-gpu overflow-hidden rounded-2xl transition-all duration-300 ease-out md:flex md:flex-col md:items-stretch md:gap-1 md:rounded-2xl md:border md:bg-card md:p-[var(--tile-pad)] md:pl-[calc(var(--tile-pad)+0.375rem)] md:shadow-[0_7px_0_var(--kpi-shadow),0_16px_24px_-18px_var(--kpi-glow)] md:will-change-transform",
         hero
-          ? "bg-[var(--ogdcl-navy)] p-5 text-white shadow-lg md:text-foreground"
+          ? "bg-[var(--ogdcl-navy)] p-5 text-white shadow-lg md:!bg-[var(--ogdcl-navy)] md:text-white md:border-white/10"
           : "flex flex-col gap-2.5 border-2 bg-card p-3.5 shadow-sm md:flex-row md:items-center md:gap-3.5 md:border md:p-[var(--tile-pad)]",
-        onClick && "cursor-pointer transition-colors active:scale-[0.98] md:active:scale-100",
-        onClick && !hero && "hover:bg-muted/50",
-        onClick && hero && "hover:brightness-110 md:hover:bg-muted/50 md:hover:brightness-100"
+        onClick && "cursor-pointer active:scale-[0.98] active:duration-100 md:active:scale-100",
+        onClick && !hero && "hover:-translate-y-1 hover:bg-muted/50 hover:shadow-lg md:hover:-translate-y-1 md:hover:bg-card md:hover:shadow-[0_10px_0_var(--kpi-shadow),0_24px_34px_-18px_var(--kpi-glow)]",
+        onClick && hero && "hover:-translate-y-1 hover:brightness-110 hover:shadow-xl md:hover:-translate-y-1 md:hover:brightness-110 md:hover:shadow-[0_10px_0_var(--kpi-shadow),0_24px_34px_-18px_var(--kpi-glow)]"
       )}
       style={
-        !hero && accent
-          ? {
-              backgroundImage: `linear-gradient(to bottom right, color-mix(in oklch, ${accent} 13%, var(--card)), var(--card) 65%)`,
-              borderColor: `color-mix(in oklch, ${accent} 35%, var(--border))`,
-            }
+        accent
+          ? ({
+              ...(hero
+                ? {}
+                : { backgroundImage: "linear-gradient(145deg, color-mix(in oklch, var(--primary) 7%, var(--card)), var(--card) 68%)" }),
+              borderColor: hero ? "color-mix(in oklch, var(--primary) 28%, white 10%)" : "color-mix(in oklch, var(--primary) 18%, var(--border))",
+              "--kpi-shadow": "color-mix(in oklch, var(--primary) 22%, var(--border))",
+              "--kpi-glow": "color-mix(in oklch, var(--primary) 34%, transparent)",
+            } as React.CSSProperties)
           : undefined
       }
       onClick={onClick}
     >
-      {trend && (
-        <div className="hidden md:block md:absolute md:top-[var(--tile-pad)] md:right-[var(--tile-pad)]" style={!hero && accent ? { color: accent } : undefined}>
-          {trend}
-        </div>
-      )}
+      {/* Desktop keeps KPI cards clean and typographic; trend visuals remain available
+          in the mobile treatment where they do not compete with the value hierarchy. */}
 
       {hero ? (
         <>
@@ -84,9 +85,9 @@ export function KpiTile({
           >
             {icon}
           </div>
-          <div className="hidden text-xs text-muted-foreground md:block">{label}</div>
+          <div className={cn("hidden text-xs text-muted-foreground md:block", hero ? "md:text-white/60" : undefined)}>{label}</div>
           <div className={cn("hidden text-[length:var(--tile-value)] font-semibold tabular-nums md:block", valueClassName)}>{value}</div>
-          {sub && <div className={cn("hidden text-xs text-muted-foreground md:block", subClassName)}>{sub}</div>}
+          {sub && <div className={cn("hidden text-xs text-muted-foreground md:block", hero ? "md:text-white/70" : undefined, subClassName)}>{sub}</div>}
         </>
       ) : (
         <>

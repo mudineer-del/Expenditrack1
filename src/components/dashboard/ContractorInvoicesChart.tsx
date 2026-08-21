@@ -1,3 +1,4 @@
+import { useId } from "react"
 import {
   Area,
   Bar,
@@ -13,6 +14,7 @@ import {
   PolarRadiusAxis,
   Radar,
   RadarChart,
+  Treemap,
   XAxis,
   YAxis,
 } from "recharts"
@@ -20,6 +22,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { activeChartPayload } from "@/lib/chartClick"
 import { vendorColor, type VendorCount } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { useIsMobile } from "@/hooks/useIsMobile"
+import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, DonutDefs, donutActiveShape, donutGradientId } from "./donut3d"
 
 const config = {
   count: { label: "Invoices" },
@@ -31,6 +35,8 @@ const config = {
 export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]; onDrill: (title: string, invoices: VendorCount["invoices"]) => void }) {
   const chartType = useDisplayStore((s) => s.breakdownChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
+  const isMobile = useIsMobile()
+  const gid = useId()
 
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No invoice data</div>
@@ -45,6 +51,7 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <PieChart>
+          {isMobile && <DonutDefs idBase={gid} colors={top.map((d, i) => vendorColor(d.vendor, i))} />}
           <ChartTooltip content={<ChartTooltipContent />} />
           <Pie
             data={top}
@@ -52,12 +59,20 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
             nameKey="vendor"
             innerRadius="45%"
             outerRadius="80%"
+            paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
+            cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
+            activeShape={isMobile ? donutActiveShape : undefined}
             isAnimationActive={animate}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
           >
             {top.map((d, i) => (
-              <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />
+              <Cell
+                key={d.vendor}
+                fill={isMobile ? `url(#${donutGradientId(gid, i)})` : vendorColor(d.vendor, i)}
+                stroke={isMobile ? "var(--card)" : undefined}
+                strokeWidth={isMobile ? 2 : undefined}
+              />
             ))}
           </Pie>
         </PieChart>
@@ -75,6 +90,45 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
           <ChartTooltip content={<ChartTooltipContent />} />
           <Radar dataKey="count" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
         </RadarChart>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "treemap") {
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <Treemap
+          data={top.map((d) => ({ vendor: d.vendor, count: d.count }))}
+          dataKey="count"
+          nameKey="vendor"
+          type="flat"
+          aspectRatio={1.7}
+          colorPanel={top.map((d, i) => vendorColor(d.vendor, i))}
+          stroke="var(--card)"
+          isAnimationActive={animate}
+          onClick={(node) => {
+            const item = top.find((d) => d.vendor === node.name)
+            if (item) drill(item)
+          }}
+        >
+          <ChartTooltip content={<ChartTooltipContent />} />
+        </Treemap>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "horizontalBar") {
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <BarChart data={top} layout="vertical" margin={{ left: 8 }} onClick={(e) => drill(activeChartPayload<VendorCount>(e))} className="cursor-pointer">
+          <CartesianGrid horizontal={false} />
+          <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+          <YAxis dataKey="vendor" type="category" tickLine={false} axisLine={false} fontSize={11} width={115} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <Bar dataKey="count" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
+            {top.map((d, i) => <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />)}
+          </Bar>
+        </BarChart>
       </ChartContainer>
     )
   }

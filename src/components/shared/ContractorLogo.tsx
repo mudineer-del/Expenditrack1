@@ -9,14 +9,17 @@ export function ContractorLogo({
   vendor: string
   logo?: string
   color: string
-  size?: "sm" | "md"
+  size?: "sm" | "md" | "lg" | "xl"
 }) {
   const initials = vendor.slice(0, 2).toUpperCase() || "?"
   return (
     <span
       className={cn(
         "flex shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white",
-        size === "sm" ? "size-6 text-[10px]" : "size-8"
+        size === "sm" && "size-6 text-[10px]",
+        size === "md" && "size-8",
+        size === "lg" && "size-12 text-base",
+        size === "xl" && "size-16 text-lg"
       )}
       style={{ backgroundColor: color }}
       title={logo ? `${vendor} logo` : vendor}

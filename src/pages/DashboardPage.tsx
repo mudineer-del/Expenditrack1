@@ -20,7 +20,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ChartTypeMenu } from "@/components/dashboard/ChartTypeMenu"
+import { CHART_OPTIONS, ChartTypeMenu } from "@/components/dashboard/ChartTypeMenu"
 import { ContractorInvoicesChart } from "@/components/dashboard/ContractorInvoicesChart"
 import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
 import { KpiTile } from "@/components/dashboard/KpiTile"
@@ -62,6 +62,122 @@ import { useReferenceLists } from "@/lib/referenceLists"
 import { useAppStore } from "@/store/useAppStore"
 import { cn } from "@/lib/utils"
 import { checkContractNotifications, loadNotifyConfig, loadNotifyPrefs, maybeSendWeeklyDigest } from "@/lib/notifications"
+
+const PICKER_NEUTRAL = "var(--muted-foreground)"
+const PICKER_PALETTE = ["var(--primary)"]
+
+/** Mobile-only department/vendor picker card. A flat gray box with a color
+ *  only on the active one read as lifeless — every card now carries its own
+ *  color always (not just when selected), and the icon sits in a raised,
+ *  diagonally-lit gradient chip with its own tinted shadow for actual depth
+ *  instead of a flat icon on a flat card. */
+function PickerCard({
+  active,
+  color,
+  icon,
+  bareIcon,
+  label,
+  onClick,
+}: {
+  active: boolean
+  color: string
+  icon: React.ReactNode
+  /** Skip the gradient-chip wrapper for icons that already come pre-styled
+   *  as their own raised badge (ContractorLogo's real logo/initials circle) —
+   *  wrapping it in a second chip would just nest two badges. */
+  bareIcon?: boolean
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "[perspective:600px] group flex aspect-square origin-center transform-gpu flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border p-2 text-center shadow-sm transition-all duration-300 ease-out active:scale-[0.96] active:duration-100",
+        active ? "border-2 shadow-md" : "border-border/70 hover:-translate-y-1 hover:shadow-lg active:shadow-md"
+      )}
+      style={{
+        borderColor: active ? color : undefined,
+        backgroundImage: `linear-gradient(155deg, color-mix(in oklch, ${color} ${active ? 18 : 10}%, var(--card)) 0%, var(--card) 65%)`,
+      }}
+    >
+      {bareIcon ? (
+        <div className="drop-shadow-[0_3px_6px_rgba(0,0,0,0.18)] transition-transform duration-300 group-hover:scale-110 group-hover:[transform:rotateY(8deg)]">
+          {icon}
+        </div>
+      ) : (
+        <div
+          className="flex size-12 items-center justify-center rounded-xl text-white ring-1 ring-black/5 transition-transform duration-300 group-hover:scale-110 group-hover:[transform:rotateY(8deg)]"
+          style={{
+            backgroundImage: `linear-gradient(155deg, color-mix(in oklch, ${color} 85%, white 25%), ${color})`,
+            boxShadow: `0 4px 10px -3px color-mix(in oklch, ${color} 55%, transparent)`,
+          }}
+        >
+          {icon}
+        </div>
+      )}
+      <span
+        className="line-clamp-2 w-full max-w-full text-wrap break-words text-[11px] leading-tight font-semibold"
+        style={{ color: active ? color : undefined }}
+      >
+        {label}
+      </span>
+    </button>
+  )
+}
+
+/** Individual 3D elevated card for one Dashboard chart — each chart used to share one big
+ *  flat card with no visual separation; now each gets its own raised, tinted card (same
+ *  accent-wash convention as PickerCard/KpiTile) that tilts in real 3D on hover (via
+ *  perspective + rotateX/Y, not just a flat lift) and gives a tactile press-squish the
+ *  moment you tap a bar/slice/point — :active applies to ancestors for the duration of
+ *  the press, so the whole card responds even though the click lands deep in the SVG. */
+function ChartCard({
+  title,
+  action,
+  children,
+}: {
+  title: React.ReactNode
+  action?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        // No hover transform on this element: it wraps a Recharts chart whose slices/bars
+        // need pixel-precise hover tracking under the cursor. A geometry-shifting hover
+        // transform (translate/rotate) here transitions the content out from under an
+        // already-hovering pointer mid-gesture, which silently breaks the chart's own
+        // hover/tap popup — depth is conveyed with shadow alone instead, which never
+        // moves anything. Only :active gets a (tiny, safe) scale, and only after the
+        // click has already been resolved against the pre-press geometry.
+        "group relative overflow-hidden rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-200 ease-out md:p-5",
+        "hover:shadow-md",
+        "active:scale-[0.995] active:duration-100",
+        "transition-transform active:scale-[0.99] active:duration-100 active:ease-in md:active:scale-[0.995]"
+      )}
+      style={
+        {
+          borderColor: "color-mix(in oklch, var(--primary) 16%, var(--border))",
+          backgroundImage: "linear-gradient(155deg, color-mix(in oklch, var(--primary) 4%, var(--card)) 0%, var(--card) 62%)",
+          "--accent-shadow": "color-mix(in oklch, var(--primary) 20%, var(--border))",
+          "--accent-glow": "color-mix(in oklch, var(--primary) 30%, transparent)",
+        } as React.CSSProperties
+      }
+    >
+      <span
+        className="absolute top-0 left-0 h-full w-1 opacity-70 transition-opacity duration-300 group-hover:opacity-100 md:top-0 md:h-1 md:w-full"
+        style={{ backgroundColor: "var(--primary)" }}
+      />
+      <div className="mb-2 flex items-center justify-between gap-2 md:mb-3">
+        <span className="text-xs font-medium text-muted-foreground md:text-sm md:font-semibold md:text-foreground">{title}</span>
+        {action}
+      </div>
+      {children}
+    </div>
+  )
+}
 
 function PctSub({ pct, label }: { pct: number | null; label: string }) {
   if (pct == null) return <span className="text-muted-foreground">No prior period data</span>
@@ -183,40 +299,29 @@ export default function DashboardPage() {
               mobile rather than just restyling it, since a wrapped pill row
               reads as desktop UI carried over, not a native mobile picker. */}
           <div className="grid grid-cols-3 gap-3 md:hidden">
-            <button
-              type="button"
+            <PickerCard
+              active={activeDept === "ALL"}
+              color={PICKER_NEUTRAL}
+              icon={<Layers className="size-6" />}
+              label="All Departments"
               onClick={() => setActiveDept("ALL")}
-              className={cn(
-                "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition-colors active:scale-[0.97]",
-                activeDept === "ALL"
-                  ? "border-primary bg-primary/10 text-primary shadow-sm"
-                  : "border-border text-muted-foreground active:bg-muted"
-              )}
-            >
-              <Layers className="size-5" />
-              <span className="line-clamp-2 text-[11px] leading-tight font-medium">All Departments</span>
-            </button>
-            {refLists.departments.map((d) => (
-              <button
+            />
+            {refLists.departments.map((d, i) => (
+              <PickerCard
                 key={d}
-                type="button"
+                active={activeDept === d}
+                color={PICKER_PALETTE[i % PICKER_PALETTE.length]}
+                icon={<Building2 className="size-6" />}
+                label={d}
                 onClick={() => setActiveDept(d)}
-                className={cn(
-                  "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition-colors active:scale-[0.97]",
-                  activeDept === d
-                    ? "border-primary bg-primary/10 text-primary shadow-sm"
-                    : "border-border text-muted-foreground active:bg-muted"
-                )}
-              >
-                <Building2 className="size-5" />
-                <span className="line-clamp-2 text-[11px] leading-tight font-medium">{d}</span>
-              </button>
+              />
             ))}
           </div>
-          <div className="hidden md:flex md:flex-wrap md:gap-2 md:border-b md:pb-3">
+          <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2 md:rounded-2xl md:border md:bg-card/80 md:p-2 md:shadow-[0_5px_0_hsl(var(--border)/0.7),0_12px_20px_-16px_hsl(var(--foreground)/0.35)]">
             <Button
               size="sm"
               variant={activeDept === "ALL" ? "default" : "outline"}
+              className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               onClick={() => setActiveDept("ALL")}
             >
               All Departments
@@ -226,6 +331,7 @@ export default function DashboardPage() {
                 key={d}
                 size="sm"
                 variant={activeDept === d ? "default" : "outline"}
+                className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 onClick={() => setActiveDept(d)}
               >
                 {d}
@@ -237,43 +343,30 @@ export default function DashboardPage() {
 
       <div className="min-w-0">
         <div className="grid grid-cols-3 gap-3 md:hidden">
-          <button
-            type="button"
+          <PickerCard
+            active={dashVendor === "ALL"}
+            color={PICKER_NEUTRAL}
+            icon={<Wallet className="size-6" />}
+            label="All"
             onClick={() => setDashVendor("ALL")}
-            className={cn(
-              "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition-colors active:scale-[0.97]",
-              dashVendor === "ALL"
-                ? "border-primary bg-primary/10 text-primary shadow-sm"
-                : "border-border text-muted-foreground active:bg-muted"
-            )}
-          >
-            <Wallet className="size-5" />
-            <span className="text-[11px] leading-tight font-medium">All</span>
-          </button>
-          {dataVendors.map((v) => {
-            const active = dashVendor === v
-            const color = vendorColor(v)
-            return (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setDashVendor(v)}
-                className={cn(
-                  "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition-colors active:scale-[0.97]",
-                  active ? "shadow-sm" : "border-border active:bg-muted"
-                )}
-                style={active ? { borderColor: color, backgroundColor: `color-mix(in oklch, ${color} 10%, transparent)` } : undefined}
-              >
-                <ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={color} size="sm" />
-                <span className="line-clamp-2 text-[11px] leading-tight font-medium">{v}</span>
-              </button>
-            )
-          })}
+          />
+          {dataVendors.map((v) => (
+            <PickerCard
+              key={v}
+              active={dashVendor === v}
+              color="var(--primary)"
+              icon={<ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={vendorColor(v)} size="lg" />}
+              bareIcon
+              label={v}
+              onClick={() => setDashVendor(v)}
+            />
+          ))}
         </div>
-        <div className="hidden md:flex md:flex-wrap md:gap-2">
+        <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2 md:rounded-2xl md:border md:bg-card/80 md:p-2 md:shadow-[0_5px_0_hsl(var(--border)/0.7),0_12px_20px_-16px_hsl(var(--foreground)/0.35)]">
           <Button
             size="sm"
             variant={dashVendor === "ALL" ? "default" : "outline"}
+            className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             onClick={() => setDashVendor("ALL")}
           >
             All
@@ -283,6 +376,7 @@ export default function DashboardPage() {
               key={v}
               size="sm"
               variant={dashVendor === v ? "default" : "outline"}
+              className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               style={dashVendor === v ? { backgroundColor: vendorColor(v), borderColor: vendorColor(v) } : undefined}
               onClick={() => setDashVendor(v)}
             >
@@ -435,33 +529,57 @@ export default function DashboardPage() {
               <Link to="/vendors">Manage contracts</Link>
             </Button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {dataVendors.map((v) => {
               const vRows = deptInvoices.filter((r) => r.vendor === v)
               const total = vRows.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0)
               const lead = avgLeadTime(vRows)
+              const accent = "var(--primary)"
+              const logoColor = vendorColor(v)
               return (
                 <button
                   key={v}
-                  className="rounded-lg border p-3 text-left transition-colors hover:bg-muted/50"
+                  className="group relative min-h-[190px] overflow-hidden rounded-2xl border p-4 text-left shadow-[0_5px_0_var(--contractor-shadow),0_12px_20px_-16px_var(--contractor-glow)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] active:translate-y-1 active:scale-[0.985] active:shadow-[0_2px_0_var(--contractor-shadow),0_7px_12px_-10px_var(--contractor-glow)] active:duration-100 md:min-h-[200px] md:rounded-2xl md:p-4 md:hover:-translate-y-1 md:hover:shadow-[0_7px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] md:active:translate-y-1 xl:min-h-[196px]"
+                  style={
+                    {
+                      borderColor: `color-mix(in oklch, ${accent} 28%, var(--border))`,
+                      backgroundImage: `linear-gradient(145deg, color-mix(in oklch, ${accent} 7%, var(--card)) 0%, var(--card) 64%, color-mix(in oklch, ${accent} 3%, var(--card)) 100%)`,
+                      "--contractor-shadow": `color-mix(in oklch, ${accent} 25%, var(--border))`,
+                      "--contractor-glow": `color-mix(in oklch, ${accent} 42%, transparent)`,
+                    } as React.CSSProperties
+                  }
                   onClick={() => setDashVendor(v)}
                 >
-                  <div className="mb-2 flex items-center gap-2 font-medium">
-                    <ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={vendorColor(v)} size="sm" />
-                    {v}
+                  <span
+                    className="absolute top-0 left-0 h-1 w-full opacity-80 transition-opacity duration-300 group-hover:opacity-100"
+                    style={{ backgroundColor: accent }}
+                  />
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="rounded-full p-1.5 shadow-[0_5px_10px_-5px_var(--contractor-glow)] ring-1 ring-black/5 transition-transform duration-300 group-hover:scale-105 group-hover:[transform:rotateY(8deg)]"
+                      style={{ backgroundColor: `color-mix(in oklch, ${accent} 10%, var(--card))` }}
+                    >
+                      <ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={logoColor} size="lg" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-base font-bold tracking-tight">{v}</div>
+                      <div className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Contractor</div>
+                    </div>
                   </div>
-                  <dl className="grid gap-1 text-xs text-muted-foreground">
-                    <div className="flex justify-between">
-                      <dt>Invoices logged</dt>
-                      <dd className="text-foreground">{vRows.length}</dd>
+                  <div className="mt-4 border-t pt-3" style={{ borderColor: `color-mix(in oklch, ${accent} 16%, var(--border))` }}>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Expenditure incl. tax</div>
+                    <div className="mt-0.5 truncate text-2xl font-extrabold tracking-tight tabular-nums" style={{ color: accent }}>
+                      {fmtMoney(total)}
                     </div>
-                    <div className="flex justify-between">
-                      <dt>Expenditure (incl. tax)</dt>
-                      <dd className="text-foreground">{fmtMoney(total)}</dd>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border bg-background/55 px-2.5 py-2 shadow-inner">
+                      <dt className="text-[10px] font-medium text-muted-foreground">Invoices logged</dt>
+                      <dd className="mt-0.5 text-sm font-bold tabular-nums">{vRows.length}</dd>
                     </div>
-                    <div className="flex justify-between">
-                      <dt>Avg. clearance lead time</dt>
-                      <dd className="text-foreground">{lead !== null ? `${lead} days` : "—"}</dd>
+                    <div className="rounded-xl border bg-background/55 px-2.5 py-2 shadow-inner">
+                      <dt className="text-[10px] font-medium text-muted-foreground">Avg. clearance</dt>
+                      <dd className="mt-0.5 text-sm font-bold tabular-nums">{lead !== null ? `${lead} days` : "—"}</dd>
                     </div>
                   </dl>
                 </button>
@@ -471,55 +589,46 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none">
+      <div className="min-w-0">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-base font-bold md:text-sm md:font-semibold">Expenditure Analysis</h3>
           <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
         </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Monthly Expenditure Trend</span>
-              <ChartTypeMenu value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />
-            </div>
+        <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
+          <ChartCard
+            title="Monthly Expenditure Trend"
+            action={<ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />}
+          >
             <TrendChart data={trend} onDrill={onDrill} />
-          </div>
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Expenditure by Service</span>
-              <ChartTypeMenu value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />
-            </div>
+          </ChartCard>
+          <ChartCard
+            title="Expenditure by Service"
+            action={<ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />}
+          >
             <ServiceChart data={byService} chartType={serviceChartType} onDrill={onDrill} />
-          </div>
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                {dashVendor === "ALL" ? "Invoice Value by Contractor" : `Invoice Value — ${dashVendor}`}
-              </span>
-              <ChartTypeMenu value={vendorChartType} onChange={(t) => setChartType("vendorChartType", t)} />
-            </div>
+          </ChartCard>
+          <ChartCard
+            title={dashVendor === "ALL" ? "Invoice Value by Contractor" : `Invoice Value — ${dashVendor}`}
+            action={<ChartTypeMenu options={CHART_OPTIONS.contractor} value={vendorChartType} onChange={(t) => setChartType("vendorChartType", t)} />}
+          >
             <VendorChart data={byVendor} serviceBreakdown={byVendorService} typeBreakdown={byVendorType} onDrill={onDrill} />
-          </div>
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                {dashVendor === "ALL" ? "Invoices by Contractor" : `Invoices by Type — ${dashVendor}`}
-              </span>
-              <ChartTypeMenu value={breakdownChartType} onChange={(t) => setChartType("breakdownChartType", t)} />
-            </div>
+          </ChartCard>
+          <ChartCard
+            title={dashVendor === "ALL" ? "Invoices by Contractor" : `Invoices by Type — ${dashVendor}`}
+            action={<ChartTypeMenu options={CHART_OPTIONS.invoices} value={breakdownChartType} onChange={(t) => setChartType("breakdownChartType", t)} />}
+          >
             {dashVendor === "ALL" ? (
               <ContractorInvoicesChart data={byVendorCount} onDrill={onDrill} />
             ) : (
               <TypeCountChart data={byTypeCount} onDrill={onDrill} />
             )}
-          </div>
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Expenditure by Status</span>
-              <ChartTypeMenu value={statusChartType} onChange={(t) => setChartType("statusChartType", t)} />
-            </div>
+          </ChartCard>
+          <ChartCard
+            title="Expenditure by Status"
+            action={<ChartTypeMenu options={CHART_OPTIONS.status} value={statusChartType} onChange={(t) => setChartType("statusChartType", t)} />}
+          >
             <ServiceChart data={byStatus} chartType={statusChartType} onDrill={onDrill} />
-          </div>
+          </ChartCard>
         </div>
       </div>
 

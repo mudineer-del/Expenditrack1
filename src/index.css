@@ -58,13 +58,13 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
+    --background: oklch(0.985 0.008 145);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: #0A86C8;
+    --primary: #147A4A;
     --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
@@ -75,41 +75,41 @@
     --destructive: oklch(0.577 0.245 27.325);
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: #0A86C8;
-    --chart-1: #0A86C8;
-    --chart-2: #49BFAC;
-    --chart-3: #2c5f8a;
-    --chart-4: #0e8a8c;
-    --chart-5: #0a2540;
+    --ring: #147A4A;
+    --chart-1: #147A4A;
+    --chart-2: #2D9CDB;
+    --chart-3: #E7A83B;
+    --chart-4: #7A6FF0;
+    --chart-5: #0B3B2E;
     /* Warm, vibrant data-viz palette — deliberately separate from --chart-1..5
        (all blue/teal, used for the KPI tile accents) so the actual charts get
        a genuinely different, contemporary feel instead of the same cold blues
        repeated everywhere. */
-    --dataviz-1: #FF6B4A;
-    --dataviz-2: #FFAB2E;
-    --dataviz-3: #F0507B;
-    --dataviz-4: #8B5CF6;
-    --dataviz-5: #1FB88E;
-    --dataviz-6: #F2C94C;
+    --dataviz-1: #147A4A;
+    --dataviz-2: #2D9CDB;
+    --dataviz-3: #E7A83B;
+    --dataviz-4: #7A6FF0;
+    --dataviz-5: #D65A5A;
+    --dataviz-6: #8AA39B;
     --radius: 0.625rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: #0A86C8;
+    --sidebar-primary: #147A4A;
     --sidebar-primary-foreground: oklch(0.985 0 0);
     --sidebar-accent: oklch(0.97 0 0);
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: #0A86C8;
+    --sidebar-ring: #147A4A;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
+    --background: oklch(0.16 0.025 155);
     --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
+    --card: oklch(0.205 0.025 155);
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: #3BA3E0;
+    --primary: #62C993;
     --primary-foreground: oklch(0.145 0 0);
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
@@ -120,26 +120,26 @@
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: #3BA3E0;
-    --chart-1: #3BA3E0;
-    --chart-2: #49BFAC;
-    --chart-3: #6fa3c4;
-    --chart-4: #2f9e94;
-    --chart-5: #8fb4c9;
-    --dataviz-1: #FF8566;
-    --dataviz-2: #FFC14D;
-    --dataviz-3: #FF6B93;
-    --dataviz-4: #A78BFA;
-    --dataviz-5: #34D399;
-    --dataviz-6: #FDE047;
+    --ring: #62C993;
+    --chart-1: #62C993;
+    --chart-2: #2D9CDB;
+    --chart-3: #F0BE68;
+    --chart-4: #A69CFF;
+    --chart-5: #B9D9C9;
+    --dataviz-1: #62C993;
+    --dataviz-2: #6EC5F0;
+    --dataviz-3: #F0BE68;
+    --dataviz-4: #A69CFF;
+    --dataviz-5: #F08A8A;
+    --dataviz-6: #94AAA1;
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: #3BA3E0;
+    --sidebar-primary: #62C993;
     --sidebar-primary-foreground: oklch(0.145 0 0);
     --sidebar-accent: oklch(0.269 0 0);
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: #3BA3E0;
+    --sidebar-ring: #62C993;
 }
 
 @layer base {
@@ -423,9 +423,9 @@ body {
    The image URL itself comes in as --login-rig, set by LoginPage. */
 
 :root {
-  --ogdcl-navy: #071A2B;
-  --ogdcl-blue: #1B73BA;
-  --ogdcl-green: #5BC49A;
+  --ogdcl-navy: #09231A;
+  --ogdcl-blue: #147A4A;
+  --ogdcl-green: #68D391;
 }
 
 .login-brand-bg {

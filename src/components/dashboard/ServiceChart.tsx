@@ -1,3 +1,4 @@
+import { useId } from "react"
 import {
   Area,
   Bar,
@@ -5,6 +6,9 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
+  Funnel,
+  FunnelChart,
+  LabelList,
   Line,
   Pie,
   PieChart,
@@ -13,6 +17,9 @@ import {
   PolarRadiusAxis,
   Radar,
   RadarChart,
+  RadialBar,
+  RadialBarChart,
+  Treemap,
   XAxis,
   YAxis,
 } from "recharts"
@@ -20,6 +27,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { activeChartPayload } from "@/lib/chartClick"
 import { fmtMoney, type CategoryTotal } from "@/lib/dashboard"
 import { useDisplayStore, type ChartType } from "@/store/useDisplayStore"
+import { useIsMobile } from "@/hooks/useIsMobile"
+import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, DonutDefs, donutActiveShape, donutGradientId } from "./donut3d"
 
 const config = {
   total: { label: "Expenditure (incl. tax)", color: "var(--dataviz-3)" },
@@ -41,6 +50,8 @@ export function ServiceChart({
   onDrill: (title: string, invoices: CategoryTotal["invoices"]) => void
 }) {
   const animate = useDisplayStore((s) => s.animationsEnabled)
+  const isMobile = useIsMobile()
+  const gid = useId()
 
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No service data</div>
@@ -55,6 +66,7 @@ export function ServiceChart({
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <PieChart>
+          {isMobile && <DonutDefs idBase={gid} colors={PIE_COLORS} />}
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
           <Pie
             data={top}
@@ -62,12 +74,20 @@ export function ServiceChart({
             nameKey="service"
             innerRadius="45%"
             outerRadius="80%"
+            paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
+            cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
+            activeShape={isMobile ? donutActiveShape : undefined}
             isAnimationActive={animate}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
           >
             {top.map((d, i) => (
-              <Cell key={d.service} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+              <Cell
+                key={d.service}
+                fill={isMobile ? `url(#${donutGradientId(gid, i % PIE_COLORS.length)})` : PIE_COLORS[i % PIE_COLORS.length]}
+                stroke={isMobile ? "var(--card)" : undefined}
+                strokeWidth={isMobile ? 2 : undefined}
+              />
             ))}
           </Pie>
         </PieChart>
@@ -85,6 +105,64 @@ export function ServiceChart({
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
           <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
         </RadarChart>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "treemap") {
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <Treemap
+          data={top.map((d) => ({ service: d.service, total: d.total }))}
+          dataKey="total"
+          nameKey="service"
+          type="flat"
+          aspectRatio={1.7}
+          colorPanel={PIE_COLORS}
+          stroke="var(--card)"
+          isAnimationActive={animate}
+          onClick={(node) => {
+            const item = top.find((d) => d.service === node.name)
+            if (item) drill(item)
+          }}
+        >
+          <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+        </Treemap>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "radial") {
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <RadialBarChart
+          data={top}
+          innerRadius="18%"
+          outerRadius="82%"
+          startAngle={90}
+          endAngle={-270}
+          onClick={(e) => drill(activeChartPayload<CategoryTotal>(e))}
+        >
+          <PolarAngleAxis type="number" domain={[0, "dataMax"]} tick={false} />
+          <RadialBar dataKey="total" background={{ fill: "var(--muted)" }} cornerRadius={8} isAnimationActive={animate}>
+            {top.map((d, i) => <Cell key={d.service} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+          </RadialBar>
+          <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+        </RadialBarChart>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "funnel") {
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <FunnelChart onClick={(e) => drill(activeChartPayload<CategoryTotal>(e))}>
+          <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+          <Funnel data={top} dataKey="total" nameKey="service" isAnimationActive={animate}>
+            {top.map((d, i) => <Cell key={d.service} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+            <LabelList position="right" fill="var(--foreground)" stroke="none" dataKey="service" fontSize={10} />
+          </Funnel>
+        </FunnelChart>
       </ChartContainer>
     )
   }

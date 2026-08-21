@@ -6,8 +6,8 @@
   "scope": "/Expenditrack1/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#0A86C8",
-  "background_color": "#FFFFFF",
+  "theme_color": "#147A4A",
+  "background_color": "#F7FAF8",
   "screenshots": [
     {
       "src": "/Expenditrack1/favicon.svg",

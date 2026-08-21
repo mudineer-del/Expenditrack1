@@ -12,6 +12,8 @@ import {
   PolarRadiusAxis,
   Radar,
   RadarChart,
+  Scatter,
+  ScatterChart,
   XAxis,
   YAxis,
 } from "recharts"
@@ -76,6 +78,29 @@ export function TrendChart({ data, onDrill }: { data: TrendPoint[]; onDrill: (ti
     )
   }
 
+  if (chartType === "scatter") {
+    const scatterData = data.map((point, index) => ({ ...point, index }))
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <ScatterChart onClick={(e) => drill(activeChartPayload<TrendPoint>(e))} className="cursor-pointer">
+          <CartesianGrid />
+          <XAxis
+            type="number"
+            dataKey="index"
+            domain={[0, Math.max(0, data.length - 1)]}
+            tickLine={false}
+            axisLine={false}
+            fontSize={11}
+            tickFormatter={(v) => data[Number(v)]?.month ?? ""}
+          />
+          <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
+          <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+          <Scatter data={scatterData} dataKey="total" fill="var(--color-total)" isAnimationActive={animate} />
+        </ScatterChart>
+      </ChartContainer>
+    )
+  }
+
   return (
     <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
       <ComposedChart data={data} onClick={(e) => drill(activeChartPayload<TrendPoint>(e))} className="cursor-pointer">
@@ -84,6 +109,12 @@ export function TrendChart({ data, onDrill }: { data: TrendPoint[]; onDrill: (ti
         <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
         <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
         {chartType === "bar" && <Bar dataKey="total" fill="var(--color-total)" radius={[8, 8, 3, 3]} isAnimationActive={animate} />}
+        {chartType === "composed" && (
+          <>
+            <Bar dataKey="total" fill="var(--color-total)" fillOpacity={0.45} radius={[8, 8, 3, 3]} isAnimationActive={animate} />
+            <Line type="monotone" dataKey="total" stroke="var(--foreground)" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={animate} />
+          </>
+        )}
         {chartType === "line" && (
           <Line
             type="monotone"
