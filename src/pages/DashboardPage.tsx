@@ -1,12 +1,18 @@
 import {
+  Award,
+  Banknote,
   Building2,
+  CalendarDays,
   CheckCircle2,
-  Clock3,
-  DollarSign,
-  History,
+  CircleDollarSign,
+  Coins,
+  Droplets,
+  FileCheck2,
+  Hourglass,
   Layers,
-  List,
-  ShieldCheck,
+  Receipt,
+  Timer,
+  TrendingUp,
   Wallet,
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -139,7 +145,7 @@ export default function DashboardPage() {
     return (
       <div className="grid gap-4">
         <Skeleton className="h-20 w-full" />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-28 w-full" />
           ))}
@@ -283,10 +289,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="min-w-0 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+      <div className="min-w-0 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <KpiTile
           hero
-          icon={<List />}
+          icon={<Droplets />}
           accent="var(--chart-1)"
           label="Total invoices"
           value={stats.k.count.toLocaleString()}
@@ -300,7 +306,7 @@ export default function DashboardPage() {
         />
         <KpiTile
           hero
-          icon={<Wallet />}
+          icon={<Banknote />}
           accent="var(--chart-2)"
           label="Total value (incl. tax)"
           value={fmtMoney(stats.k.totalIncl)}
@@ -323,7 +329,7 @@ export default function DashboardPage() {
           onClick={() => onDrill("Cleared Invoices", clearedInvoices(rows))}
         />
         <KpiTile
-          icon={<Clock3 />}
+          icon={<Hourglass />}
           iconClassName="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
           accent="#d97706"
           label="Pending / in process"
@@ -335,7 +341,7 @@ export default function DashboardPage() {
         {dashVendor !== "ALL" && contractCost > 0 && (
           <>
             <KpiTile
-              icon={<DollarSign />}
+              icon={<CircleDollarSign />}
               accent="var(--chart-3)"
               label="Contract cost"
               value={fmtMoney(contractCost)}
@@ -343,7 +349,7 @@ export default function DashboardPage() {
               onClick={() => onDrill(`Invoices — ${dashVendor}`, rows)}
             />
             <KpiTile
-              icon={<Wallet />}
+              icon={<Coins />}
               accent="var(--chart-4)"
               label="Remaining"
               value={fmtMoney(contractCost - stats.k.totalIncl)}
@@ -355,9 +361,9 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="min-w-0 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+      <div className="min-w-0 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
         <KpiTile
-          icon={<History />}
+          icon={<TrendingUp />}
           accent="var(--chart-1)"
           label="This quarter"
           value={fmtMoney(stats.thisQTotal)}
@@ -367,7 +373,7 @@ export default function DashboardPage() {
           }
         />
         <KpiTile
-          icon={<History />}
+          icon={<CalendarDays />}
           accent="var(--chart-2)"
           label={`Fiscal year ${stats.latestYr || "—"}`}
           value={fmtMoney(stats.ytdTotal)}
@@ -375,7 +381,7 @@ export default function DashboardPage() {
           onClick={() => onDrill(`Invoices — FY ${stats.latestYr ?? ""}`, invoicesInYear(rows, stats.latestYr))}
         />
         <KpiTile
-          icon={<DollarSign />}
+          icon={<Receipt />}
           iconClassName="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
           accent="#16a34a"
           label="Avg invoice value"
@@ -385,7 +391,7 @@ export default function DashboardPage() {
           onClick={() => onDrill(dashVendor === "ALL" ? "All Invoices" : `Invoices — ${dashVendor}`, rows)}
         />
         <KpiTile
-          icon={<Clock3 />}
+          icon={<Timer />}
           iconClassName="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
           accent="#d97706"
           label="Avg days to clear"
@@ -394,7 +400,7 @@ export default function DashboardPage() {
           onClick={() => onDrill("Invoices with recorded clearance time", invoicesWithClearTime(rows))}
         />
         <KpiTile
-          icon={<Building2 />}
+          icon={<Award />}
           iconClassName="bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
           accent="#dc2626"
           label="Top contractor share"
@@ -403,7 +409,7 @@ export default function DashboardPage() {
           onClick={() => stats.topVendor && onDrill(`Invoices — ${stats.topVendor[0]}`, invoicesForVendorName(rows, stats.topVendor[0]))}
         />
         <KpiTile
-          icon={<ShieldCheck />}
+          icon={<FileCheck2 />}
           accent="var(--chart-5)"
           label="Active contracts"
           value={stats.activeContracts.length}

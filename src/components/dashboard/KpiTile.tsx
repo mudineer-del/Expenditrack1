@@ -16,7 +16,7 @@ export function KpiTile({
 }: {
   icon: ReactNode
   iconClassName?: string
-  /** CSS color (e.g. "var(--chart-1)") used for the left accent bar, icon tint, and a faint background wash — gives each tile its own color identity, matching VendorCard's per-vendor coloring. */
+  /** CSS color (e.g. "var(--chart-1)") used for the icon badge, border tint, and background wash — gives each tile its own color identity, matching VendorCard's per-vendor coloring. */
   accent?: string
   label: string
   value: ReactNode
@@ -38,19 +38,21 @@ export function KpiTile({
         "ogdcl-hoverable relative overflow-hidden rounded-2xl md:flex md:flex-col md:items-stretch md:gap-1 md:rounded-lg md:border md:bg-card md:p-[var(--tile-pad)] md:pl-[calc(var(--tile-pad)+0.375rem)] md:shadow-none",
         hero
           ? "bg-[var(--ogdcl-navy)] p-5 text-white shadow-lg md:text-foreground"
-          : "flex flex-row items-center gap-3.5 border bg-card p-4 pl-[1.375rem] shadow-sm",
-        onClick && "cursor-pointer transition-colors active:scale-[0.99] md:active:scale-100",
+          : "flex flex-col gap-2.5 border-2 bg-card p-3.5 shadow-sm md:flex-row md:items-center md:gap-3.5 md:border md:p-[var(--tile-pad)]",
+        onClick && "cursor-pointer transition-colors active:scale-[0.98] md:active:scale-100",
         onClick && !hero && "hover:bg-muted/50",
         onClick && hero && "hover:brightness-110 md:hover:bg-muted/50 md:hover:brightness-100"
       )}
       style={
         !hero && accent
-          ? { backgroundImage: `linear-gradient(to bottom right, color-mix(in oklch, ${accent} 7%, var(--card)), var(--card) 70%)` }
+          ? {
+              backgroundImage: `linear-gradient(to bottom right, color-mix(in oklch, ${accent} 13%, var(--card)), var(--card) 65%)`,
+              borderColor: `color-mix(in oklch, ${accent} 35%, var(--border))`,
+            }
           : undefined
       }
       onClick={onClick}
     >
-      {accent && !hero && <span className="absolute top-0 left-0 h-full w-1.5 md:w-1" style={{ backgroundColor: accent }} />}
       {trend && (
         <div className="hidden md:block md:absolute md:top-[var(--tile-pad)] md:right-[var(--tile-pad)]" style={!hero && accent ? { color: accent } : undefined}>
           {trend}
@@ -72,6 +74,7 @@ export function KpiTile({
             </div>
           )}
           {/* Desktop — identical structure/markup to the non-hero tile below */}
+          <span className="hidden md:absolute md:top-0 md:left-0 md:block md:h-full md:w-1" style={{ backgroundColor: accent }} />
           <div
             className={cn(
               "hidden size-[var(--tile-icon)] shrink-0 items-center justify-center rounded-md md:mb-1 md:flex [&_svg]:size-[var(--tile-icon-svg)]",
@@ -87,22 +90,38 @@ export function KpiTile({
         </>
       ) : (
         <>
+          {accent && <span className="hidden md:absolute md:top-0 md:left-0 md:block md:h-full md:w-1" style={{ backgroundColor: accent }} />}
+          {/* Mobile: square-ish card — colorful icon badge on top, value +
+              label stacked below. The parent grid renders these 2-per-row. */}
+          <div className="flex items-center justify-between md:hidden">
+            <div
+              className="flex size-11 items-center justify-center rounded-xl shadow-sm [&_svg]:size-5 [&_svg]:text-white"
+              style={{ backgroundColor: accent ?? "var(--primary)" }}
+            >
+              {icon}
+            </div>
+            {trend && <div style={accent ? { color: accent } : undefined}>{trend}</div>}
+          </div>
+          <div className="min-w-0 md:hidden">
+            <div className={cn("text-2xl font-extrabold tabular-nums", valueClassName)}>{value}</div>
+            <div className="mt-0.5 truncate text-[13px] font-semibold text-foreground/80">{label}</div>
+            {sub && <div className="mt-1 truncate text-xs text-muted-foreground">{sub}</div>}
+          </div>
+
+          {/* Desktop: unchanged compact tile */}
           <div
             className={cn(
-              "flex size-11 shrink-0 items-center justify-center rounded-xl [&_svg]:size-5 md:mb-1 md:size-[var(--tile-icon)] md:rounded-md md:[&_svg]:size-[var(--tile-icon-svg)]",
+              "hidden md:mb-1 md:flex md:size-[var(--tile-icon)] md:shrink-0 md:items-center md:justify-center md:rounded-md [&_svg]:size-[var(--tile-icon-svg)]",
               iconClassName ?? (accent ? undefined : "bg-primary/10 text-primary")
             )}
             style={accent && !iconClassName ? { backgroundColor: `color-mix(in oklch, ${accent} 16%, transparent)`, color: accent } : undefined}
           >
             {icon}
           </div>
-          <div className="min-w-0 flex-1 md:flex-none">
-            <div className="flex items-baseline justify-between gap-2 md:block">
-              <span className="min-w-0 truncate text-[13px] text-muted-foreground md:text-xs">{label}</span>
-              <span className={cn("shrink-0 text-xl font-bold tabular-nums md:hidden", valueClassName)}>{value}</span>
-            </div>
-            <div className={cn("hidden text-[length:var(--tile-value)] font-semibold tabular-nums md:block", valueClassName)}>{value}</div>
-            {sub && <div className={cn("mt-0.5 text-[13px] text-muted-foreground md:mt-0 md:text-xs", subClassName)}>{sub}</div>}
+          <div className="hidden min-w-0 md:block md:flex-none">
+            <span className="min-w-0 truncate text-xs text-muted-foreground">{label}</span>
+            <div className={cn("text-[length:var(--tile-value)] font-semibold tabular-nums", valueClassName)}>{value}</div>
+            {sub && <div className={cn("mt-0.5 text-xs text-muted-foreground", subClassName)}>{sub}</div>}
           </div>
         </>
       )}
