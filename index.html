@@ -1072,6 +1072,33 @@ button, a, input, select, textarea, label, summary,
   table.mobile-cards tbody td.mc-empty{display:block; text-align:center; padding:0;}
   table.mobile-cards .empty{padding:34px 16px;}
   table.mobile-cards .status-pill, table.mobile-cards .tag-soft, table.mobile-cards .tag-well{white-space:normal;}
+
+  /* Apply mobile-cards to all table types below 768px */
+  @media (max-width:768px){
+    table.data-table, table.rpt-table, table.dd-table, .dd-tablewrap table{
+      width:100%; border-collapse:collapse;
+    }
+    table.data-table thead, table.rpt-table thead, table.dd-table thead{display:none;}
+    table.data-table tbody, table.data-table tr, table.rpt-table tbody, table.rpt-table tr, table.dd-table tbody, table.dd-table tr{
+      display:block; width:100%;
+    }
+    table.data-table tr, table.rpt-table tr, table.dd-table tr{
+      margin-bottom:12px; border-radius:8px; border:1px solid var(--border); background:var(--card);
+    }
+    html.dark-mode table.data-table tr, html.dark-mode table.rpt-table tr, html.dark-mode table.dd-table tr{
+      border-color:#333;
+    }
+    table.data-table td, table.rpt-table td, table.dd-table td{
+      display:block; width:100%; padding:10px; text-align:left; font-size:13px;
+    }
+    table.data-table td::before, table.rpt-table td::before, table.dd-table td::before{
+      display:block; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--muted); margin-bottom:4px; opacity:0.7;
+      content: attr(data-label);
+    }
+    table.data-table td[data-label=""]::before, table.rpt-table td[data-label=""]::before, table.dd-table td[data-label=""]::before{display:none;}
+    table.data-table .empty, table.rpt-table .empty, table.dd-table .empty{text-align:center; padding:40px 20px;}
+  }
+
   /* The bulk-select bar sits above the cards, not inside a table shell */
   .mobile-cards-wrap .bulk-bar{
     flex-wrap:wrap; gap:8px 14px; margin:0 10px 10px;
@@ -5766,7 +5793,25 @@ document.addEventListener('keydown', (e)=>{
   if(e.key === 'Escape' && state.sidebarOpen){ state.sidebarOpen = false; render(); }
 });
 
+function autoLabelTableCells(){
+  document.querySelectorAll('table').forEach(table=>{
+    const thead = table.querySelector('thead');
+    if(!thead) return;
+    const headerCells = Array.from(thead.querySelectorAll('th'));
+    const headerLabels = headerCells.map((th,i)=>({i, text: (th.textContent||'').trim()}));
+    const tbody = table.querySelector('tbody');
+    if(!tbody) return;
+    tbody.querySelectorAll('tr').forEach(tr=>{
+      Array.from(tr.querySelectorAll('td')).forEach((td,i)=>{
+        const label = headerLabels.find(h=>h.i===i)?.text || '';
+        if(label && !td.hasAttribute('data-label')) td.setAttribute('data-label', label);
+      });
+    });
+  });
+}
+
 function bindShell(){
+  autoLabelTableCells();
   const pinBtn = el('sidebarPinToggle');
   if(pinBtn) pinBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.sidebarPinned = !state.sidebarPinned; render(); });
   document.querySelectorAll('[data-nav]').forEach(n=>n.addEventListener('click', ()=>{ state.page=n.dataset.nav; state.pageNum=1; state.sidebarOpen=false; render(); }));
