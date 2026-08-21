@@ -4,6 +4,7 @@ import {
   Clock3,
   DollarSign,
   History,
+  Layers,
   List,
   ShieldCheck,
   Wallet,
@@ -52,6 +53,7 @@ import { useInvoicesQuery } from "@/hooks/useInvoices"
 import { getContractorLogo, useContractorLogosQuery } from "@/lib/contractorLogos"
 import { useReferenceLists } from "@/lib/referenceLists"
 import { useAppStore } from "@/store/useAppStore"
+import { cn } from "@/lib/utils"
 import { checkContractNotifications, loadNotifyConfig, loadNotifyPrefs, maybeSendWeeklyDigest } from "@/lib/notifications"
 
 function PctSub({ pct, label }: { pct: number | null; label: string }) {
@@ -167,46 +169,118 @@ export default function DashboardPage() {
       <SpendingTicker contracts={deptContracts} invoices={deptInvoices} />
 
       {refLists.departments.length > 1 && (
-        <div className="min-w-0 flex flex-wrap gap-2 border-b pb-3">
-          <Button
-            size="sm"
-            variant={activeDept === "ALL" ? "default" : "outline"}
-            onClick={() => setActiveDept("ALL")}
-          >
-            All Departments
-          </Button>
-          {refLists.departments.map((d) => (
-            <Button
-              key={d}
-              size="sm"
-              variant={activeDept === d ? "default" : "outline"}
-              onClick={() => setActiveDept(d)}
+        <div className="min-w-0">
+          {/* Square card grid below md — replaces the pill row entirely on
+              mobile rather than just restyling it, since a wrapped pill row
+              reads as desktop UI carried over, not a native mobile picker. */}
+          <div className="grid grid-cols-3 gap-3 md:hidden">
+            <button
+              type="button"
+              onClick={() => setActiveDept("ALL")}
+              className={cn(
+                "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition-colors active:scale-[0.97]",
+                activeDept === "ALL"
+                  ? "border-primary bg-primary/10 text-primary shadow-sm"
+                  : "border-border text-muted-foreground active:bg-muted"
+              )}
             >
-              {d}
+              <Layers className="size-5" />
+              <span className="line-clamp-2 text-[11px] leading-tight font-medium">All Departments</span>
+            </button>
+            {refLists.departments.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setActiveDept(d)}
+                className={cn(
+                  "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition-colors active:scale-[0.97]",
+                  activeDept === d
+                    ? "border-primary bg-primary/10 text-primary shadow-sm"
+                    : "border-border text-muted-foreground active:bg-muted"
+                )}
+              >
+                <Building2 className="size-5" />
+                <span className="line-clamp-2 text-[11px] leading-tight font-medium">{d}</span>
+              </button>
+            ))}
+          </div>
+          <div className="hidden md:flex md:flex-wrap md:gap-2 md:border-b md:pb-3">
+            <Button
+              size="sm"
+              variant={activeDept === "ALL" ? "default" : "outline"}
+              onClick={() => setActiveDept("ALL")}
+            >
+              All Departments
             </Button>
-          ))}
+            {refLists.departments.map((d) => (
+              <Button
+                key={d}
+                size="sm"
+                variant={activeDept === d ? "default" : "outline"}
+                onClick={() => setActiveDept(d)}
+              >
+                {d}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="min-w-0 flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant={dashVendor === "ALL" ? "default" : "outline"}
-          onClick={() => setDashVendor("ALL")}
-        >
-          All
-        </Button>
-        {dataVendors.map((v) => (
-          <Button
-            key={v}
-            size="sm"
-            variant={dashVendor === v ? "default" : "outline"}
-            style={dashVendor === v ? { backgroundColor: vendorColor(v), borderColor: vendorColor(v) } : undefined}
-            onClick={() => setDashVendor(v)}
+      <div className="min-w-0">
+        <div className="grid grid-cols-3 gap-3 md:hidden">
+          <button
+            type="button"
+            onClick={() => setDashVendor("ALL")}
+            className={cn(
+              "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition-colors active:scale-[0.97]",
+              dashVendor === "ALL"
+                ? "border-primary bg-primary/10 text-primary shadow-sm"
+                : "border-border text-muted-foreground active:bg-muted"
+            )}
           >
-            {v}
+            <Wallet className="size-5" />
+            <span className="text-[11px] leading-tight font-medium">All</span>
+          </button>
+          {dataVendors.map((v) => {
+            const active = dashVendor === v
+            const color = vendorColor(v)
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setDashVendor(v)}
+                className={cn(
+                  "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition-colors active:scale-[0.97]",
+                  active ? "shadow-sm" : "border-border active:bg-muted"
+                )}
+                style={active ? { borderColor: color, backgroundColor: `color-mix(in oklch, ${color} 10%, transparent)` } : undefined}
+              >
+                <ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={color} size="sm" />
+                <span className="line-clamp-2 text-[11px] leading-tight font-medium">{v}</span>
+              </button>
+            )
+          })}
+        </div>
+        <div className="hidden md:flex md:flex-wrap md:gap-2">
+          <Button
+            size="sm"
+            variant={dashVendor === "ALL" ? "default" : "outline"}
+            onClick={() => setDashVendor("ALL")}
+          >
+            All
           </Button>
-        ))}
+          {dataVendors.map((v) => (
+            <Button
+              key={v}
+              size="sm"
+              variant={dashVendor === v ? "default" : "outline"}
+              style={dashVendor === v ? { backgroundColor: vendorColor(v), borderColor: vendorColor(v) } : undefined}
+              onClick={() => setDashVendor(v)}
+            >
+              {v}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="min-w-0 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
