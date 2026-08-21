@@ -46,6 +46,7 @@ import {
   monthlyTrend,
   pendingInvoices,
   serviceBreakdown,
+  statusBreakdown,
   typeInvoiceCounts,
   vendorBreakdown,
   vendorColor,
@@ -86,6 +87,7 @@ export default function DashboardPage() {
   const serviceChartType = useDisplayStore((s) => s.serviceChartType)
   const vendorChartType = useDisplayStore((s) => s.vendorChartType)
   const breakdownChartType = useDisplayStore((s) => s.breakdownChartType)
+  const statusChartType = useDisplayStore((s) => s.statusChartType)
   const setChartType = useDisplayStore((s) => s.setChartType)
 
   const invoices = invoicesQuery.data ?? []
@@ -131,6 +133,7 @@ export default function DashboardPage() {
   const countSparkline = recentTrend.map((t) => t.invoices.length)
   const avgSparkline = recentTrend.map((t) => (t.invoices.length ? t.total / t.invoices.length : 0))
   const byService = useMemo(() => serviceBreakdown(rows), [rows])
+  const byStatus = useMemo(() => statusBreakdown(rows), [rows])
   const byVendor = useMemo(() => vendorBreakdown(rows), [rows])
   const byVendorService = useMemo(() => vendorServiceBreakdown(rows), [rows])
   const byVendorType = useMemo(() => vendorTypeBreakdown(rows), [rows])
@@ -509,6 +512,13 @@ export default function DashboardPage() {
             ) : (
               <TypeCountChart data={byTypeCount} onDrill={onDrill} />
             )}
+          </div>
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Expenditure by Status</span>
+              <ChartTypeMenu value={statusChartType} onChange={(t) => setChartType("statusChartType", t)} />
+            </div>
+            <ServiceChart data={byStatus} chartType={statusChartType} onDrill={onDrill} />
           </div>
         </div>
       </div>

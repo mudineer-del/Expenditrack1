@@ -289,7 +289,10 @@ function ChartLegendContent({
   return (
     <div
       className={cn(
-        "flex items-center justify-center gap-4",
+        // flex-wrap matters here: with many series (e.g. 10 contractors) or
+        // long labels, an unwrapped row silently overflows its container on
+        // a narrow screen instead of just taking a second line.
+        "flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5",
         verticalAlign === "top" ? "pb-3" : "pt-3",
         className
       )}

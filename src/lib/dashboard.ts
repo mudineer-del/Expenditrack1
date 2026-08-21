@@ -339,6 +339,22 @@ export function serviceBreakdown(rows: Invoice[]): CategoryTotal[] {
     .sort((a, b) => b.total - a.total)
 }
 
+/** Expenditure by status (e.g. how much is sitting in "Under Process" vs
+ *  "Cleared"), shaped as CategoryTotal so it can reuse ServiceChart as-is —
+ *  the component's tooltip/axis formatting is money-shaped (fmtMoney), so
+ *  this sums amountInclTax rather than counting invoices; the existing
+ *  Cleared/Pending KPI tiles already cover the count angle. */
+export function statusBreakdown(rows: Invoice[]): CategoryTotal[] {
+  const byStatus: Record<string, Invoice[]> = {}
+  rows.forEach((r) => {
+    const s = r.status || "Unspecified"
+    ;(byStatus[s] ||= []).push(r)
+  })
+  return Object.entries(byStatus)
+    .map(([service, invoices]) => ({ service, total: invoices.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0), invoices }))
+    .sort((a, b) => b.total - a.total)
+}
+
 export interface VendorTotal {
   vendor: string
   total: number
