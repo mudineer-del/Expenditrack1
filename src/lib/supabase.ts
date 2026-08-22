@@ -13,6 +13,18 @@ const SB_ENV: SbConfig = {
 
 const CONFIG_KEY = "sbConfig"
 
+// supabase-js throws synchronously from createClient() on an empty URL — with no
+// config yet (no VITE_SUPABASE_* at build time and nothing saved in Settings →
+// Cloud Sync), that exception was escaping from useAuthStore's initialize(), which
+// runs on app boot before React even renders the login screen, so the whole app
+// crashed to a blank white page instead of letting the user reach the sign-in
+// or settings UI. A syntactically-valid placeholder keeps createClient happy;
+// real Supabase calls still fail (network error), which existing per-page
+// isError states already surface, e.g. "Check your connection to Supabase in
+// Settings → Cloud Sync."
+const PLACEHOLDER_URL = "https://placeholder-project.supabase.co"
+const PLACEHOLDER_KEY = "placeholder-anon-key"
+
 let client: SupabaseClient | null = null
 let currentConfig: SbConfig | null = null
 
@@ -25,7 +37,7 @@ function loadConfig(): SbConfig {
 export function getSupabaseClient(): SupabaseClient {
   if (client && currentConfig) return client
   currentConfig = loadConfig()
-  client = createClient(currentConfig.url, currentConfig.anonKey, {
+  client = createClient(currentConfig.url || PLACEHOLDER_URL, currentConfig.anonKey || PLACEHOLDER_KEY, {
     auth: { persistSession: true, autoRefreshToken: true },
   })
   return client
