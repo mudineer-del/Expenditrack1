@@ -30,6 +30,14 @@ jobs:
       - run: npm run build
         env:
           GITHUB_PAGES: "true"
+          # Supabase's anon key is designed to be public in client bundles — access
+          # control is enforced server-side via Row Level Security, not by keeping
+          # this secret. Without these, the deployed build has no project to talk
+          # to at all: any visitor without a Settings -> Cloud Sync config saved in
+          # their own browser gets "Failed to fetch" on every sign-in attempt,
+          # since the app falls back to a non-existent placeholder project.
+          VITE_SUPABASE_URL: https://mwgzyguymlqyvroivhsf.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13Z3p5Z3V5bWxxeXZyb2l2aHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4NzQ1NjksImV4cCI6MjEwMDQ1MDU2OX0.seJUeVuOr1E3-pDQPIkhF6di8_gF0sty87sZp3dvEDg
 
       - uses: actions/upload-pages-artifact@v3
         with:
