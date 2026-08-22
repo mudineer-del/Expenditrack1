@@ -64,7 +64,7 @@ import { cn } from "@/lib/utils"
 import { checkContractNotifications, loadNotifyConfig, loadNotifyPrefs, maybeSendWeeklyDigest } from "@/lib/notifications"
 
 const PICKER_NEUTRAL = "var(--muted-foreground)"
-const PICKER_PALETTE = ["var(--primary)"]
+const PICKER_PALETTE = ["var(--dataviz-1)", "var(--dataviz-2)", "var(--dataviz-3)", "var(--dataviz-4)", "var(--dataviz-5)", "var(--dataviz-6)"]
 
 /** Mobile-only department/vendor picker card. A flat gray box with a color
  *  only on the active one read as lifeless — every card now carries its own
@@ -134,10 +134,15 @@ function PickerCard({
  *  moment you tap a bar/slice/point — :active applies to ancestors for the duration of
  *  the press, so the whole card responds even though the click lands deep in the SVG. */
 function ChartCard({
+  accent,
   title,
   action,
   children,
 }: {
+  /** Each chart card gets its own color identity (drawn from the warm --dataviz palette)
+   *  instead of every card sharing one flat --primary blue — otherwise five differently
+   *  titled cards read as one indistinguishable block. */
+  accent: string
   title: React.ReactNode
   action?: React.ReactNode
   children: React.ReactNode
@@ -154,21 +159,20 @@ function ChartCard({
         // click has already been resolved against the pre-press geometry.
         "group relative overflow-hidden rounded-2xl border bg-card p-4 shadow-sm transition-shadow duration-200 ease-out md:p-5",
         "hover:shadow-md",
-        "active:scale-[0.995] active:duration-100",
         "transition-transform active:scale-[0.99] active:duration-100 active:ease-in md:active:scale-[0.995]"
       )}
       style={
         {
-          borderColor: "color-mix(in oklch, var(--primary) 16%, var(--border))",
-          backgroundImage: "linear-gradient(155deg, color-mix(in oklch, var(--primary) 4%, var(--card)) 0%, var(--card) 62%)",
-          "--accent-shadow": "color-mix(in oklch, var(--primary) 20%, var(--border))",
-          "--accent-glow": "color-mix(in oklch, var(--primary) 30%, transparent)",
+          borderColor: `color-mix(in oklch, ${accent} 22%, var(--border))`,
+          backgroundImage: `linear-gradient(155deg, color-mix(in oklch, ${accent} 7%, var(--card)) 0%, var(--card) 62%)`,
+          "--accent-shadow": `color-mix(in oklch, ${accent} 25%, var(--border))`,
+          "--accent-glow": `color-mix(in oklch, ${accent} 35%, transparent)`,
         } as React.CSSProperties
       }
     >
       <span
         className="absolute top-0 left-0 h-full w-1 opacity-70 transition-opacity duration-300 group-hover:opacity-100 md:top-0 md:h-1 md:w-full"
-        style={{ backgroundColor: "var(--primary)" }}
+        style={{ backgroundColor: accent }}
       />
       <div className="mb-2 flex items-center justify-between gap-2 md:mb-3">
         <span className="text-xs font-medium text-muted-foreground md:text-sm md:font-semibold md:text-foreground">{title}</span>
@@ -596,24 +600,28 @@ export default function DashboardPage() {
         </div>
         <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
           <ChartCard
+            accent="var(--dataviz-1)"
             title="Monthly Expenditure Trend"
             action={<ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />}
           >
             <TrendChart data={trend} onDrill={onDrill} />
           </ChartCard>
           <ChartCard
+            accent="var(--dataviz-3)"
             title="Expenditure by Service"
             action={<ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />}
           >
             <ServiceChart data={byService} chartType={serviceChartType} onDrill={onDrill} />
           </ChartCard>
           <ChartCard
+            accent="var(--dataviz-4)"
             title={dashVendor === "ALL" ? "Invoice Value by Contractor" : `Invoice Value — ${dashVendor}`}
             action={<ChartTypeMenu options={CHART_OPTIONS.contractor} value={vendorChartType} onChange={(t) => setChartType("vendorChartType", t)} />}
           >
             <VendorChart data={byVendor} serviceBreakdown={byVendorService} typeBreakdown={byVendorType} onDrill={onDrill} />
           </ChartCard>
           <ChartCard
+            accent="var(--dataviz-2)"
             title={dashVendor === "ALL" ? "Invoices by Contractor" : `Invoices by Type — ${dashVendor}`}
             action={<ChartTypeMenu options={CHART_OPTIONS.invoices} value={breakdownChartType} onChange={(t) => setChartType("breakdownChartType", t)} />}
           >
@@ -624,6 +632,7 @@ export default function DashboardPage() {
             )}
           </ChartCard>
           <ChartCard
+            accent="var(--dataviz-5)"
             title="Expenditure by Status"
             action={<ChartTypeMenu options={CHART_OPTIONS.status} value={statusChartType} onChange={(t) => setChartType("statusChartType", t)} />}
           >
