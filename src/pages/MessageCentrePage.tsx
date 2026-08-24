@@ -95,7 +95,7 @@ export default function MessageCentrePage() {
 
   if (messagesQuery.isLoading || profilesQuery.isLoading) {
     return (
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-[32rem] w-full" />
       </div>

@@ -34,11 +34,11 @@ const ACTIONS: ActivityAction[] = ["Import", "Add", "Edit", "Delete", "Undo", "R
 
 const ACTION_COLOR: Record<ActivityAction, string> = {
   Import: "#6d5fd6",
-  Add: "#1c8a4b",
-  Edit: "#c8781c",
-  Delete: "#c23b3b",
-  Undo: "#5b7086",
-  Restore: "#155a82",
+  Add: "var(--status-cleared)",
+  Edit: "var(--status-under)",
+  Delete: "var(--status-returned)",
+  Undo: "var(--dataviz-6)",
+  Restore: "var(--dataviz-5)",
 }
 
 function fmtDateTime(ts: number): string {
@@ -129,7 +129,7 @@ export default function ActivityLogPage() {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 gap-4">
       {newCount > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary">
           <span className="flex size-2 shrink-0 rounded-full bg-primary" />
@@ -311,3 +311,4 @@ export default function ActivityLogPage() {
     </div>
   )
 }
+

@@ -97,7 +97,7 @@ export default function ReportsPage() {
 
   if (invoicesQuery.isLoading || contractsQuery.isLoading) {
     return (
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-72 w-full" />
       </div>
@@ -113,13 +113,19 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 gap-4">
       <div className="rounded-lg border bg-card p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-semibold">Financial Reporting</h3>
-          <div className="flex gap-1 rounded-lg border bg-muted/50 p-1">
+          <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg border bg-muted/50 p-1">
             {MODE_TABS.map((t) => (
-              <Button key={t.key} size="sm" variant={mode === t.key ? "default" : "ghost"} onClick={() => setMode(t.key)}>
+              <Button
+                key={t.key}
+                size="sm"
+                variant={mode === t.key ? "default" : "ghost"}
+                className="shrink-0"
+                onClick={() => setMode(t.key)}
+              >
                 {t.label}
               </Button>
             ))}

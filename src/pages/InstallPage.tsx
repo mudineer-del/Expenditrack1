@@ -29,15 +29,15 @@ const handleDownload = (url: string) => {
 export default function InstallPage() {
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Install Expenditrack</h1>
-        <p className="text-muted-foreground text-lg">
+      <div className="space-y-1.5 md:space-y-2">
+        <h1 className="text-xl font-bold md:text-3xl">Install Expenditrack</h1>
+        <p className="text-sm text-muted-foreground md:text-lg">
           Get the app on any device — web, mobile, or desktop
         </p>
       </div>
 
       {/* Installation Options Grid */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* PWA Option */}
         <Card className="border-2 hover:border-primary/50 transition-colors">
           <CardHeader>
@@ -49,25 +49,25 @@ export default function InstallPage() {
                 </CardTitle>
                 <CardDescription>Browser-based, works everywhere</CardDescription>
               </div>
-              <CheckCircle2 className="size-5 text-green-600" />
+              <CheckCircle2 className="size-5 text-status-cleared" />
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <ul className="text-sm space-y-2">
               <li className="flex gap-2">
-                <span className="text-green-600">✓</span>
+                <span className="text-status-cleared">✓</span>
                 <span>No download needed</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-green-600">✓</span>
+                <span className="text-status-cleared">✓</span>
                 <span>Works offline</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-green-600">✓</span>
+                <span className="text-status-cleared">✓</span>
                 <span>Auto-updates</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-green-600">✓</span>
+                <span className="text-status-cleared">✓</span>
                 <span>Install on home screen</span>
               </li>
             </ul>
@@ -95,19 +95,19 @@ export default function InstallPage() {
           <CardContent className="space-y-3">
             <ul className="text-sm space-y-2">
               <li className="flex gap-2">
-                <span className="text-blue-600">✓</span>
+                <span className="text-primary">✓</span>
                 <span>Native performance</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-blue-600">✓</span>
+                <span className="text-primary">✓</span>
                 <span>App Store/Play Store</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-blue-600">✓</span>
+                <span className="text-primary">✓</span>
                 <span>Push notifications</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-blue-600">✓</span>
+                <span className="text-primary">✓</span>
                 <span>Offline sync</span>
               </li>
             </ul>
@@ -264,7 +264,7 @@ export default function InstallPage() {
       </Card>
 
       {/* Installation Instructions */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Windows Installation</CardTitle>
@@ -314,7 +314,7 @@ export default function InstallPage() {
       {/* Quick Tips */}
       <Alert>
         <div className="flex gap-3">
-          <CheckCircle2 className="size-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <CheckCircle2 className="size-5 text-status-cleared flex-shrink-0 mt-0.5" />
           <AlertDescription>
             <strong>Tip:</strong> All platforms stay in sync. Use PWA on web, mobile app on phone, and desktop app on computer — your data automatically syncs everywhere!
           </AlertDescription>
@@ -382,3 +382,4 @@ export default function InstallPage() {
     </div>
   )
 }
+

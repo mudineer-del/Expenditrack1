@@ -1,4 +1,4 @@
-import { Bell, Cloud, Database, Key, Shield, Tags, Type, User, Download } from "lucide-react"
+import { Bell, Cloud, Database, Key, Palette, Shield, Tags, Type, User, Download } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
@@ -11,10 +11,12 @@ import { PasswordTab } from "@/components/settings/PasswordTab"
 import { ProfileTab } from "@/components/settings/ProfileTab"
 import { ReferenceListsTab } from "@/components/settings/ReferenceListsTab"
 import { SecurityTab } from "@/components/settings/SecurityTab"
+import { AppearanceTab } from "@/components/settings/AppearanceTab"
 
-type TabKey = "profile" | "security" | "password" | "notifications" | "labels" | "backup" | "desktop" | "lists" | "cloud"
+type TabKey = "appearance" | "profile" | "security" | "password" | "notifications" | "labels" | "backup" | "desktop" | "lists" | "cloud"
 
 const BASE_TABS: { key: TabKey; label: string; icon: typeof User }[] = [
+  { key: "appearance", label: "Appearance", icon: Palette },
   { key: "profile", label: "Profile", icon: User },
   { key: "security", label: "Security", icon: Shield },
   { key: "password", label: "Password", icon: Key },
@@ -35,7 +37,7 @@ export default function SettingsPage() {
   const tabs = [...BASE_TABS, ...ADMIN_TABS]
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[200px_1fr]">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[200px_1fr]">
       <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
         {tabs.map((t) => (
           <button
@@ -54,6 +56,7 @@ export default function SettingsPage() {
         ))}
       </nav>
       <div>
+        {tab === "appearance" && <AppearanceTab />}
         {tab === "profile" && <ProfileTab />}
         {tab === "security" && <SecurityTab />}
         {tab === "password" && <PasswordTab />}
@@ -67,3 +70,8 @@ export default function SettingsPage() {
     </div>
   )
 }
+
+
+
+
+

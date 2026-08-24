@@ -29,12 +29,12 @@ function TaBadge({ days }: { days: number | null }) {
   if (days === null) return <span className="text-muted-foreground">—</span>
   const cls =
     days <= 15
-      ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
+      ? "status-tone-cleared"
       : days <= 30
-        ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+        ? "bg-primary/10 text-primary"
         : days <= 60
-          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-          : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+          ? "status-tone-under"
+          : "status-tone-returned"
   return <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium", cls)}>{days}d</span>
 }
 
@@ -192,18 +192,25 @@ export function InvoicesTable({
     return (
       <div className="space-y-3 pb-20">
         {rows.length ? (
-          rows.map((invoice) => (
-            <InvoiceCard
+          rows.map((invoice, i) => (
+            // Staggered entrance, capped at the first dozen rows — beyond that the
+            // cumulative delay would just make a long list feel sluggish to load.
+            <div
               key={invoice.id}
-              invoice={invoice}
-              contractorLogos={contractorLogos}
-              isSelected={selected.has(invoice.id)}
-              canEdit={canEdit}
-              canDelete={canDelete}
-              onView={onView}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
+              className="animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-backwards duration-300 ease-out motion-reduce:animate-none"
+              style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
+            >
+              <InvoiceCard
+                invoice={invoice}
+                contractorLogos={contractorLogos}
+                isSelected={selected.has(invoice.id)}
+                canEdit={canEdit}
+                canDelete={canDelete}
+                onView={onView}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            </div>
           ))
         ) : (
           <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
@@ -300,3 +307,6 @@ export function InvoicesTable({
       </Table>
   )
 }
+
+
+

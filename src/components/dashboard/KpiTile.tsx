@@ -67,7 +67,7 @@ export function KpiTile({
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 [&_svg]:size-[18px]">{icon}</div>
             <span className="truncate text-[13px] text-white/60">{label}</span>
           </div>
-          <div className={cn("mt-3 text-3xl font-extrabold tabular-nums md:hidden", valueClassName)}>{value}</div>
+          <div className={cn("mt-3 text-2xl font-extrabold tabular-nums md:hidden", valueClassName)}>{value}</div>
           {sub && <div className="mt-1 text-[13px] text-white/70 md:hidden">{sub}</div>}
           {trend && (
             <div className="-mx-1 mt-4 md:hidden" style={{ color: "var(--ogdcl-green, #5BC49A)" }}>
@@ -104,7 +104,7 @@ export function KpiTile({
             {trend && <div style={accent ? { color: accent } : undefined}>{trend}</div>}
           </div>
           <div className="min-w-0 md:hidden">
-            <div className={cn("text-2xl font-extrabold tabular-nums", valueClassName)}>{value}</div>
+            <div className={cn("text-xl font-extrabold tabular-nums", valueClassName)}>{value}</div>
             <div className="mt-0.5 truncate text-[13px] font-semibold text-foreground/80">{label}</div>
             {sub && <div className="mt-1 truncate text-xs text-muted-foreground">{sub}</div>}
           </div>

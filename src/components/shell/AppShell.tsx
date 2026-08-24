@@ -137,7 +137,13 @@ export function AppShell() {
             </div>
           </header>
           <main className="flex-1 overflow-auto p-4 pb-24 md:pb-4">
-            <Outlet />
+            {/* Keyed by pathname so each page swap remounts this wrapper and
+                replays the entrance animation — react-router doesn't animate
+                route transitions on its own, so without this, navigating felt
+                like an instant, jarring content swap instead of an app. */}
+            <div key={location.pathname} className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-out motion-reduce:animate-none">
+              <Outlet />
+            </div>
           </main>
         </SidebarInset>
         <CommandPalette />

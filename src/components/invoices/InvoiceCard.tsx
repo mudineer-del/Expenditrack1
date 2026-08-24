@@ -43,18 +43,25 @@ export function InvoiceCard({
     tat === null
       ? "text-muted-foreground"
       : tat <= 15
-        ? "text-green-600"
+        ? "text-status-cleared"
         : tat <= 30
-          ? "text-blue-600"
+          ? "text-primary"
           : tat <= 60
-            ? "text-amber-600"
-            : "text-red-600"
+            ? "text-status-under"
+            : "text-status-returned"
+
+  const accent = vendorColor(invoice.vendor)
 
   return (
     <Card
-      className={cn("cursor-pointer transition-all hover:shadow-md", isSelected && "ring-2 ring-primary")}
+      className={cn(
+        "relative cursor-pointer overflow-hidden transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] active:duration-100",
+        isSelected && "ring-2 ring-primary"
+      )}
+      style={{ borderColor: `color-mix(in oklch, ${accent} 20%, var(--border))` }}
       onClick={() => onView(invoice)}
     >
+      <span className="absolute top-0 left-0 h-full w-1" style={{ backgroundColor: accent }} />
       <CardContent className="p-4">
         <div className="space-y-3">
           {/* Header */}
@@ -67,7 +74,7 @@ export function InvoiceCard({
                 size="sm"
               />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold truncate">{invoice.vendor || "Unknown"}</p>
+                <p className="text-[15px] font-semibold truncate">{invoice.vendor || "Unknown"}</p>
                 <p className="text-xs text-muted-foreground truncate">{invoice.invoiceNo}</p>
               </div>
             </div>
@@ -155,3 +162,4 @@ export function InvoiceCard({
     </Card>
   )
 }
+

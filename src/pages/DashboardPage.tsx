@@ -186,7 +186,7 @@ function ChartCard({
 function PctSub({ pct, label }: { pct: number | null; label: string }) {
   if (pct == null) return <span className="text-muted-foreground">No prior period data</span>
   return (
-    <span className={pct >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+    <span className={pct >= 0 ? "text-status-cleared" : "text-status-returned"}>
       {pct >= 0 ? "+" : ""}
       {pct.toFixed(0)}% {label}
     </span>
@@ -266,7 +266,7 @@ export default function DashboardPage() {
 
   if (invoicesQuery.isLoading || contractsQuery.isLoading) {
     return (
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Skeleton className="h-20 w-full" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -421,21 +421,21 @@ export default function DashboardPage() {
         />
         <KpiTile
           icon={<CheckCircle2 />}
-          iconClassName="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
-          accent="#16a34a"
+          iconClassName="status-icon-cleared"
+          accent="var(--status-cleared)"
           label="Cleared"
           value={stats.k.cleared.toLocaleString()}
-          valueClassName="text-green-700 dark:text-green-400"
+          valueClassName="text-status-cleared"
           sub={`${((stats.k.cleared / stats.k.count) * 100 || 0).toFixed(0)}% of invoices`}
           onClick={() => onDrill("Cleared Invoices", clearedInvoices(rows))}
         />
         <KpiTile
           icon={<Hourglass />}
-          iconClassName="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
-          accent="#d97706"
+          iconClassName="status-icon-under"
+          accent="var(--status-under)"
           label="Pending / in process"
           value={stats.k.pending.toLocaleString()}
-          valueClassName="text-amber-700 dark:text-amber-400"
+          valueClassName="text-status-under"
           sub="Awaiting clearance"
           onClick={() => onDrill("Pending Invoices", pendingInvoices(rows))}
         />
@@ -454,7 +454,7 @@ export default function DashboardPage() {
               accent="var(--chart-4)"
               label="Remaining"
               value={fmtMoney(contractCost - stats.k.totalIncl)}
-              valueClassName={contractCost - stats.k.totalIncl < 0 ? "text-red-600" : "text-green-600"}
+              valueClassName={contractCost - stats.k.totalIncl < 0 ? "text-status-returned" : "text-status-cleared"}
               sub={`${Math.min(100, (stats.k.totalIncl / contractCost) * 100).toFixed(1)}% utilized`}
               onClick={() => onDrill(`Invoices — ${dashVendor}`, rows)}
             />
@@ -483,8 +483,8 @@ export default function DashboardPage() {
         />
         <KpiTile
           icon={<Receipt />}
-          iconClassName="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
-          accent="#16a34a"
+          iconClassName="status-icon-cleared"
+          accent="var(--status-cleared)"
           label="Avg invoice value"
           value={fmtMoney(stats.avgInvoiceValue)}
           sub={`Across ${stats.k.count.toLocaleString()} invoices`}
@@ -493,8 +493,8 @@ export default function DashboardPage() {
         />
         <KpiTile
           icon={<Timer />}
-          iconClassName="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
-          accent="#d97706"
+          iconClassName="status-icon-under"
+          accent="var(--status-under)"
           label="Avg days to clear"
           value={stats.avgDaysToClear == null ? "—" : `${stats.avgDaysToClear.toFixed(1)}d`}
           sub={`${stats.clearDaysCount} invoices with dates`}
@@ -502,8 +502,8 @@ export default function DashboardPage() {
         />
         <KpiTile
           icon={<Award />}
-          iconClassName="bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
-          accent="#dc2626"
+          iconClassName="status-icon-returned"
+          accent="var(--status-returned)"
           label="Top contractor share"
           value={stats.topVendorPct == null ? "—" : `${stats.topVendorPct.toFixed(0)}%`}
           sub={stats.topVendor ? stats.topVendor[0] : "No data"}
@@ -516,7 +516,7 @@ export default function DashboardPage() {
           value={stats.activeContracts.length}
           sub={
             stats.expiringSoon > 0 ? (
-              <span className="text-amber-600 dark:text-amber-400">{stats.expiringSoon} expiring within 30 days</span>
+              <span className="text-status-under">{stats.expiringSoon} expiring within 30 days</span>
             ) : (
               "None expiring soon"
             )
@@ -566,13 +566,13 @@ export default function DashboardPage() {
                       <ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={logoColor} size="lg" />
                     </div>
                     <div className="min-w-0">
-                      <div className="truncate text-base font-bold tracking-tight">{v}</div>
+                      <div className="truncate text-[15px] font-bold tracking-tight">{v}</div>
                       <div className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Contractor</div>
                     </div>
                   </div>
                   <div className="mt-4 border-t pt-3" style={{ borderColor: `color-mix(in oklch, ${accent} 16%, var(--border))` }}>
                     <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Expenditure incl. tax</div>
-                    <div className="mt-0.5 truncate text-2xl font-extrabold tracking-tight tabular-nums" style={{ color: accent }}>
+                    <div className="mt-0.5 truncate text-xl font-extrabold tracking-tight tabular-nums" style={{ color: accent }}>
                       {fmtMoney(total)}
                     </div>
                   </div>
@@ -737,3 +737,5 @@ export default function DashboardPage() {
     </div>
   )
 }
+
+

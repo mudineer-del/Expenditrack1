@@ -215,7 +215,7 @@ export default function InvoicesPage() {
 
   if (invoicesQuery.isLoading) {
     return (
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-96 w-full" />
       </div>
@@ -231,42 +231,46 @@ export default function InvoicesPage() {
   }
 
   return (
-    <div className="grid gap-4">
+    // grid-cols-1 (not bare `grid`) matters here — see DashboardPage's identical fix:
+    // a single implicit column with no explicit track sizes via `auto` (widest child's
+    // max-content width), which can render wider than the viewport and silently push
+    // every row inside it wider too. grid-cols-1 uses Tailwind's minmax(0,1fr) instead.
+    <div className="grid grid-cols-1 gap-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
-          <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <List className="size-4" />
           </span>
-          <div>
-            <div className="text-lg font-semibold">{filteredRows.length.toLocaleString()}</div>
-            <div className="text-xs text-muted-foreground">{hasFilter ? "Filtered" : "Total"} invoices</div>
+          <div className="min-w-0">
+            <div className="truncate text-base font-semibold md:text-lg">{filteredRows.length.toLocaleString()}</div>
+            <div className="truncate text-xs text-muted-foreground">{hasFilter ? "Filtered" : "Total"} invoices</div>
           </div>
         </div>
         <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
-          <span className="flex size-9 items-center justify-center rounded-md bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-400">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-400">
             <Wallet className="size-4" />
           </span>
-          <div>
-            <div className="text-lg font-semibold">{fmtMoney(sumIncl)}</div>
-            <div className="text-xs text-muted-foreground">Value (incl. tax)</div>
+          <div className="min-w-0">
+            <div className="truncate text-base font-semibold md:text-lg">{fmtMoney(sumIncl)}</div>
+            <div className="truncate text-xs text-muted-foreground">Value (incl. tax)</div>
           </div>
         </div>
         <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
-          <span className="flex size-9 items-center justify-center rounded-md bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md status-icon-cleared">
             <Wallet className="size-4" />
           </span>
-          <div>
-            <div className="text-lg font-semibold">{fmtMoney(sumPaid)}</div>
-            <div className="text-xs text-muted-foreground">Amount paid</div>
+          <div className="min-w-0">
+            <div className="truncate text-base font-semibold md:text-lg">{fmtMoney(sumPaid)}</div>
+            <div className="truncate text-xs text-muted-foreground">Amount paid</div>
           </div>
         </div>
         <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
-          <span className="flex size-9 items-center justify-center rounded-md bg-accent text-accent-foreground">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
             <CheckCircle2 className="size-4" />
           </span>
-          <div>
-            <div className="text-lg font-semibold">{clearedN.toLocaleString()}</div>
-            <div className="text-xs text-muted-foreground">Cleared</div>
+          <div className="min-w-0">
+            <div className="truncate text-base font-semibold md:text-lg">{clearedN.toLocaleString()}</div>
+            <div className="truncate text-xs text-muted-foreground">Cleared</div>
           </div>
         </div>
       </div>
@@ -442,3 +446,4 @@ export default function InvoicesPage() {
     </div>
   )
 }
+

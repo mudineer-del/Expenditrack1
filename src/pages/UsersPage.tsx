@@ -50,7 +50,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 gap-4">
       <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
         Sign-in is handled by real Supabase Auth — passwords are verified and stored server-side, never in this
         app's code.
