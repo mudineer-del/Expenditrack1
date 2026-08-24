@@ -32,9 +32,14 @@ function buildItems(contracts: Contract[], invoices: Invoice[]): TickerItem[] {
 
 function Segment({ item }: { item: TickerItem }) {
   return (
-    <span className="inline-flex shrink-0 items-center gap-2 px-4 text-sm whitespace-nowrap">
+    <span
+      className="mx-1 inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-1 text-sm whitespace-nowrap"
+      style={{ backgroundColor: `color-mix(in oklch, ${item.color} 10%, transparent)` }}
+    >
       <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-      <span className="font-medium">{item.vendor}</span>
+      <span className="font-medium" style={{ color: item.color }}>
+        {item.vendor}
+      </span>
       <span className="text-muted-foreground">— {item.story}</span>
     </span>
   )
@@ -45,7 +50,7 @@ function ScrollTicker({ items }: { items: TickerItem[] }) {
   // matching -50% translate in index.css's .ticker-track, which assumes exactly 2 copies.
   const duration = Math.max(20, items.length * 6)
   return (
-    <div className="ticker-viewport overflow-hidden rounded-lg border bg-card py-2.5">
+    <div className="ticker-viewport overflow-hidden rounded-2xl border bg-card py-2 shadow-sm md:rounded-lg">
       <div className="ticker-track flex w-max" style={{ "--ticker-duration": `${duration}s` } as React.CSSProperties}>
         {[...items, ...items].map((item, i) => (
           <Segment key={`${item.key}-${i}`} item={item} />
@@ -66,7 +71,7 @@ function CycleTicker({ items }: { items: TickerItem[] }) {
 
   const item = items[index % items.length]
   return (
-    <div className="flex items-center overflow-hidden rounded-lg border bg-card px-2 py-2.5">
+    <div className="flex items-center overflow-hidden rounded-2xl border bg-card px-1.5 py-2 shadow-sm md:rounded-lg">
       <span key={item.key} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
         <Segment item={item} />
       </span>

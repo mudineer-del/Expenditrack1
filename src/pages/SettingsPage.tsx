@@ -1,7 +1,8 @@
-import { Bell, Cloud, Database, Key, Shield, Tags, Type, User, Download } from "lucide-react"
+import { Bell, Cloud, Database, Key, Palette, Shield, Tags, Type, User, Download } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
+import { AppearanceTab } from "@/components/settings/AppearanceTab"
 import { BackupTab } from "@/components/settings/BackupTab"
 import { CloudSyncTab } from "@/components/settings/CloudSyncTab"
 import { DesktopAppTab } from "@/components/settings/DesktopAppTab"
@@ -12,9 +13,10 @@ import { ProfileTab } from "@/components/settings/ProfileTab"
 import { ReferenceListsTab } from "@/components/settings/ReferenceListsTab"
 import { SecurityTab } from "@/components/settings/SecurityTab"
 
-type TabKey = "profile" | "security" | "password" | "notifications" | "labels" | "backup" | "desktop" | "lists" | "cloud"
+type TabKey = "appearance" | "profile" | "security" | "password" | "notifications" | "labels" | "backup" | "desktop" | "lists" | "cloud"
 
 const BASE_TABS: { key: TabKey; label: string; icon: typeof User }[] = [
+  { key: "appearance", label: "Appearance", icon: Palette },
   { key: "profile", label: "Profile", icon: User },
   { key: "security", label: "Security", icon: Shield },
   { key: "password", label: "Password", icon: Key },
@@ -54,6 +56,7 @@ export default function SettingsPage() {
         ))}
       </nav>
       <div>
+        {tab === "appearance" && <AppearanceTab />}
         {tab === "profile" && <ProfileTab />}
         {tab === "security" && <SecurityTab />}
         {tab === "password" && <PasswordTab />}

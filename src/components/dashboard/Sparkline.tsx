@@ -91,6 +91,9 @@ export function Sparkline({
           <stop offset="100%" stopColor={color} stopOpacity={1} />
         </linearGradient>
       </defs>
+      {/* Baseline hint — without it, a run of near-zero bars is easy to misread as
+          "no data" rather than "genuinely small relative to the peak". */}
+      <line x1={0} y1={height} x2={width} y2={height} stroke={color} strokeWidth={1} opacity={0.15} />
       {data.map((v, i) => {
         const barH = Math.max(2.5, (v / max) * usableH)
         const x = i * stepX + gap

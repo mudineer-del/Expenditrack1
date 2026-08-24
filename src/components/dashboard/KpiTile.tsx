@@ -25,33 +25,33 @@ export function KpiTile({
   subClassName?: string
   /** Optional sparkline (or any small element) pinned to the top-right corner, opposite the icon. */
   trend?: ReactNode
-  /** Mobile-only "headline" treatment — dark navy card with an oversized
-   *  number and the trend sparkline embedded as its own row instead of
-   *  tucked in a corner. Identical to a normal tile at md+; reserve for the
-   *  1-2 metrics that should read as the page's primary numbers. */
+  /** "Headline" treatment — an oversized number on mobile with the trend
+   *  sparkline embedded as its own row instead of tucked in a corner.
+   *  Identical to a normal tile at md+; reserve for the 1-2 metrics that
+   *  should read as the page's primary numbers. Previously rendered as a
+   *  dark navy card on mobile — that read as two oddly dark, disconnected
+   *  cards sitting in an otherwise light, colorful grid, so hero now uses
+   *  the same light/accent-tinted styling as every other tile and only
+   *  keeps its own layout (bigger number, full-width trend row). */
   hero?: boolean
   onClick?: () => void
 }) {
   return (
     <div
       className={cn(
-        "ogdcl-hoverable relative transform-gpu overflow-hidden rounded-2xl transition-all duration-300 ease-out md:flex md:flex-col md:items-stretch md:gap-1 md:rounded-2xl md:border md:bg-card md:p-[var(--tile-pad)] md:pl-[calc(var(--tile-pad)+0.375rem)] md:shadow-[0_7px_0_var(--kpi-shadow),0_16px_24px_-18px_var(--kpi-glow)] md:will-change-transform",
-        hero
-          ? "bg-[var(--ogdcl-navy)] p-5 text-white shadow-lg md:!bg-[var(--ogdcl-navy)] md:text-white md:border-white/10"
-          : "flex flex-col gap-2.5 border-2 bg-card p-3.5 shadow-sm md:flex-row md:items-center md:gap-3.5 md:border md:p-[var(--tile-pad)]",
+        "ogdcl-hoverable relative transform-gpu overflow-hidden rounded-2xl border-2 bg-card shadow-sm transition-all duration-300 ease-out md:flex md:flex-col md:items-stretch md:gap-1 md:rounded-2xl md:border md:bg-card md:p-[var(--tile-pad)] md:pl-[calc(var(--tile-pad)+0.375rem)] md:shadow-[0_7px_0_var(--kpi-shadow),0_16px_24px_-18px_var(--kpi-glow)] md:will-change-transform",
+        hero ? "p-4" : "flex flex-col gap-2.5 p-3.5 md:flex-row md:items-center md:gap-3.5",
         onClick && "cursor-pointer active:scale-[0.98] active:duration-100 md:active:scale-100",
-        onClick && !hero && "hover:-translate-y-1 hover:bg-muted/50 hover:shadow-lg md:hover:-translate-y-1 md:hover:bg-card md:hover:shadow-[0_10px_0_var(--kpi-shadow),0_24px_34px_-18px_var(--kpi-glow)]",
-        onClick && hero && "hover:-translate-y-1 hover:brightness-110 hover:shadow-xl md:hover:-translate-y-1 md:hover:brightness-110 md:hover:shadow-[0_10px_0_var(--kpi-shadow),0_24px_34px_-18px_var(--kpi-glow)]"
+        onClick &&
+          "hover:-translate-y-1 hover:bg-muted/50 hover:shadow-lg md:hover:-translate-y-1 md:hover:bg-card md:hover:shadow-[0_10px_0_var(--kpi-shadow),0_24px_34px_-18px_var(--kpi-glow)]"
       )}
       style={
         accent
           ? ({
-              ...(hero
-                ? {}
-                : { backgroundImage: "linear-gradient(145deg, color-mix(in oklch, var(--primary) 7%, var(--card)), var(--card) 68%)" }),
-              borderColor: hero ? "color-mix(in oklch, var(--primary) 28%, white 10%)" : "color-mix(in oklch, var(--primary) 18%, var(--border))",
-              "--kpi-shadow": "color-mix(in oklch, var(--primary) 22%, var(--border))",
-              "--kpi-glow": "color-mix(in oklch, var(--primary) 34%, transparent)",
+              backgroundImage: `linear-gradient(145deg, color-mix(in oklch, ${accent} 7%, var(--card)), var(--card) 68%)`,
+              borderColor: `color-mix(in oklch, ${accent} 18%, var(--border))`,
+              "--kpi-shadow": `color-mix(in oklch, ${accent} 22%, var(--border))`,
+              "--kpi-glow": `color-mix(in oklch, ${accent} 34%, transparent)`,
             } as React.CSSProperties)
           : undefined
       }
@@ -64,13 +64,18 @@ export function KpiTile({
         <>
           {/* Mobile hero card */}
           <div className="flex items-center gap-2 md:hidden">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 [&_svg]:size-[18px]">{icon}</div>
-            <span className="truncate text-[13px] text-white/60">{label}</span>
+            <div
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg shadow-sm [&_svg]:size-[18px] [&_svg]:text-white"
+              style={{ backgroundColor: accent ?? "var(--primary)" }}
+            >
+              {icon}
+            </div>
+            <span className="truncate text-[13px] font-semibold text-foreground/80">{label}</span>
           </div>
           <div className={cn("mt-3 text-2xl font-extrabold tabular-nums md:hidden", valueClassName)}>{value}</div>
-          {sub && <div className="mt-1 text-[13px] text-white/70 md:hidden">{sub}</div>}
+          {sub && <div className="mt-1 truncate text-[13px] text-muted-foreground md:hidden">{sub}</div>}
           {trend && (
-            <div className="-mx-1 mt-4 md:hidden" style={{ color: "var(--ogdcl-green, #5BC49A)" }}>
+            <div className="-mx-1 mt-4 md:hidden" style={accent ? { color: accent } : undefined}>
               {trend}
             </div>
           )}
@@ -85,9 +90,9 @@ export function KpiTile({
           >
             {icon}
           </div>
-          <div className={cn("hidden text-xs text-muted-foreground md:block", hero ? "md:text-white/60" : undefined)}>{label}</div>
+          <div className="hidden text-xs text-muted-foreground md:block">{label}</div>
           <div className={cn("hidden text-[length:var(--tile-value)] font-semibold tabular-nums md:block", valueClassName)}>{value}</div>
-          {sub && <div className={cn("hidden text-xs text-muted-foreground md:block", hero ? "md:text-white/70" : undefined, subClassName)}>{sub}</div>}
+          {sub && <div className={cn("hidden text-xs text-muted-foreground md:block", subClassName)}>{sub}</div>}
         </>
       ) : (
         <>

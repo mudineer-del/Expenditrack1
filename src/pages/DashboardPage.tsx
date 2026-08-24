@@ -330,17 +330,25 @@ export default function DashboardPage() {
             >
               All Departments
             </Button>
-            {refLists.departments.map((d) => (
-              <Button
-                key={d}
-                size="sm"
-                variant={activeDept === d ? "default" : "outline"}
-                className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                onClick={() => setActiveDept(d)}
-              >
-                {d}
-              </Button>
-            ))}
+            {refLists.departments.map((d, i) => {
+              const deptColor = PICKER_PALETTE[i % PICKER_PALETTE.length]
+              return (
+                <Button
+                  key={d}
+                  size="sm"
+                  variant={activeDept === d ? "default" : "outline"}
+                  className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                  style={
+                    activeDept === d
+                      ? { backgroundColor: deptColor, borderColor: deptColor }
+                      : { borderColor: `color-mix(in oklch, ${deptColor} 35%, var(--border))`, color: deptColor }
+                  }
+                  onClick={() => setActiveDept(d)}
+                >
+                  {d}
+                </Button>
+              )
+            })}
           </div>
         </div>
       )}
@@ -358,7 +366,7 @@ export default function DashboardPage() {
             <PickerCard
               key={v}
               active={dashVendor === v}
-              color="var(--primary)"
+              color={vendorColor(v)}
               icon={<ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={vendorColor(v)} size="lg" />}
               bareIcon
               label={v}
@@ -381,7 +389,11 @@ export default function DashboardPage() {
               size="sm"
               variant={dashVendor === v ? "default" : "outline"}
               className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-              style={dashVendor === v ? { backgroundColor: vendorColor(v), borderColor: vendorColor(v) } : undefined}
+              style={
+                dashVendor === v
+                  ? { backgroundColor: vendorColor(v), borderColor: vendorColor(v) }
+                  : { borderColor: `color-mix(in oklch, ${vendorColor(v)} 35%, var(--border))`, color: vendorColor(v) }
+              }
               onClick={() => setDashVendor(v)}
             >
               {v}
@@ -528,7 +540,10 @@ export default function DashboardPage() {
       {dashVendor === "ALL" && dataVendors.length > 0 && (
         <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-base font-bold md:text-sm md:font-semibold">Contractor Expenditure Overview</h3>
+            <h3 className="flex items-center gap-2 text-base font-bold md:text-base md:font-semibold">
+              <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
+              Contractor Expenditure Overview
+            </h3>
             <Button size="sm" variant="ghost" asChild>
               <Link to="/vendors">Manage contracts</Link>
             </Button>
@@ -538,8 +553,11 @@ export default function DashboardPage() {
               const vRows = deptInvoices.filter((r) => r.vendor === v)
               const total = vRows.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0)
               const lead = avgLeadTime(vRows)
-              const accent = "var(--primary)"
+              // Each contractor's own identity color (already used for its logo/ticker dot
+              // elsewhere) drives the whole card now — a shared var(--primary) here made
+              // every contractor's money figure read as visually identical.
               const logoColor = vendorColor(v)
+              const accent = logoColor
               return (
                 <button
                   key={v}
@@ -595,7 +613,10 @@ export default function DashboardPage() {
 
       <div className="min-w-0">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="text-base font-bold md:text-sm md:font-semibold">Expenditure Analysis</h3>
+          <h3 className="flex items-center gap-2 text-base font-bold md:text-base md:font-semibold">
+            <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
+            Expenditure Analysis
+          </h3>
           <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
         </div>
         <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
@@ -643,7 +664,10 @@ export default function DashboardPage() {
 
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm md:rounded-lg md:shadow-none">
         <div className="flex items-center justify-between border-b p-4">
-          <h3 className="text-base font-bold md:text-sm md:font-semibold">Recent Invoices{dashVendor !== "ALL" ? ` — ${dashVendor}` : ""}</h3>
+          <h3 className="flex items-center gap-2 text-base font-bold md:text-base md:font-semibold">
+            <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
+            Recent Invoices{dashVendor !== "ALL" ? ` — ${dashVendor}` : ""}
+          </h3>
           <Button size="sm" variant="ghost" asChild>
             <Link to="/invoices">View all</Link>
           </Button>
