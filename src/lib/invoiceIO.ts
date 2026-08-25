@@ -140,8 +140,19 @@ function normalizeDate(v: unknown): string {
   if (m) {
     let [, a, b, y] = m
     if (y.length === 2) y = "20" + y
-    const mm = b.padStart(2, "0")
-    const dd = a.padStart(2, "0")
+    let day = Number(a)
+    let month = Number(b)
+    // Default assumption is DD/MM/YYYY, but a source cell in US MM/DD/YYYY format
+    // (e.g. "4/25/2022" for April 25) would otherwise read as day=4, month=25 —
+    // an invalid month Postgres rejects with "date/time field value out of range"
+    // instead of a clear "bad row" error at import time. Swap when the naive
+    // reading is impossible but the flipped one isn't.
+    if (month > 12 && day <= 12) {
+      ;[day, month] = [month, day]
+    }
+    if (month < 1 || month > 12 || day < 1 || day > 31) return ""
+    const mm = String(month).padStart(2, "0")
+    const dd = String(day).padStart(2, "0")
     return `${y}-${mm}-${dd}`
   }
   if (/^\d{5}(\.\d+)?$/.test(s)) {

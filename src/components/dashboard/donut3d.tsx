@@ -1,5 +1,7 @@
 import { Sector } from "recharts"
-import type { PieSectorDataItem } from "recharts"
+import type { PieLabelRenderProps, PieSectorDataItem } from "recharts"
+
+const RADIAN = Math.PI / 180
 
 /** Shared look for every donut chart on the Dashboard: glossy per-slice gradient (instead
  *  of a flat fill) for a 3D, domed appearance, plus a small gap + rounded ends between
@@ -24,6 +26,41 @@ export function DonutDefs({ idBase, colors }: { idBase: string; colors: string[]
         </radialGradient>
       ))}
     </defs>
+  )
+}
+
+/** Desktop-only outer radius, leaving room for donutOuterLabel's ring of labels
+ *  around the circle — mobile keeps the larger 80% radius since it relies on
+ *  tap + tooltip instead (a ring of up to 8 label lines is unreadable on a
+ *  narrow phone card). */
+export const DONUT_OUTER_RADIUS_LABELED = "62%"
+
+/** Renders each slice's name + share of total on a leader line outside the donut,
+ *  so the breakdown is readable at a glance without needing to hover every slice.
+ *  Pass as Pie's `label` prop together with `labelLine` (Recharts draws the line
+ *  itself; this only positions the text past the line's outer end). */
+export function donutOuterLabel(props: PieLabelRenderProps) {
+  const { cx, cy, midAngle, outerRadius, percent, name } = props
+  if (cx == null || cy == null || midAngle == null || outerRadius == null) return null
+  // Slices under 2% crowd their neighbors with barely-readable "(0%)"/"(1%)" labels
+  // that collide at the shared angle real near-zero values cluster around — skip
+  // them; the value is still available via hover/tap.
+  if (percent != null && percent < 0.02) return null
+  const radius = Number(outerRadius) + 18
+  const x = Number(cx) + radius * Math.cos(-midAngle * RADIAN)
+  const y = Number(cy) + radius * Math.sin(-midAngle * RADIAN)
+  const pct = percent != null ? `${Math.round(percent * 100)}%` : ""
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="var(--muted-foreground)"
+      fontSize={10}
+      textAnchor={x > Number(cx) ? "start" : "end"}
+      dominantBaseline="central"
+    >
+      {name} {pct && `(${pct})`}
+    </text>
   )
 }
 

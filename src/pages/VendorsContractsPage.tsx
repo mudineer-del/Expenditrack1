@@ -20,6 +20,7 @@ import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet"
 import { ContractDrawer } from "@/components/contracts/ContractDrawer"
 import { ContractRow } from "@/components/contracts/ContractRow"
 import { VendorCard } from "@/components/contracts/VendorCard"
+import { VendorDetailSheet } from "@/components/contracts/VendorDetailSheet"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { avgLeadTime, fmtMoney, vendorColor } from "@/lib/dashboard"
 import { CONTRACT_TONE_CLASSES, contractExpenditure, contractStatusTone, invoicesForContract, utilizationColor } from "@/lib/contracts"
@@ -51,6 +52,7 @@ export default function VendorsContractsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Contract | null>(null)
   const [contractSearch, setContractSearch] = useState("")
   const [viewingContract, setViewingContract] = useState<Contract | null>(null)
+  const [viewingVendor, setViewingVendor] = useState<string | null>(null)
 
   const activeDept = useAppStore((s) => s.activeDept)
   const allInvoices = invoicesQuery.data ?? []
@@ -189,7 +191,10 @@ export default function VendorsContractsPage() {
                 count={v.count}
                 leadDays={v.lead}
                 active={dashVendor === v.vendor}
-                onClick={() => setDashVendor(dashVendor === v.vendor ? "ALL" : v.vendor)}
+                onClick={() => {
+                  setDashVendor(dashVendor === v.vendor ? "ALL" : v.vendor)
+                  setViewingVendor(v.vendor)
+                }}
               />
             ))}
           </div>
@@ -230,7 +235,7 @@ export default function VendorsContractsPage() {
             {/* Card list below md — an 8-column table forces horizontal scroll
                 on a phone; same tap-to-view plus visible Edit/Delete affordances
                 as the desktop row. Table (unchanged) takes over at md+. */}
-            <div className="divide-y md:hidden">
+            <div className="divide-y divide-border/50 md:hidden">
               {filteredContracts.map((c) => {
                 const spent = contractExpenditure(invoices, c.contractNo)
                 const cost = Number(c.value) || 0
@@ -373,6 +378,20 @@ export default function VendorsContractsPage() {
         onEdit={() => {
           if (viewingContract) openEdit(viewingContract)
           setViewingContract(null)
+        }}
+      />
+
+      <VendorDetailSheet
+        open={!!viewingVendor}
+        vendor={viewingVendor}
+        color={vendorColor(viewingVendor || "")}
+        logo={getContractorLogo(contractorLogosQuery.data ?? {}, viewingVendor || "")}
+        invoices={invoices}
+        contracts={contracts}
+        onOpenChange={(v) => !v && setViewingVendor(null)}
+        onViewContract={(c) => {
+          setViewingVendor(null)
+          setViewingContract(c)
         }}
       />
 

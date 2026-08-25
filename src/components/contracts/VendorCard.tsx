@@ -45,7 +45,7 @@ export function VendorCard({
             }
           : active
             ? { borderColor: color, boxShadow: `0 0 0 2px ${color}` }
-            : undefined
+            : { borderColor: `color-mix(in oklch, ${color} 16%, var(--border))` }
       }
     >
       <div className="mb-2 flex items-center gap-2.5 md:gap-2">

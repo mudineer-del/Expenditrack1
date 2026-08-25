@@ -9,9 +9,9 @@ const BUCKETS: [string, number, number][] = [
   ["31–60 days", 31, 60],
   [">60 days", 61, Infinity],
 ]
-const COLORS = ["#49BFAC", "#0A86C8", "#c8781c", "#c23b3b"]
+const COLORS = ["var(--dataviz-2)", "var(--primary)", "var(--status-under)", "var(--status-returned)"]
 
-const config = { count: { label: "Invoices", color: "#0A86C8" } } satisfies ChartConfig
+const config = { count: { label: "Invoices", color: "var(--primary)" } } satisfies ChartConfig
 
 /** Ported from the TA-distribution bucket chart inside bindReportCharts (index.html:4904-4916). */
 export function TaBucketChart({ rows, onBucketClick }: { rows: Invoice[]; onBucketClick: (rows: Invoice[], label: string) => void }) {
@@ -45,3 +45,4 @@ export function TaBucketChart({ rows, onBucketClick }: { rows: Invoice[]; onBuck
     </ChartContainer>
   )
 }
+

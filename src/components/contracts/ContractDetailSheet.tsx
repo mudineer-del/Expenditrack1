@@ -1,4 +1,5 @@
 import { Calendar, DollarSign, FileText } from "lucide-react"
+import { useState } from "react"
 import {
   Dialog,
   DialogClose,
@@ -9,15 +10,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { ChartCard } from "@/components/dashboard/ChartCard"
+import { ChartTypeMenu, CHART_OPTIONS } from "@/components/dashboard/ChartTypeMenu"
+import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
+import { ServiceChart } from "@/components/dashboard/ServiceChart"
+import { TrendChart } from "@/components/dashboard/TrendChart"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { cn } from "@/lib/utils"
-import { avgLeadTime, fmtMoney, vendorColor } from "@/lib/dashboard"
+import { avgLeadTime, fmtMoney, monthlyTrend, serviceBreakdown, vendorColor } from "@/lib/dashboard"
 import { CONTRACT_TONE_CLASSES, contractExpenditure, contractStatusTone, daysUntil, invoicesForContract, utilizationColor } from "@/lib/contracts"
+import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
 
-/** Immersive contract detail view — everything about one contract in one place, opened by clicking its row. */
+/** Immersive contract detail view — everything about one contract in one place, opened by clicking its row.
+ *  Carries the same narrative-report + chart treatment as VendorDetailSheet, scoped to this one contract's
+ *  invoices instead of a whole vendor's. */
 export function ContractDetailSheet({
   open,
   contract,
@@ -35,6 +44,11 @@ export function ContractDetailSheet({
   canEdit: boolean
   logo?: string
 }) {
+  const trendChartType = useDisplayStore((s) => s.trendChartType)
+  const serviceChartType = useDisplayStore((s) => s.serviceChartType)
+  const setChartType = useDisplayStore((s) => s.setChartType)
+  const [drill, setDrill] = useState<{ title: string; invoices: Invoice[] } | null>(null)
+
   if (!contract) return <Dialog open={open} onOpenChange={onOpenChange} />
 
   const cost = Number(contract.value) || 0
@@ -48,9 +62,24 @@ export function ContractDetailSheet({
   const tone = contractStatusTone(contract.status)
   const daysLeft = daysUntil(contract.endDate)
 
+  const trend = monthlyTrend(rows)
+  const byService = serviceBreakdown(rows)
+  const topService = byService[0]
+  const onDrill = (title: string, drillInvoices: Invoice[]) => setDrill({ title, invoices: drillInvoices })
+
+  const report =
+    rows.length > 0
+      ? `${rows.length.toLocaleString()} invoice${rows.length !== 1 ? "s" : ""} logged against this contract, totaling ${fmtMoney(spent)}` +
+        (cost > 0 ? ` — ${pct.toFixed(1)}% of its ${fmtMoney(cost)} value.` : ".") +
+        (topService ? ` The largest category is ${topService.service} at ${fmtMoney(topService.total)}.` : "") +
+        (lead !== null ? ` Invoices clear in ${lead} day${lead !== 1 ? "s" : ""} on average.` : "") +
+        (daysLeft !== null ? (daysLeft < 0 ? " This contract has expired." : ` ${daysLeft} day${daysLeft !== 1 ? "s" : ""} remain on it.`) : "")
+      : "No invoices logged against this contract yet."
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] w-full overflow-y-auto sm:max-w-xl">
+      <DialogContent className="max-h-[88vh] w-full overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <div className="flex items-start gap-3">
             <span className="mt-1 h-10 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
@@ -82,7 +111,7 @@ export function ContractDetailSheet({
                 <div className="font-medium">
                   {contract.startDate || "—"} → {contract.endDate || "—"}
                   {daysLeft !== null && (
-                    <span className={cn("ml-1", daysLeft < 0 ? "text-destructive" : daysLeft <= 30 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
+                    <span className={cn("ml-1", daysLeft < 0 ? "text-destructive" : daysLeft <= 30 ? "text-status-under" : "text-muted-foreground")}>
                       ({daysLeft < 0 ? "expired" : `${daysLeft}d left`})
                     </span>
                   )}
@@ -124,11 +153,34 @@ export function ContractDetailSheet({
             )}
           </div>
 
+          <p className="rounded-lg border-l-2 bg-muted/20 p-3 text-sm text-foreground/90" style={{ borderColor: color }}>
+            {report}
+          </p>
+
+          {rows.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <ChartCard
+                accent="var(--dataviz-1)"
+                title="Spending Trend"
+                action={<ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />}
+              >
+                <TrendChart data={trend} onDrill={onDrill} />
+              </ChartCard>
+              <ChartCard
+                accent="var(--dataviz-3)"
+                title="Expenditure by Service"
+                action={<ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />}
+              >
+                <ServiceChart data={byService} chartType={serviceChartType} onDrill={onDrill} />
+              </ChartCard>
+            </div>
+          )}
+
           <div>
             <h4 className="mb-2 text-sm font-semibold">Invoices on this contract</h4>
             <div className="max-h-72 overflow-y-auto rounded-lg border">
               {rows.length ? (
-                <div className="divide-y">
+                <div className="divide-y divide-border/50">
                   {rows.map((r) => (
                     <div key={r.id} className="flex items-center justify-between gap-3 p-2.5 text-sm">
                       <div className="min-w-0">
@@ -163,5 +215,9 @@ export function ContractDetailSheet({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <InvoiceListDialog open={!!drill} onOpenChange={(v) => !v && setDrill(null)} title={drill?.title ?? ""} invoices={drill?.invoices ?? []} />
+    </>
   )
 }
+

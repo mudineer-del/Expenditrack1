@@ -28,7 +28,15 @@ import { activeChartPayload } from "@/lib/chartClick"
 import { fmtMoney, type CategoryTotal } from "@/lib/dashboard"
 import { useDisplayStore, type ChartType } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/useIsMobile"
-import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, DonutDefs, donutActiveShape, donutGradientId } from "./donut3d"
+import {
+  DONUT_CORNER_RADIUS,
+  DONUT_OUTER_RADIUS_LABELED,
+  DONUT_PAD_ANGLE,
+  DonutDefs,
+  donutActiveShape,
+  donutGradientId,
+  donutOuterLabel,
+} from "./donut3d"
 
 const config = {
   total: { label: "Expenditure (incl. tax)", color: "var(--dataviz-3)" },
@@ -73,11 +81,18 @@ export function ServiceChart({
             dataKey="total"
             nameKey="service"
             innerRadius="45%"
-            outerRadius="80%"
+            outerRadius={isMobile ? "80%" : DONUT_OUTER_RADIUS_LABELED}
             paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
             cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
             activeShape={isMobile ? donutActiveShape : undefined}
-            isAnimationActive={animate}
+            label={isMobile ? undefined : donutOuterLabel}
+            labelLine={isMobile ? false : { stroke: "var(--border)" }}
+            // Recharts only shows Pie labels once its entrance animation resolves
+            // (showLabels: !isAnimating internally) — with `top` a fresh array
+            // every render, that transition seemingly never settles, so labels
+            // never appeared. The desktop labeled view isn't worth an entrance
+            // animation anyway; mobile (no outer labels) keeps its animation.
+            isAnimationActive={isMobile ? animate : false}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
           >

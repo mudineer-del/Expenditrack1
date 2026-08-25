@@ -23,7 +23,15 @@ import { activeChartPayload } from "@/lib/chartClick"
 import type { TypeCount } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/useIsMobile"
-import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, DonutDefs, donutActiveShape, donutGradientId } from "./donut3d"
+import {
+  DONUT_CORNER_RADIUS,
+  DONUT_OUTER_RADIUS_LABELED,
+  DONUT_PAD_ANGLE,
+  DonutDefs,
+  donutActiveShape,
+  donutGradientId,
+  donutOuterLabel,
+} from "./donut3d"
 
 const config = {
   count: { label: "Invoices", color: "var(--dataviz-2)" },
@@ -60,11 +68,13 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
             dataKey="count"
             nameKey="type"
             innerRadius="45%"
-            outerRadius="80%"
+            outerRadius={isMobile ? "80%" : DONUT_OUTER_RADIUS_LABELED}
             paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
             cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
             activeShape={isMobile ? donutActiveShape : undefined}
-            isAnimationActive={animate}
+            label={isMobile ? undefined : donutOuterLabel}
+            labelLine={isMobile ? false : { stroke: "var(--border)" }}
+            isAnimationActive={isMobile ? animate : false}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
           >

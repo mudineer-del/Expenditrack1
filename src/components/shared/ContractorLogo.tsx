@@ -21,7 +21,10 @@ export function ContractorLogo({
         size === "lg" && "size-12 text-base",
         size === "xl" && "size-16 text-lg"
       )}
-      style={{ backgroundColor: color }}
+      style={{
+        background: `linear-gradient(155deg, color-mix(in oklch, ${color} 45%, white), ${color})`,
+        boxShadow: `0 3px 8px -2px color-mix(in oklch, ${color} 45%, transparent)`,
+      }}
       title={logo ? `${vendor} logo` : vendor}
     >
       {logo ? <img src={logo} alt={`${vendor} logo`} className="size-full object-contain bg-white" /> : initials}

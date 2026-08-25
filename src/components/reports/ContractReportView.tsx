@@ -13,12 +13,12 @@ function TaBadge({ days }: { days: number | null }) {
   if (days === null) return <span className="text-muted-foreground">—</span>
   const cls =
     days <= 15
-      ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300"
+      ? "status-tone-cleared"
       : days <= 30
-        ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+        ? "bg-primary/10 text-primary"
         : days <= 60
-          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-          : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+          ? "status-tone-under"
+          : "status-tone-returned"
   return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{days}d</span>
 }
 
@@ -51,7 +51,7 @@ export function ContractReportView({
   const c = contracts.find((x) => x.contractNo.trim().toLowerCase() === filters.contract.trim().toLowerCase())
   const cost = Number(c?.value) || 0
   const util = cost > 0 ? Math.min(100, (a.incl / cost) * 100) : null
-  const utilColor = util === null ? "var(--muted-foreground)" : util >= 90 ? "#c23b3b" : util >= 70 ? "#c8781c" : "#1c8a4b"
+  const utilColor = util === null ? "var(--muted-foreground)" : util >= 90 ? "var(--status-returned)" : util >= 70 ? "var(--status-under)" : "var(--status-cleared)"
   const vendors = Array.from(new Set(rows.map((r) => r.vendor).filter(Boolean)))
 
   return (
@@ -82,7 +82,7 @@ export function ContractReportView({
             onClick={() => onDrill(rows.filter((r) => (Number(r.amountPaid) || 0) > 0), `Paid Invoices — ${filters.contract}`)}
           >
             <div className="text-xs text-muted-foreground">Paid</div>
-            <div className="text-lg font-semibold text-green-700 dark:text-green-400">{fmtMoney(a.paid)}</div>
+            <div className="text-lg font-semibold text-status-cleared">{fmtMoney(a.paid)}</div>
             <div className="text-xs text-muted-foreground">{a.count ? ((a.paid / a.incl) * 100 || 0).toFixed(0) : 0}% of value</div>
           </button>
           <button
@@ -91,7 +91,7 @@ export function ContractReportView({
             onClick={() => onDrill(rows.filter((r) => (Number(r.amountInclTax) || 0) - (Number(r.amountPaid) || 0) > 0), `Outstanding Invoices — ${filters.contract}`)}
           >
             <div className="text-xs text-muted-foreground">Outstanding</div>
-            <div className={`text-lg font-semibold ${a.outstanding > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-700 dark:text-green-400"}`}>
+            <div className={`text-lg font-semibold ${a.outstanding > 0 ? "text-status-under" : "text-status-cleared"}`}>
               {fmtMoney(a.outstanding)}
             </div>
             <div className="text-xs text-muted-foreground">unpaid balance</div>
@@ -133,11 +133,11 @@ export function ContractReportView({
               <div className="text-muted-foreground">Slowest</div>
             </div>
             <div>
-              <div className={`text-base font-semibold ${a.delayed ? "text-red-600 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}>{a.delayed}</div>
+              <div className={`text-base font-semibold ${a.delayed ? "text-status-returned" : "text-status-cleared"}`}>{a.delayed}</div>
               <div className="text-muted-foreground">Delayed &gt;30d</div>
             </div>
             <div>
-              <div className="text-base font-semibold text-amber-600 dark:text-amber-400">{a.openItems}</div>
+              <div className="text-base font-semibold text-status-under">{a.openItems}</div>
               <div className="text-muted-foreground">Open</div>
             </div>
           </div>
@@ -190,7 +190,7 @@ export function ContractReportView({
                       <TaBadge days={turnaroundDays(r)} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{fmtMoney(r.amountInclTax)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-green-700 dark:text-green-400">{fmtMoney(r.amountPaid)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-status-cleared">{fmtMoney(r.amountPaid)}</TableCell>
                     <TableCell>
                       <StatusBadge status={r.status} />
                     </TableCell>
@@ -213,3 +213,6 @@ export function ContractReportView({
     </div>
   )
 }
+
+
+

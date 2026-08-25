@@ -278,7 +278,7 @@ export function CompareReportView({
               onClick={() => onDrill(groups.flatMap((g) => g.rows.filter((r) => (Number(r.amountPaid) || 0) > 0)), "Paid Invoices — compared contracts")}
             >
               <div className="text-xs text-muted-foreground">Combined paid</div>
-              <div className="text-lg font-semibold text-green-700 dark:text-green-400">{fmtMoney(tot.paid)}</div>
+              <div className="text-lg font-semibold text-status-cleared">{fmtMoney(tot.paid)}</div>
             </button>
             <button
               type="button"
@@ -291,7 +291,7 @@ export function CompareReportView({
               }
             >
               <div className="text-xs text-muted-foreground">Combined outstanding</div>
-              <div className="text-lg font-semibold text-amber-600 dark:text-amber-400">{fmtMoney(tot.outstanding)}</div>
+              <div className="text-lg font-semibold text-status-under">{fmtMoney(tot.outstanding)}</div>
             </button>
           </div>
 
@@ -341,14 +341,14 @@ export function CompareReportView({
                       <TableCell className="text-right">{g.count}</TableCell>
                       <TableCell className="text-right tabular-nums">{fmtMoney(g.exclTax)}</TableCell>
                       <TableCell className="text-right tabular-nums">{fmtMoney(g.incl)}</TableCell>
-                      <TableCell className="text-right tabular-nums text-green-700 dark:text-green-400">{fmtMoney(g.paid)}</TableCell>
-                      <TableCell className={`text-right tabular-nums ${g.outstanding > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-700 dark:text-green-400"}`}>
+                      <TableCell className="text-right tabular-nums text-status-cleared">{fmtMoney(g.paid)}</TableCell>
+                      <TableCell className={`text-right tabular-nums ${g.outstanding > 0 ? "text-status-under" : "text-status-cleared"}`}>
                         {fmtMoney(g.outstanding)}
                       </TableCell>
                       <TableCell className="text-right">—</TableCell>
                       <TableCell className="text-right">—</TableCell>
                       <TableCell className="text-center">{g.taAvg !== null ? `${Math.round(g.taAvg)}d` : "—"}</TableCell>
-                      <TableCell className={`text-right ${g.delayed ? "text-red-600 dark:text-red-400" : ""}`}>{g.delayed}</TableCell>
+                      <TableCell className={`text-right ${g.delayed ? "text-status-returned" : ""}`}>{g.delayed}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -374,3 +374,4 @@ export function CompareReportView({
     </div>
   )
 }
+

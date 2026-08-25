@@ -104,7 +104,7 @@ export function NotificationsTab() {
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold">Email delivery (EmailJS)</h3>
             <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${configured ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300" : "bg-muted text-muted-foreground"}`}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${configured ? "status-tone-cleared" : "bg-muted text-muted-foreground"}`}
             >
               {configured ? "Connected" : "Not configured"}
             </span>
@@ -114,7 +114,7 @@ export function NotificationsTab() {
             <code>to_email</code>, <code>subject</code> and <code>message</code>, then paste the three IDs below
             along with the address that should receive alerts.
           </p>
-          <p className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+          <p className="mb-4 rounded-md border border-status-under/25 bg-status-under/10 p-3 text-xs text-status-under dark:border-status-under/30 dark:bg-status-under/10 text-status-under">
             This configuration is saved to this browser only, not shared across your team. Automatic contract and
             weekly-digest checks only run while someone opens the Dashboard in a browser where it's set up — "Check
             contracts now" below is the reliable way to trigger a check on demand.
@@ -151,3 +151,5 @@ export function NotificationsTab() {
     </div>
   )
 }
+
+

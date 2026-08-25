@@ -17,7 +17,7 @@ export function DesktopAppTab() {
       <Card className="border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/20">
         <CardHeader>
           <div className="flex items-start gap-3">
-            <Monitor className="size-5 text-blue-600 mt-1 flex-shrink-0" />
+            <Monitor className="size-5 text-primary mt-1 flex-shrink-0" />
             <div>
               <CardTitle className="text-lg">Install as Desktop App</CardTitle>
               <CardDescription>
@@ -32,19 +32,19 @@ export function DesktopAppTab() {
           </p>
           <ul className="text-sm space-y-2 pl-4">
             <li className="flex items-center gap-2">
-              <span className="text-blue-600">✓</span> Native window frame and menu bar
+              <span className="text-primary">✓</span> Native window frame and menu bar
             </li>
             <li className="flex items-center gap-2">
-              <span className="text-blue-600">✓</span> Keyboard shortcuts (Ctrl+N for new invoice)
+              <span className="text-primary">✓</span> Keyboard shortcuts (Ctrl+N for new invoice)
             </li>
             <li className="flex items-center gap-2">
-              <span className="text-blue-600">✓</span> Automatic updates
+              <span className="text-primary">✓</span> Automatic updates
             </li>
             <li className="flex items-center gap-2">
-              <span className="text-blue-600">✓</span> Works offline
+              <span className="text-primary">✓</span> Works offline
             </li>
             <li className="flex items-center gap-2">
-              <span className="text-blue-600">✓</span> All system integrations
+              <span className="text-primary">✓</span> All system integrations
             </li>
           </ul>
 
@@ -142,3 +142,4 @@ export function DesktopAppTab() {
     </div>
   )
 }
+

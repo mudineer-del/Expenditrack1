@@ -1,6 +1,15 @@
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
+/** The sidebar's gradient icon-chip formula (linear-gradient light→base + tinted shadow),
+ *  generalized via color-mix so it works with any accent — a literal hex or a CSS var. */
+function chipStyle(accent: string): React.CSSProperties {
+  return {
+    background: `linear-gradient(155deg, color-mix(in oklch, ${accent} 45%, white), ${accent})`,
+    boxShadow: `0 3px 8px -2px color-mix(in oklch, ${accent} 45%, transparent)`,
+  }
+}
+
 export function KpiTile({
   icon,
   iconClassName,
@@ -65,14 +74,14 @@ export function KpiTile({
           {/* Mobile hero card */}
           <div className="flex items-center gap-2 md:hidden">
             <div
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg shadow-sm [&_svg]:size-[18px] [&_svg]:text-white"
-              style={{ backgroundColor: accent ?? "var(--primary)" }}
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg [&_svg]:size-[18px] [&_svg]:text-white"
+              style={chipStyle(accent ?? "var(--primary)")}
             >
               {icon}
             </div>
             <span className="truncate text-[13px] font-semibold text-foreground/80">{label}</span>
           </div>
-          <div className={cn("mt-3 text-2xl font-extrabold tabular-nums md:hidden", valueClassName)}>{value}</div>
+          <div className={cn("mt-3 truncate text-2xl font-extrabold tabular-nums md:hidden", valueClassName)}>{value}</div>
           {sub && <div className="mt-1 truncate text-[13px] text-muted-foreground md:hidden">{sub}</div>}
           {trend && (
             <div className="-mx-1 mt-4 md:hidden" style={accent ? { color: accent } : undefined}>
@@ -84,14 +93,14 @@ export function KpiTile({
           <div
             className={cn(
               "hidden size-[var(--tile-icon)] shrink-0 items-center justify-center rounded-md md:mb-1 md:flex [&_svg]:size-[var(--tile-icon-svg)]",
-              iconClassName ?? (accent ? undefined : "bg-primary/10 text-primary")
+              iconClassName ?? (accent ? "[&_svg]:text-white" : "bg-primary/10 text-primary")
             )}
-            style={accent && !iconClassName ? { backgroundColor: `color-mix(in oklch, ${accent} 16%, transparent)`, color: accent } : undefined}
+            style={accent && !iconClassName ? chipStyle(accent) : undefined}
           >
             {icon}
           </div>
           <div className="hidden text-xs text-muted-foreground md:block">{label}</div>
-          <div className={cn("hidden text-[length:var(--tile-value)] font-semibold tabular-nums md:block", valueClassName)}>{value}</div>
+          <div className={cn("hidden truncate text-[length:var(--tile-value)] font-semibold tabular-nums md:block", valueClassName)}>{value}</div>
           {sub && <div className={cn("hidden text-xs text-muted-foreground md:block", subClassName)}>{sub}</div>}
         </>
       ) : (
@@ -101,15 +110,15 @@ export function KpiTile({
               label stacked below. The parent grid renders these 2-per-row. */}
           <div className="flex items-center justify-between md:hidden">
             <div
-              className="flex size-11 items-center justify-center rounded-xl shadow-sm [&_svg]:size-5 [&_svg]:text-white"
-              style={{ backgroundColor: accent ?? "var(--primary)" }}
+              className="flex size-11 items-center justify-center rounded-xl [&_svg]:size-5 [&_svg]:text-white"
+              style={chipStyle(accent ?? "var(--primary)")}
             >
               {icon}
             </div>
             {trend && <div style={accent ? { color: accent } : undefined}>{trend}</div>}
           </div>
           <div className="min-w-0 md:hidden">
-            <div className={cn("text-xl font-extrabold tabular-nums", valueClassName)}>{value}</div>
+            <div className={cn("truncate text-xl font-extrabold tabular-nums", valueClassName)}>{value}</div>
             <div className="mt-0.5 truncate text-[13px] font-semibold text-foreground/80">{label}</div>
             {sub && <div className="mt-1 truncate text-xs text-muted-foreground">{sub}</div>}
           </div>
@@ -118,15 +127,15 @@ export function KpiTile({
           <div
             className={cn(
               "hidden md:mb-1 md:flex md:size-[var(--tile-icon)] md:shrink-0 md:items-center md:justify-center md:rounded-md [&_svg]:size-[var(--tile-icon-svg)]",
-              iconClassName ?? (accent ? undefined : "bg-primary/10 text-primary")
+              iconClassName ?? (accent ? "[&_svg]:text-white" : "bg-primary/10 text-primary")
             )}
-            style={accent && !iconClassName ? { backgroundColor: `color-mix(in oklch, ${accent} 16%, transparent)`, color: accent } : undefined}
+            style={accent && !iconClassName ? chipStyle(accent) : undefined}
           >
             {icon}
           </div>
           <div className="hidden min-w-0 md:block md:flex-none">
             <span className="min-w-0 truncate text-xs text-muted-foreground">{label}</span>
-            <div className={cn("text-[length:var(--tile-value)] font-semibold tabular-nums", valueClassName)}>{value}</div>
+            <div className={cn("truncate text-[length:var(--tile-value)] font-semibold tabular-nums", valueClassName)}>{value}</div>
             {sub && <div className={cn("mt-0.5 text-xs text-muted-foreground", subClassName)}>{sub}</div>}
           </div>
         </>

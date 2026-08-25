@@ -58,7 +58,7 @@ export function PeriodReportView({
           onClick={() => onDrill(rows.filter((r) => (Number(r.amountPaid) || 0) > 0), "Paid Invoices")}
         >
           <div className="text-xs text-muted-foreground">Total paid</div>
-          <div className="text-lg font-semibold text-green-700 dark:text-green-400">{fmtMoney(tot.paid)}</div>
+          <div className="text-lg font-semibold text-status-cleared">{fmtMoney(tot.paid)}</div>
         </button>
         <button
           type="button"
@@ -66,7 +66,7 @@ export function PeriodReportView({
           onClick={() => onDrill(rows.filter((r) => (Number(r.amountInclTax) || 0) - (Number(r.amountPaid) || 0) > 0), "Outstanding Invoices")}
         >
           <div className="text-xs text-muted-foreground">Outstanding</div>
-          <div className="text-lg font-semibold text-amber-600 dark:text-amber-400">{fmtMoney(tot.outstanding)}</div>
+          <div className="text-lg font-semibold text-status-under">{fmtMoney(tot.outstanding)}</div>
         </button>
         <button
           type="button"
@@ -125,12 +125,12 @@ export function PeriodReportView({
                   <TableCell className="text-right tabular-nums">{fmtMoney(g.exclTax)}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmtMoney(g.tax)}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmtMoney(g.incl)}</TableCell>
-                  <TableCell className="text-right tabular-nums text-green-700 dark:text-green-400">{fmtMoney(g.paid)}</TableCell>
-                  <TableCell className={`text-right tabular-nums ${g.outstanding > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-700 dark:text-green-400"}`}>
+                  <TableCell className="text-right tabular-nums text-status-cleared">{fmtMoney(g.paid)}</TableCell>
+                  <TableCell className={`text-right tabular-nums ${g.outstanding > 0 ? "text-status-under" : "text-status-cleared"}`}>
                     {fmtMoney(g.outstanding)}
                   </TableCell>
                   <TableCell className="text-center">{g.taAvg !== null ? `${Math.round(g.taAvg)}d` : "—"}</TableCell>
-                  <TableCell className={`text-right ${g.delayed ? "text-red-600 dark:text-red-400" : ""}`}>{g.delayed}</TableCell>
+                  <TableCell className={`text-right ${g.delayed ? "text-status-returned" : ""}`}>{g.delayed}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -153,3 +153,4 @@ export function PeriodReportView({
     </div>
   )
 }
+

@@ -59,13 +59,14 @@ export function AppShell() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          {/* Navy bar, carrying the login screen's brand panel through into the app.
-              Children are forced to light ink via [&_*] rather than per-element
-              classes so the shadcn Buttons/Dropdown inside keep their own variants. */}
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-white/10 bg-[var(--ogdcl-navy)] px-4 text-white [&_button:hover]:bg-white/10 [&_button]:text-white">
+          {/* Light, token-driven bar matching the sidebar surface — keeps the shell
+              reading as one cohesive light frame instead of a dark stripe sitting
+              on top of an otherwise light app. Adapts automatically with theme/dark
+              mode since it rides --sidebar/--sidebar-border like AppSidebar does. */}
+          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground">
             <SidebarTrigger />
-            <Separator orientation="vertical" className="mr-2 h-4 bg-white/20" />
-            <OgdclLogoFull className="hidden h-8 w-auto rounded-none shadow-none sm:block" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <OgdclLogoFull className="hidden h-8 w-auto rounded-md shadow-none sm:block" />
             {/* min-w-0 matters: h1 is a flex item in a fixed-height (h-14) row
                 with no explicit width — flex items default to min-width:auto,
                 refusing to shrink below their own unwrapped text width, so a
@@ -83,7 +84,7 @@ export function AppShell() {
               // redundant context worth dropping on the narrowest screens
               // rather than fighting the title for room.
               <span
-                className="hidden shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/80 sm:inline-flex sm:max-w-40 lg:max-w-none"
+                className="hidden shrink-0 items-center gap-1.5 rounded-full bg-sidebar-accent px-2.5 py-1 text-xs font-medium text-sidebar-accent-foreground sm:inline-flex sm:max-w-40 lg:max-w-none"
                 title="This page is scoped to the sidebar's active department"
               >
                 <Layers className="size-3 shrink-0" />
@@ -94,12 +95,12 @@ export function AppShell() {
               <Button
                 variant="outline"
                 size="sm"
-                className="hidden gap-2 border-white/25 bg-transparent text-white/80 hover:bg-white/10 sm:flex"
+                className="hidden gap-2 text-muted-foreground sm:flex"
                 onClick={() => openPalette(true)}
               >
                 <Search className="size-3.5" />
                 Search
-                <kbd className="rounded border border-white/25 bg-white/10 px-1 text-[10px] font-medium">Ctrl K</kbd>
+                <kbd className="rounded border bg-muted px-1 text-[10px] font-medium">Ctrl K</kbd>
               </Button>
               <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => openPalette(true)} title="Search">
                 <Search />

@@ -38,7 +38,7 @@ export function ContractRow({
   const tone = contractStatusTone(contract.status)
 
   return (
-    <TableRow className="cursor-pointer" onClick={onView}>
+    <TableRow className="cursor-pointer border-border/50" onClick={onView}>
       <TableCell>
         <div className="flex items-center gap-2">
           <ContractorLogo vendor={primaryVendor || contract.vendor} logo={logo} color={color} size="sm" />

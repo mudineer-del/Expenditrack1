@@ -4,14 +4,14 @@ import { fmtMoney } from "@/lib/dashboard"
 import { shortContract, type ReportGroup } from "@/lib/reports"
 
 const valueConfig = {
-  paid: { label: "Paid", color: "#1c8a4b" },
-  outstanding: { label: "Outstanding", color: "#c8781c" },
+  paid: { label: "Paid", color: "var(--status-cleared)" },
+  outstanding: { label: "Outstanding", color: "var(--status-under)" },
 } satisfies ChartConfig
-const taConfig = { taAvg: { label: "Avg turnaround (days)", color: "#0A86C8" } } satisfies ChartConfig
+const taConfig = { taAvg: { label: "Avg turnaround (days)", color: "var(--primary)" } } satisfies ChartConfig
 
 function taColor(days: number | null): string {
   const d = days || 0
-  return d <= 15 ? "#49BFAC" : d <= 30 ? "#0A86C8" : d <= 60 ? "#c8781c" : "#c23b3b"
+  return d <= 15 ? "var(--status-cleared)" : d <= 30 ? "var(--primary)" : d <= 60 ? "var(--status-under)" : "var(--status-returned)"
 }
 
 /** Ported from the "Value by Contract" chart inside bindReportCharts (index.html:4940-4949). */
@@ -50,3 +50,5 @@ export function CompareTaChart({ groups, onGroupClick }: { groups: ReportGroup[]
     </ChartContainer>
   )
 }
+
+

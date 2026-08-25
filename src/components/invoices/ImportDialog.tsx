@@ -162,7 +162,7 @@ export function ImportDialog({
                   </li>
                 )}
                 {plan.updates.length > 0 && (
-                  <li className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                  <li className="flex items-center gap-1.5 text-status-under">
                     <RefreshCw className="size-3.5" />
                     {plan.updates.length} existing invoice{plan.updates.length !== 1 ? "s" : ""} will be
                     updated with missing details (nothing already filled in gets overwritten).
@@ -216,3 +216,4 @@ export function ImportDialog({
     </Dialog>
   )
 }
+

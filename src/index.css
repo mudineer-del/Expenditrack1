@@ -477,3 +477,82 @@ body {
     @apply gap-2;
   }
 }
+/* Theme-system semantic tokens. Runtime palette injection supplies the four families;
+   these Petrol defaults keep first paint consistent before the module initializes. */
+:root {
+  --status-cleared: #4D9A76;
+  --status-under: #B08352;
+  --status-returned: #B96770;
+  --dataviz-1: #267FC7;
+  --dataviz-2: #2E9FA7;
+  --dataviz-3: #8B79D8;
+  --dataviz-4: #B2759A;
+  --dataviz-5: #567A9C;
+  --dataviz-6: #7898A8;
+}
+.dark {
+  --background: #070B11;
+  --foreground: #E7F0F8;
+  --card: #0D151F;
+  --card-foreground: #E7F0F8;
+  --popover: #101A26;
+  --popover-foreground: #E7F0F8;
+  --primary: #2E90FF;
+  --primary-foreground: #06111F;
+  --secondary: #121E2B;
+  --secondary-foreground: #D8E8F5;
+  --muted: #131E2A;
+  --muted-foreground: #91A7BB;
+  --accent: #16283A;
+  --accent-foreground: #B9D8F2;
+  --border: #223242;
+  --input: #26394B;
+  --ring: #2E90FF;
+  --sidebar: #091019;
+  --sidebar-foreground: #E7F0F8;
+  --sidebar-primary: #2E90FF;
+  --sidebar-primary-foreground: #06111F;
+  --sidebar-accent: #142231;
+  --sidebar-accent-foreground: #B9D8F2;
+  --sidebar-border: #223242;
+  --sidebar-ring: #2E90FF;
+  --chart-1: #2E90FF;
+  --chart-2: #43AEB2;
+  --chart-3: #927FE1;
+  --chart-4: #C17FA8;
+  --chart-5: #7196B8;
+  --status-cleared: #67A889;
+  --status-under: #C39A68;
+  --status-returned: #CF7C86;
+  --dataviz-1: #2E90FF;
+  --dataviz-2: #43AEB2;
+  --dataviz-3: #927FE1;
+  --dataviz-4: #C17FA8;
+  --dataviz-5: #7196B8;
+  --dataviz-6: #8BB0BC;
+}
+.status-tone-cleared,
+.status-tone-under,
+.status-tone-returned {
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+}
+.status-tone-cleared { color: var(--status-cleared); background: color-mix(in oklch, var(--status-cleared) 16%, var(--card)); }
+.status-tone-under { color: var(--status-under); background: color-mix(in oklch, var(--status-under) 16%, var(--card)); }
+.status-tone-returned { color: var(--status-returned); background: color-mix(in oklch, var(--status-returned) 16%, var(--card)); }
+
+.text-status-cleared { color: var(--status-cleared) !important; }
+.text-status-under { color: var(--status-under) !important; }
+.text-status-returned { color: var(--status-returned) !important; }
+.status-icon-cleared { color: var(--status-cleared); background: color-mix(in oklch, var(--status-cleared) 16%, var(--card)); }
+.status-icon-under { color: var(--status-under); background: color-mix(in oklch, var(--status-under) 16%, var(--card)); }
+.status-icon-returned { color: var(--status-returned); background: color-mix(in oklch, var(--status-returned) 16%, var(--card)); }
+
+@theme inline {
+  --color-status-cleared: var(--status-cleared);
+  --color-status-under: var(--status-under);
+  --color-status-returned: var(--status-returned);
+}

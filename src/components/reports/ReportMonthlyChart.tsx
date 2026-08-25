@@ -9,7 +9,7 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ]
 
-const config = { total: { label: "Expenditure (incl. tax)", color: "#0A86C8" } } satisfies ChartConfig
+const config = { total: { label: "Expenditure (incl. tax)", color: "var(--primary)" } } satisfies ChartConfig
 
 /** Ported from the monthly-expenditure chart inside bindReportCharts (index.html:4917-4929). */
 export function ReportMonthlyChart({ rows, onMonthClick }: { rows: Invoice[]; onMonthClick: (rows: Invoice[], label: string) => void }) {
@@ -56,3 +56,4 @@ export function ReportMonthlyChart({ rows, onMonthClick }: { rows: Invoice[]; on
     </ChartContainer>
   )
 }
+

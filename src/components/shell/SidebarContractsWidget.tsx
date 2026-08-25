@@ -70,7 +70,7 @@ function ContractPill({ contract, invoices, logo, onOpen }: { contract: Contract
             {contract.status || "—"}
           </span>
           {days !== null && (
-            <span className={cn("text-xs font-medium", days < 0 ? "text-destructive" : days <= 30 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
+            <span className={cn("text-xs font-medium", days < 0 ? "text-destructive" : days <= 30 ? "text-status-under" : "text-muted-foreground")}>
               {days < 0 ? "Expired" : days === 0 ? "Today" : `${days}d left`}
             </span>
           )}
@@ -190,3 +190,4 @@ export function SidebarContractsWidget() {
     </div>
   )
 }
+

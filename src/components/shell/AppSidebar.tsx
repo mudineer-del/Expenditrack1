@@ -27,7 +27,9 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { OgdclMark } from "@/components/shared/OgdclMark"
 import { DepartmentSwitcher } from "@/components/shell/DepartmentSwitcher"
+import { NavIconChip } from "@/components/shell/NavIconChip"
 import { SidebarContractsWidget } from "@/components/shell/SidebarContractsWidget"
+import { NAV_ITEM_COLORS } from "@/lib/navColors"
 import { useAuth } from "@/hooks/useAuth"
 import { useActivityLogQuery } from "@/hooks/useActivityLog"
 import { useMessagesQuery } from "@/hooks/useMessages"
@@ -109,16 +111,18 @@ export function AppSidebar() {
                 {group.items.map((item) => {
                   const restricted = "adminOnly" in item && item.adminOnly && !isAdmin
                   const badgeCount = item.to === "/activity" ? unreadActivity : item.to === "/messages" ? unreadMessages : 0
+                  const color = NAV_ITEM_COLORS[item.to]
                   return (
                     <SidebarMenuItem key={item.to}>
                       <SidebarMenuButton
                         asChild={!restricted}
                         disabled={restricted}
+                        size="lg"
                         tooltip={restricted ? "Only Admins can access Users" : item.label}
                       >
                         {restricted ? (
                           <>
-                            <item.icon />
+                            <NavIconChip icon={item.icon} color={color} />
                             <span>{item.label}</span>
                           </>
                         ) : (
@@ -127,12 +131,29 @@ export function AppSidebar() {
                             end={"end" in item ? item.end : false}
                             className={({ isActive }) => (isActive ? "bg-sidebar-accent font-medium" : "")}
                           >
-                            <item.icon />
-                            <span>{item.label}</span>
+                            {({ isActive }) => (
+                              <>
+                                {isActive && (
+                                  <span
+                                    className="absolute inset-y-1.5 left-0 w-[3px] rounded-full"
+                                    style={{ background: color.to }}
+                                  />
+                                )}
+                                <NavIconChip icon={item.icon} color={color} />
+                                <span>{item.label}</span>
+                              </>
+                            )}
                           </NavLink>
                         )}
                       </SidebarMenuButton>
-                      {badgeCount > 0 && <SidebarMenuBadge className="bg-primary text-primary-foreground">{badgeCount}</SidebarMenuBadge>}
+                      {badgeCount > 0 && (
+                        <SidebarMenuBadge
+                          className="border-0 text-white"
+                          style={{ background: `linear-gradient(135deg, ${color.from}, ${color.to})` }}
+                        >
+                          {badgeCount}
+                        </SidebarMenuBadge>
+                      )}
                     </SidebarMenuItem>
                   )
                 })}

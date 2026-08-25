@@ -88,21 +88,41 @@ export function InvoicesTable({
         return (
           <div className="flex items-center gap-2">
             <ContractorLogo vendor={r.vendor || "Unknown"} logo={getContractorLogo(contractorLogos, r.vendor)} color={vendorColor(r.vendor)} size="sm" />
-            {r.vendor}
+            <span className="font-medium">{r.vendor}</span>
           </div>
         )
       },
     }),
-    columnHelper.display({ id: "invoiceNo", header: "Invoice No.", size: 140, cell: ({ row }) => row.original.invoiceNo }),
+    columnHelper.display({
+      id: "invoiceNo",
+      header: "Invoice No.",
+      size: 140,
+      cell: ({ row }) => <span className="font-medium">{row.original.invoiceNo}</span>,
+    }),
     columnHelper.display({
       id: "wellName",
       header: "Well Name",
       size: 140,
-      cell: ({ row }) => row.original.wellName || "—",
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.wellName || "—"}</span>,
     }),
-    columnHelper.display({ id: "service", header: "Service", size: 130, cell: ({ row }) => row.original.service || "—" }),
-    columnHelper.display({ id: "region", header: "Region", size: 90, cell: ({ row }) => row.original.region || "—" }),
-    columnHelper.display({ id: "invoiceDate", header: "Invoice Date", size: 110, cell: ({ row }) => row.original.invoiceDate || "—" }),
+    columnHelper.display({
+      id: "service",
+      header: "Service",
+      size: 130,
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.service || "—"}</span>,
+    }),
+    columnHelper.display({
+      id: "region",
+      header: "Region",
+      size: 90,
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.region || "—"}</span>,
+    }),
+    columnHelper.display({
+      id: "invoiceDate",
+      header: "Invoice Date",
+      size: 110,
+      cell: ({ row }) => <span className="text-muted-foreground">{row.original.invoiceDate || "—"}</span>,
+    }),
     columnHelper.display({
       id: "amountExclTax",
       header: "Excl. Tax",
@@ -134,7 +154,10 @@ export function InvoicesTable({
       cell: ({ row }) => {
         const r = row.original
         return (
-          <span className="truncate" title={r.updatedByName && r.updatedByName !== r.createdByName ? `Last edited by ${r.updatedByName}` : undefined}>
+          <span
+            className="truncate text-muted-foreground"
+            title={r.updatedByName && r.updatedByName !== r.createdByName ? `Last edited by ${r.updatedByName}` : undefined}
+          >
             {r.createdByName || "—"}
           </span>
         )
@@ -276,7 +299,7 @@ export function InvoicesTable({
               <TableRow
                 key={row.id}
                 data-state={selected.has(row.original.id) ? "selected" : undefined}
-                className={cn("cursor-pointer", tableBanded && "even:bg-muted/30")}
+                className={cn("cursor-pointer border-border/50", tableBanded && "even:bg-muted/30")}
                 onClick={() => onView(row.original)}
               >
                 {canBulk && (

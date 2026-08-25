@@ -142,11 +142,18 @@ export default function InvoicesPage() {
 
   // Deep-link support: Dashboard's Recent Invoices rows (and the command palette) navigate
   // here with { openInvoiceId } in router state to jump straight to that invoice; the
-  // header's quick-add button navigates here with { openAdd: true } to open a blank one.
+  // header's quick-add button navigates here with { openAdd: true } to open a blank one;
+  // VendorDetailSheet's "View all invoices" navigates here with { vendorFilter } to land
+  // pre-filtered to that contractor.
   useEffect(() => {
-    const state = location.state as { openInvoiceId?: string; openAdd?: boolean } | null
+    const state = location.state as { openInvoiceId?: string; openAdd?: boolean; vendorFilter?: string } | null
     if (state?.openAdd) {
       openAdd()
+      navigate(location.pathname, { replace: true, state: null })
+      return
+    }
+    if (state?.vendorFilter) {
+      setFilters((f) => ({ ...f, vendor: state.vendorFilter! }))
       navigate(location.pathname, { replace: true, state: null })
       return
     }

@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
+import { NavIconChip } from "@/components/shell/NavIconChip"
+import { ALL_DEPARTMENTS_COLOR, departmentChipColor } from "@/lib/navColors"
 import { errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useRenameDepartment } from "@/hooks/useDepartments"
@@ -116,9 +118,16 @@ export function DepartmentSwitcher() {
             <SidebarMenuButton
               isActive={activeDept === ALL_DEPARTMENTS}
               onClick={() => setActiveDept(ALL_DEPARTMENTS)}
+              size="lg"
               tooltip="All departments"
             >
-              <Layers />
+              {activeDept === ALL_DEPARTMENTS && (
+                <span
+                  className="absolute inset-y-1.5 left-0 w-[3px] rounded-full"
+                  style={{ background: ALL_DEPARTMENTS_COLOR.to }}
+                />
+              )}
+              <NavIconChip icon={Layers} color={ALL_DEPARTMENTS_COLOR} />
               <span>All departments</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -162,14 +171,21 @@ export function DepartmentSwitcher() {
                 <SidebarMenuButton
                   isActive={activeDept === d}
                   onClick={() => setActiveDept(d)}
+                  size="lg"
                   className={isAdmin ? "pr-14" : undefined}
                   tooltip={d}
                 >
-                  <Building2 />
+                  {activeDept === d && (
+                    <span
+                      className="absolute inset-y-1.5 left-0 w-[3px] rounded-full"
+                      style={{ background: departmentChipColor(d).to }}
+                    />
+                  )}
+                  <NavIconChip icon={Building2} color={departmentChipColor(d)} />
                   <span>{d}</span>
                 </SidebarMenuButton>
                 {isAdmin && (
-                  <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/dept:opacity-100 group-focus-within/dept:opacity-100">
+                  <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center gap-0.5 opacity-0 transition-opacity group-hover/dept:opacity-100 group-focus-within/dept:opacity-100">
                     <button
                       type="button"
                       title={`Rename ${d}`}

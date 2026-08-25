@@ -1,34 +1,18 @@
 import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
 
-/** Ported from VENDOR_COLORS (index.html:2986). */
-const VENDOR_COLORS: Record<string, string> = {
-  "Step Oiltools": "#0A86C8",
-  Schlumbergers: "#49BFAC",
-  Hilong: "#c8781c",
-  Gemstone: "#1c8a4b",
-  Sprint: "#7a5fc9",
-  "Mid Gard": "#c25577",
-}
-const FALLBACK_VENDOR_COLORS = ["#5b7086", "#3d8f84", "#8b5cf6", "#c23b3b", "#155a82", "#2f9e94"]
+/** Theme-aware series colors keep vendor identities distinct without reserving status hues. */
+const SERIES_VARS = ["--dataviz-1", "--dataviz-2", "--dataviz-3", "--dataviz-4", "--dataviz-5", "--dataviz-6"]
 
-/** Simple deterministic string hash so a vendor not in VENDOR_COLORS still gets
- *  the same fallback color everywhere it's shown, instead of always the first one. */
 function hashVendor(v: string): number {
   let h = 0
   for (let i = 0; i < v.length; i++) h = (h * 31 + v.charCodeAt(i)) | 0
   return Math.abs(h)
 }
 
-/** `index` is an explicit override for callers (like a chart legend) that need
- *  guaranteed-distinct colors among a specific set of vendors shown together;
- *  omit it and the color is derived from the vendor's own name instead. */
 export function vendorColor(v: string, index?: number): string {
-  if (VENDOR_COLORS[v]) return VENDOR_COLORS[v]
-  const i = index ?? hashVendor(v)
-  return FALLBACK_VENDOR_COLORS[i % FALLBACK_VENDOR_COLORS.length]
+  return `var(${SERIES_VARS[(index ?? hashVendor(v)) % SERIES_VARS.length]})`
 }
-
 export function fmtMoney(n: number | "" | null | undefined): string {
   const v = Number(n) || 0
   return "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -517,3 +501,5 @@ export function typeInvoiceCounts(rows: Invoice[]): TypeCount[] {
     .map(([type, invoices]) => ({ type, count: invoices.length, invoices }))
     .sort((a, b) => b.count - a.count)
 }
+
+

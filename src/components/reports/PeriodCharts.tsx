@@ -3,16 +3,16 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { fmtMoney } from "@/lib/dashboard"
 import type { ReportGroup } from "@/lib/reports"
 
-const CHART_PALETTE = ["#0A86C8", "#0e8a8c", "#2c5f8a", "#49BFAC", "#5b7086", "#155a82", "#3d8f84", "#0a2540", "#6fa3c4", "#2f9e94"]
+const CHART_PALETTE = ["var(--primary)", "var(--dataviz-2)", "var(--dataviz-5)", "var(--dataviz-2)", "var(--dataviz-6)", "var(--dataviz-5)", "var(--dataviz-2)", "var(--dataviz-1)", "#6fa3c4", "var(--dataviz-2)"]
 
 function shortLabel(k: string): string {
   return k.length > 18 ? "…" + k.slice(-16) : k
 }
 
-const valueConfig = { incl: { label: "Value (incl. tax)", color: "#0A86C8" } } satisfies ChartConfig
+const valueConfig = { incl: { label: "Value (incl. tax)", color: "var(--primary)" } } satisfies ChartConfig
 const paidConfig = {
-  paid: { label: "Paid", color: "#1c8a4b" },
-  outstanding: { label: "Outstanding", color: "#c8781c" },
+  paid: { label: "Paid", color: "var(--status-cleared)" },
+  outstanding: { label: "Outstanding", color: "var(--status-under)" },
 } satisfies ChartConfig
 
 /** Ported from the period "Expenditure by {label}" chart (index.html:4986-4996): line for time-based grouping, bar otherwise. */
@@ -81,3 +81,4 @@ export function PeriodPaidChart({ groups, onGroupClick }: { groups: ReportGroup[
     </ChartContainer>
   )
 }
+
