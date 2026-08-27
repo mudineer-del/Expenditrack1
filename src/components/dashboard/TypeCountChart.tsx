@@ -6,6 +6,7 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
+  LabelList,
   Line,
   Pie,
   PieChart,
@@ -45,6 +46,8 @@ const PIE_COLORS = ["var(--dataviz-1)", "var(--dataviz-2)", "var(--dataviz-3)", 
 export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: (title: string, invoices: TypeCount["invoices"]) => void }) {
   const chartType = useDisplayStore((s) => s.breakdownChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
+  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
   const isMobile = useIsMobile()
   const gid = useId()
 
@@ -72,8 +75,8 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
             paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
             cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
             activeShape={isMobile ? donutActiveShape : undefined}
-            label={isMobile ? undefined : donutOuterLabel}
-            labelLine={isMobile ? false : { stroke: "var(--border)" }}
+            label={isMobile || !labelsEnabled ? undefined : donutOuterLabel}
+            labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
             isAnimationActive={isMobile ? animate : false}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
@@ -137,7 +140,16 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
           <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
           <YAxis dataKey="type" type="category" tickLine={false} axisLine={false} fontSize={11} width={110} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="count" fill="var(--color-count)" radius={[0, 8, 8, 0]} isAnimationActive={animate} />
+          <Bar dataKey="count" fill="var(--color-count)" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
+            {labelsEnabled && (
+              <LabelList
+                dataKey="count"
+                position={labelPosition === "inside" ? "insideRight" : "right"}
+                fontSize={10}
+                fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+              />
+            )}
+          </Bar>
         </BarChart>
       </ChartContainer>
     )
@@ -151,7 +163,16 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
           <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
           <YAxis dataKey="type" type="category" tickLine={false} axisLine={false} fontSize={11} width={110} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="count" fill="var(--color-count)" radius={[0, 8, 8, 0]} isAnimationActive={animate} />
+          <Bar dataKey="count" fill="var(--color-count)" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
+            {labelsEnabled && (
+              <LabelList
+                dataKey="count"
+                position={labelPosition === "inside" ? "insideRight" : "right"}
+                fontSize={10}
+                fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+              />
+            )}
+          </Bar>
         </BarChart>
       </ChartContainer>
     )
@@ -174,7 +195,9 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
             dot={{ r: 3.5 }}
             activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
             isAnimationActive={animate}
-          />
+          >
+            {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={10} fill="var(--muted-foreground)" />}
+          </Line>
         )}
         {chartType === "area" && (
           <>
@@ -193,7 +216,9 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
               fill="url(#typeCountGradient)"
               activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
               isAnimationActive={animate}
-            />
+            >
+              {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={10} fill="var(--muted-foreground)" />}
+            </Area>
           </>
         )}
       </ComposedChart>

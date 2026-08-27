@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, Sele
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PALETTES } from "@/lib/colorPalettes"
+import { CHART_MEASURES, chartMeasureLabel, GROUP_BY_OPTIONS, reportGroupLabel, type ChartMeasure } from "@/lib/reports"
 import { cn } from "@/lib/utils"
 import {
   customFontFaceName,
@@ -24,6 +25,9 @@ import {
   type BorderWidth,
   type BuiltinFont,
   type CardScale,
+  type ChartDimension,
+  type ChartLabelPosition,
+  type ChartSlotId,
   type ChartType,
   type FontSize,
   type IconWeight,
@@ -75,6 +79,98 @@ const CHART_TYPES: { key: ChartType; label: string }[] = [
   { key: "area", label: "Area" },
   { key: "pie", label: "Pie" },
   { key: "radar", label: "Radar" },
+]
+
+interface ChartSlotMeta {
+  id: ChartSlotId
+  title: string
+  hasDimension: boolean
+}
+
+const DASHBOARD_SLOTS: ChartSlotMeta[] = [
+  { id: "dashTrend", title: "Monthly Expenditure Trend", hasDimension: true },
+  { id: "dashService", title: "Expenditure by Service", hasDimension: true },
+  { id: "dashVendor", title: "Invoice Value by Contractor", hasDimension: true },
+  { id: "dashBreakdown", title: "Contractor / Type Breakdown", hasDimension: true },
+  { id: "dashStatus", title: "Expenditure by Status", hasDimension: true },
+]
+const DETAIL_SHEET_SLOTS: ChartSlotMeta[] = [
+  { id: "vendorSheetTrend", title: "Vendor sheet — Spending Trend", hasDimension: true },
+  { id: "vendorSheetService", title: "Vendor sheet — Expenditure by Service", hasDimension: true },
+  { id: "contractSheetTrend", title: "Contract sheet — Spending Trend", hasDimension: true },
+  { id: "contractSheetService", title: "Contract sheet — Expenditure by Service", hasDimension: true },
+]
+const REPORTS_SLOTS: ChartSlotMeta[] = [
+  { id: "periodValue", title: "Period Report — Expenditure chart", hasDimension: false },
+  { id: "compareTa", title: "Compare Contracts — Avg Turnaround chart", hasDimension: false },
+  { id: "contractBuckets", title: "Contract Report — Turnaround Buckets chart", hasDimension: false },
+  { id: "contractMonthly", title: "Contract Report — Monthly Expenditure chart", hasDimension: false },
+]
+
+const AUTO_DIMENSION = "__auto__"
+
+/** One configurable chart's Dimension + Measure controls — reads/writes `chartSlots[id]` directly
+ *  off the store so each row only re-renders when its own slot changes. `dashBreakdown` is the one
+ *  slot whose dimension defaults to "unset" (an automatic Contractor/Type swap driven by the
+ *  Dashboard's contractor filter) — its picker gets an extra "Automatic" option for that state. */
+function ChartSlotRow({ id, title, hasDimension }: ChartSlotMeta) {
+  const cfg = useDisplayStore((s) => s.chartSlots[id])
+  const setChartSlot = useDisplayStore((s) => s.setChartSlot)
+  const canBeAuto = id === "dashBreakdown"
+
+  return (
+    <div className="rounded-lg border p-2.5">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="text-xs font-medium">
+          {title}
+          {cfg.hidden && <span className="ml-1.5 text-muted-foreground">(hidden)</span>}
+        </div>
+        <Switch
+          className="shrink-0"
+          checked={!cfg.hidden}
+          onCheckedChange={(checked) => setChartSlot(id, { hidden: !checked })}
+          title={cfg.hidden ? "Show this chart" : "Hide this chart"}
+        />
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        {hasDimension && (
+          <Select
+            value={cfg.dimension ?? AUTO_DIMENSION}
+            onValueChange={(v) => setChartSlot(id, { dimension: v === AUTO_DIMENSION ? undefined : (v as ChartDimension) })}
+          >
+            <SelectTrigger className="h-8 flex-1 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {canBeAuto && <SelectItem value={AUTO_DIMENSION}>Automatic</SelectItem>}
+              {GROUP_BY_OPTIONS.map((g) => (
+                <SelectItem key={g} value={g}>
+                  {reportGroupLabel(g)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Select value={cfg.measure} onValueChange={(v) => setChartSlot(id, { measure: v as ChartMeasure })}>
+          <SelectTrigger className="h-8 flex-1 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CHART_MEASURES.map((m) => (
+              <SelectItem key={m} value={m}>
+                {chartMeasureLabel(m)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+}
+
+const LABEL_POSITIONS: { key: ChartLabelPosition; label: string }[] = [
+  { key: "outside", label: "Outside" },
+  { key: "inside", label: "Inside" },
 ]
 
 const FONT_FAMILIES: { key: BuiltinFont; label: string }[] = [
@@ -330,6 +426,22 @@ export function FormatDialog() {
             <Section title="Contractor / Type Breakdown" hint="Shows contractor volume for 'All'; switches to that contractor's work-type mix once one is selected.">
               <SegmentedControl options={CHART_TYPES} value={store.breakdownChartType} onChange={(t) => store.setChartType("breakdownChartType", t)} />
             </Section>
+            <Section title="Value labels">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="chart-labels-toggle" className="text-sm font-medium">
+                    Show on charts
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Bars, lines and slices show their value directly.</p>
+                </div>
+                <Switch id="chart-labels-toggle" checked={store.chartLabelsEnabled} onCheckedChange={store.setChartLabelsEnabled} />
+              </div>
+              <SegmentedControl
+                options={LABEL_POSITIONS}
+                value={store.chartLabelPosition}
+                onChange={store.setChartLabelPosition}
+              />
+            </Section>
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="animations-toggle" className="text-sm font-medium">
@@ -339,6 +451,35 @@ export function FormatDialog() {
               </div>
               <Switch id="animations-toggle" checked={store.animationsEnabled} onCheckedChange={store.setAnimationsEnabled} />
             </div>
+
+            <Section title="Chart data" hint="Pick what each chart is grouped by and what value it plots — changes apply immediately, everywhere that chart appears.">
+              <div className="grid gap-3">
+                <div>
+                  <div className="mb-1.5 text-xs font-semibold text-muted-foreground uppercase">Dashboard</div>
+                  <div className="grid gap-2">
+                    {DASHBOARD_SLOTS.map((s) => (
+                      <ChartSlotRow key={s.id} {...s} />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1.5 text-xs font-semibold text-muted-foreground uppercase">Vendor / Contract sheets</div>
+                  <div className="grid gap-2">
+                    {DETAIL_SHEET_SLOTS.map((s) => (
+                      <ChartSlotRow key={s.id} {...s} />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1.5 text-xs font-semibold text-muted-foreground uppercase">Financial Reports</div>
+                  <div className="grid gap-2">
+                    {REPORTS_SLOTS.map((s) => (
+                      <ChartSlotRow key={s.id} {...s} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Section>
           </TabsContent>
 
           <TabsContent value="table" className="grid gap-4 pt-4">

@@ -1,8 +1,11 @@
 import { useMemo } from "react"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtMoney } from "@/lib/dashboard"
-import { aggregate, groupRows, reportGroupLabel, reportRows, turnaroundDays, type ReportFilters, type ReportGroup } from "@/lib/reports"
+import { aggregate, chartMeasureLabel, groupRows, reportGroupLabel, reportRows, turnaroundDays, type ReportFilters, type ReportGroup } from "@/lib/reports"
+import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
+import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
 import { PeriodPaidChart, PeriodValueChart } from "@/components/reports/PeriodCharts"
+import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Invoice } from "@/types/invoice"
 
 const TIME_GROUPS = ["month", "quarter", "year"]
@@ -27,6 +30,8 @@ export function PeriodReportView({
   const tot = useMemo(() => aggregate(rows), [rows])
   const label = reportGroupLabel(filters.groupBy)
   const isTime = TIME_GROUPS.includes(filters.groupBy)
+  const valueMeasure = useDisplayStore((s) => s.chartSlots.periodValue.measure)
+  const valueHidden = useDisplayStore((s) => s.chartSlots.periodValue.hidden)
 
   function drillGroup(g: ReportGroup) {
     onDrill(g.rows, `${label}: ${g.key}`)
@@ -80,13 +85,22 @@ export function PeriodReportView({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {!valueHidden && (
         <div className="rounded-lg border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Expenditure by {label}</h3>
-            <span className="text-xs text-muted-foreground">Click a point/bar for details</span>
+            <h3 className="text-sm font-semibold">
+              {valueMeasure === "incl" ? `Expenditure by ${label}` : `${chartMeasureLabel(valueMeasure)} by ${label}`}
+            </h3>
+            <div className="flex items-center gap-1">
+              <ChartVisibilityToggle id="periodValue" />
+              <span className="text-xs text-muted-foreground">Click a point/bar for details</span>
+            </div>
           </div>
-          <PeriodValueChart groups={groups} isTime={isTime} onGroupClick={drillGroup} />
+          <ChartSlotContextMenu id="periodValue" hasDimension={false}>
+            <PeriodValueChart groups={groups} isTime={isTime} measure={valueMeasure} onGroupClick={drillGroup} />
+          </ChartSlotContextMenu>
         </div>
+        )}
         <div className="rounded-lg border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">Paid vs Outstanding by {label}</h3>

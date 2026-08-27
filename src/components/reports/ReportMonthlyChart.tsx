@@ -1,38 +1,31 @@
 import { useMemo } from "react"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { fmtMoney } from "@/lib/dashboard"
+import { chartMeasureLabel, formatGroupKey, formatMeasureValue, groupRows, seriesFromGroups, type ChartMeasure } from "@/lib/reports"
+import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Invoice } from "@/types/invoice"
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-]
-
-const config = { total: { label: "Expenditure (incl. tax)", color: "var(--primary)" } } satisfies ChartConfig
-
-/** Ported from the monthly-expenditure chart inside bindReportCharts (index.html:4917-4929). */
-export function ReportMonthlyChart({ rows, onMonthClick }: { rows: Invoice[]; onMonthClick: (rows: Invoice[], label: string) => void }) {
-  const { data, monthRows } = useMemo(() => {
-    const byMonth: Record<string, number> = {}
-    const monthRows: Record<string, Invoice[]> = {}
-    rows.forEach((r) => {
-      const d = r.invoiceDate
-      if (d && /^\d{4}-\d{2}/.test(d)) {
-        const k = d.slice(0, 7)
-        byMonth[k] = (byMonth[k] || 0) + (Number(r.amountInclTax) || 0)
-        ;(monthRows[k] = monthRows[k] || []).push(r)
-      }
-    })
-    const keys = Object.keys(byMonth).sort()
-    return {
-      data: keys.map((k) => {
-        const [y, m] = k.split("-")
-        return { key: k, month: `${MONTHS[Number(m) - 1].slice(0, 3)} ${y.slice(2)}`, total: byMonth[k] }
-      }),
-      monthRows,
-    }
-  }, [rows])
+/** Ported from the monthly-expenditure chart inside bindReportCharts (index.html:4917-4929).
+ *  Dimension stays fixed to month (this chart's whole purpose); `measure` (Settings ▸ Charts,
+ *  default "incl") picks which aggregate field is plotted per month. */
+export function ReportMonthlyChart({
+  rows,
+  measure,
+  onMonthClick,
+}: {
+  rows: Invoice[]
+  measure: ChartMeasure
+  onMonthClick: (rows: Invoice[], label: string) => void
+}) {
+  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const data = useMemo(() => {
+    const points = seriesFromGroups(groupRows(rows, "month"), "month", measure)
+    return points.map((p) => ({ key: p.key, month: formatGroupKey("month", p.key), total: p.value, invoices: p.invoices }))
+  }, [rows, measure])
+  const fmt = (v: unknown) => formatMeasureValue(measure, Number(v), (n) => fmtMoney(n).replace(".00", ""))
+  const config = { total: { label: chartMeasureLabel(measure), color: "var(--primary)" } } satisfies ChartConfig
 
   if (!data.length) {
     return <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">No dated invoices</div>
@@ -43,15 +36,25 @@ export function ReportMonthlyChart({ rows, onMonthClick }: { rows: Invoice[]; on
       <BarChart data={data}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} />
-        <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
-        <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+        <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={fmt} width={60} />
+        <ChartTooltip content={<ChartTooltipContent formatter={(v) => formatMeasureValue(measure, Number(v), fmtMoney)} />} />
         <Bar
           dataKey="total"
           fill="var(--color-total)"
           radius={4}
           cursor="pointer"
-          onClick={(d) => onMonthClick(monthRows[(d.payload as { key: string }).key] || [], `Month: ${(d.payload as { month: string }).month}`)}
-        />
+          onClick={(d) => onMonthClick((d.payload as { invoices: Invoice[] }).invoices || [], `Month: ${(d.payload as { month: string }).month}`)}
+        >
+          {labelsEnabled && (
+            <LabelList
+              dataKey="total"
+              position={labelPosition === "inside" ? "inside" : "top"}
+              formatter={fmt}
+              fontSize={10}
+              fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+            />
+          )}
+        </Bar>
       </BarChart>
     </ChartContainer>
   )

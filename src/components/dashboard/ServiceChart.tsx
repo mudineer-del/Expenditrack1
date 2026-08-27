@@ -58,8 +58,11 @@ export function ServiceChart({
   onDrill: (title: string, invoices: CategoryTotal["invoices"]) => void
 }) {
   const animate = useDisplayStore((s) => s.animationsEnabled)
+  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
   const isMobile = useIsMobile()
   const gid = useId()
+  const valueLabel = (v: unknown) => fmtMoney(Number(v)).replace(".00", "")
 
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No service data</div>
@@ -85,8 +88,8 @@ export function ServiceChart({
             paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
             cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
             activeShape={isMobile ? donutActiveShape : undefined}
-            label={isMobile ? undefined : donutOuterLabel}
-            labelLine={isMobile ? false : { stroke: "var(--border)" }}
+            label={isMobile || !labelsEnabled ? undefined : donutOuterLabel}
+            labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
             // Recharts only shows Pie labels once its entrance animation resolves
             // (showLabels: !isAnimating internally) — with `top` a fresh array
             // every render, that transition seemingly never settles, so labels
@@ -190,7 +193,17 @@ export function ServiceChart({
           <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} />
           <YAxis dataKey="service" type="category" tickLine={false} axisLine={false} fontSize={11} width={110} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Bar dataKey="total" fill="var(--color-total)" radius={[0, 8, 8, 0]} isAnimationActive={animate} />
+          <Bar dataKey="total" fill="var(--color-total)" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
+            {labelsEnabled && (
+              <LabelList
+                dataKey="total"
+                position={labelPosition === "inside" ? "insideRight" : "right"}
+                formatter={valueLabel}
+                fontSize={10}
+                fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+              />
+            )}
+          </Bar>
         </BarChart>
       </ChartContainer>
     )
@@ -213,7 +226,9 @@ export function ServiceChart({
             dot={{ r: 3.5 }}
             activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
             isAnimationActive={animate}
-          />
+          >
+            {labelsEnabled && <LabelList dataKey="total" position="top" formatter={valueLabel} fontSize={10} fill="var(--muted-foreground)" />}
+          </Line>
         )}
         {chartType === "area" && (
           <>
@@ -232,7 +247,9 @@ export function ServiceChart({
               fill="url(#serviceGradient)"
               activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
               isAnimationActive={animate}
-            />
+            >
+              {labelsEnabled && <LabelList dataKey="total" position="top" formatter={valueLabel} fontSize={10} fill="var(--muted-foreground)" />}
+            </Area>
           </>
         )}
       </ComposedChart>

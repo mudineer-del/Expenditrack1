@@ -6,6 +6,7 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
+  LabelList,
   Line,
   Pie,
   PieChart,
@@ -43,6 +44,8 @@ const config = {
 export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]; onDrill: (title: string, invoices: VendorCount["invoices"]) => void }) {
   const chartType = useDisplayStore((s) => s.breakdownChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
+  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
   const isMobile = useIsMobile()
   const gid = useId()
 
@@ -70,8 +73,8 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
             paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
             cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
             activeShape={isMobile ? donutActiveShape : undefined}
-            label={isMobile ? undefined : donutOuterLabel}
-            labelLine={isMobile ? false : { stroke: "var(--border)" }}
+            label={isMobile || !labelsEnabled ? undefined : donutOuterLabel}
+            labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
             isAnimationActive={isMobile ? animate : false}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
@@ -137,6 +140,14 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
           <ChartTooltip content={<ChartTooltipContent />} />
           <Bar dataKey="count" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
             {top.map((d, i) => <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />)}
+            {labelsEnabled && (
+              <LabelList
+                dataKey="count"
+                position={labelPosition === "inside" ? "insideRight" : "right"}
+                fontSize={10}
+                fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+              />
+            )}
           </Bar>
         </BarChart>
       </ChartContainer>
@@ -155,6 +166,14 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
             {top.map((d, i) => (
               <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />
             ))}
+            {labelsEnabled && (
+              <LabelList
+                dataKey="count"
+                position={labelPosition === "inside" ? "inside" : "top"}
+                fontSize={10}
+                fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+              />
+            )}
           </Bar>
         </BarChart>
       </ChartContainer>
@@ -178,7 +197,9 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
             dot={{ r: 3.5 }}
             activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
             isAnimationActive={animate}
-          />
+          >
+            {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={10} fill="var(--muted-foreground)" />}
+          </Line>
         )}
         {chartType === "area" && (
           <>
@@ -197,7 +218,9 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
               fill="url(#contractorCountGradient)"
               activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
               isAnimationActive={animate}
-            />
+            >
+              {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={10} fill="var(--muted-foreground)" />}
+            </Area>
           </>
         )}
       </ComposedChart>

@@ -1,6 +1,7 @@
 import {
   Area,
   Bar,
+  Brush,
   CartesianGrid,
   Cell,
   ComposedChart,
@@ -146,6 +147,9 @@ export function TrendChart({ data, onDrill }: { data: TrendPoint[]; onDrill: (ti
               isAnimationActive={animate}
             />
           </>
+        )}
+        {data.length > 8 && (
+          <Brush dataKey="month" height={22} travellerWidth={8} stroke="var(--color-total)" fill="var(--muted)" className="text-xs" />
         )}
       </ComposedChart>
     </ChartContainer>

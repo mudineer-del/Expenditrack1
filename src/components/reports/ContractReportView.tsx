@@ -3,9 +3,12 @@ import { useNavigate } from "react-router-dom"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { fmtMoney } from "@/lib/dashboard"
-import { aggregate, reportRows, turnaroundDays, type ReportFilters } from "@/lib/reports"
+import { aggregate, chartMeasureLabel, reportRows, turnaroundDays, type ReportFilters } from "@/lib/reports"
+import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
+import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
 import { ReportMonthlyChart } from "@/components/reports/ReportMonthlyChart"
 import { TaBucketChart } from "@/components/reports/TaBucketChart"
+import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
 
@@ -35,6 +38,10 @@ export function ContractReportView({
   onDrill: (rows: Invoice[], title: string) => void
 }) {
   const navigate = useNavigate()
+  const bucketMeasure = useDisplayStore((s) => s.chartSlots.contractBuckets.measure)
+  const bucketHidden = useDisplayStore((s) => s.chartSlots.contractBuckets.hidden)
+  const monthlyMeasure = useDisplayStore((s) => s.chartSlots.contractMonthly.measure)
+  const monthlyHidden = useDisplayStore((s) => s.chartSlots.contractMonthly.hidden)
 
   if (!filters.contract) {
     return (
@@ -116,8 +123,13 @@ export function ContractReportView({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-lg border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Turnaround (Clearance Time)</h3>
-            <span className="text-xs text-muted-foreground">Click a bar for details</span>
+            <h3 className="text-sm font-semibold">
+              {bucketMeasure === "count" ? "Turnaround (Clearance Time)" : `${chartMeasureLabel(bucketMeasure)} by Turnaround Bucket`}
+            </h3>
+            <div className="flex items-center gap-1">
+              <ChartVisibilityToggle id="contractBuckets" />
+              <span className="text-xs text-muted-foreground">Click a bar for details</span>
+            </div>
           </div>
           <div className="mb-3 grid grid-cols-5 gap-2 text-center text-xs">
             <div>
@@ -141,15 +153,28 @@ export function ContractReportView({
               <div className="text-muted-foreground">Open</div>
             </div>
           </div>
-          <TaBucketChart rows={rows} onBucketClick={onDrill} />
+          {!bucketHidden && (
+          <ChartSlotContextMenu id="contractBuckets" hasDimension={false}>
+            <TaBucketChart rows={rows} measure={bucketMeasure} onBucketClick={onDrill} />
+          </ChartSlotContextMenu>
+          )}
         </div>
+        {!monthlyHidden && (
         <div className="rounded-lg border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Monthly Expenditure</h3>
-            <span className="text-xs text-muted-foreground">Click a bar for details</span>
+            <h3 className="text-sm font-semibold">
+              {monthlyMeasure === "incl" ? "Monthly Expenditure" : `${chartMeasureLabel(monthlyMeasure)} by Month`}
+            </h3>
+            <div className="flex items-center gap-1">
+              <ChartVisibilityToggle id="contractMonthly" />
+              <span className="text-xs text-muted-foreground">Click a bar for details</span>
+            </div>
           </div>
-          <ReportMonthlyChart rows={rows} onMonthClick={onDrill} />
+          <ChartSlotContextMenu id="contractMonthly" hasDimension={false}>
+            <ReportMonthlyChart rows={rows} measure={monthlyMeasure} onMonthClick={onDrill} />
+          </ChartSlotContextMenu>
         </div>
+        )}
       </div>
 
       <div className="rounded-lg border bg-card">

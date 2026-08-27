@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ChartCard } from "@/components/dashboard/ChartCard"
+import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
+import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
 import { ChartTypeMenu, CHART_OPTIONS } from "@/components/dashboard/ChartTypeMenu"
 import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
 import { ServiceChart } from "@/components/dashboard/ServiceChart"
@@ -18,8 +20,9 @@ import { TrendChart } from "@/components/dashboard/TrendChart"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { cn } from "@/lib/utils"
-import { avgLeadTime, fmtMoney, monthlyTrend, serviceBreakdown, vendorColor } from "@/lib/dashboard"
+import { avgLeadTime, fmtMoney, serviceBreakdown, vendorColor } from "@/lib/dashboard"
 import { CONTRACT_TONE_CLASSES, contractExpenditure, contractStatusTone, daysUntil, invoicesForContract, utilizationColor } from "@/lib/contracts"
+import { chartMeasureLabel, formatGroupKey, groupRows, reportGroupLabel, seriesFromGroups } from "@/lib/reports"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
@@ -47,7 +50,11 @@ export function ContractDetailSheet({
   const trendChartType = useDisplayStore((s) => s.trendChartType)
   const serviceChartType = useDisplayStore((s) => s.serviceChartType)
   const setChartType = useDisplayStore((s) => s.setChartType)
+  const chartSlots = useDisplayStore((s) => s.chartSlots)
   const [drill, setDrill] = useState<{ title: string; invoices: Invoice[] } | null>(null)
+  const rows = contract
+    ? invoicesForContract(invoices, contract.contractNo).sort((a, b) => (b.invoiceDate || "").localeCompare(a.invoiceDate || ""))
+    : []
 
   if (!contract) return <Dialog open={open} onOpenChange={onOpenChange} />
 
@@ -55,16 +62,26 @@ export function ContractDetailSheet({
   const spent = contractExpenditure(invoices, contract.contractNo)
   const pct = cost > 0 ? Math.min(100, (spent / cost) * 100) : 0
   const barColor = utilizationColor(pct)
-  const rows = invoicesForContract(invoices, contract.contractNo).sort((a, b) => (b.invoiceDate || "").localeCompare(a.invoiceDate || ""))
   const lead = avgLeadTime(rows)
   const primaryVendor = (contract.vendor || "").split("/")[0].trim()
   const color = vendorColor(primaryVendor)
   const tone = contractStatusTone(contract.status)
   const daysLeft = daysUntil(contract.endDate)
 
-  const trend = monthlyTrend(rows)
-  const byService = serviceBreakdown(rows)
-  const topService = byService[0]
+  const trendCfg = chartSlots.contractSheetTrend
+  const trend = seriesFromGroups(groupRows(rows, trendCfg.dimension ?? "month"), trendCfg.dimension ?? "month", trendCfg.measure).map((p) => ({
+    month: formatGroupKey(trendCfg.dimension ?? "month", p.key),
+    key: p.key,
+    total: p.value,
+    invoices: p.invoices,
+  }))
+  const serviceCfg = chartSlots.contractSheetService
+  const byService = seriesFromGroups(groupRows(rows, serviceCfg.dimension ?? "service"), serviceCfg.dimension ?? "service", serviceCfg.measure).map(
+    (p) => ({ service: formatGroupKey(serviceCfg.dimension ?? "service", p.key), total: p.value, invoices: p.invoices })
+  )
+  // The narrative report always describes the real "by service, $" breakdown — independent
+  // of what the chart card itself is currently configured to show.
+  const topService = serviceBreakdown(rows)[0]
   const onDrill = (title: string, drillInvoices: Invoice[]) => setDrill({ title, invoices: drillInvoices })
 
   const report =
@@ -157,22 +174,44 @@ export function ContractDetailSheet({
             {report}
           </p>
 
-          {rows.length > 0 && (
+          {rows.length > 0 && (!trendCfg.hidden || !serviceCfg.hidden) && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {!trendCfg.hidden && (
               <ChartCard
                 accent="var(--dataviz-1)"
-                title="Spending Trend"
-                action={<ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />}
+                title={(trendCfg.dimension && trendCfg.dimension !== "month") || trendCfg.measure !== "incl"
+                  ? `${chartMeasureLabel(trendCfg.measure)} by ${reportGroupLabel(trendCfg.dimension ?? "month")}`
+                  : "Spending Trend"}
+                action={
+                  <div className="flex items-center gap-0.5">
+                    <ChartVisibilityToggle id="contractSheetTrend" />
+                    <ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />
+                  </div>
+                }
               >
-                <TrendChart data={trend} onDrill={onDrill} />
+                <ChartSlotContextMenu id="contractSheetTrend" hasDimension>
+                  <TrendChart data={trend} onDrill={onDrill} />
+                </ChartSlotContextMenu>
               </ChartCard>
+              )}
+              {!serviceCfg.hidden && (
               <ChartCard
                 accent="var(--dataviz-3)"
-                title="Expenditure by Service"
-                action={<ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />}
+                title={(serviceCfg.dimension && serviceCfg.dimension !== "service") || serviceCfg.measure !== "incl"
+                  ? `${chartMeasureLabel(serviceCfg.measure)} by ${reportGroupLabel(serviceCfg.dimension ?? "service")}`
+                  : "Expenditure by Service"}
+                action={
+                  <div className="flex items-center gap-0.5">
+                    <ChartVisibilityToggle id="contractSheetService" />
+                    <ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />
+                  </div>
+                }
               >
-                <ServiceChart data={byService} chartType={serviceChartType} onDrill={onDrill} />
+                <ChartSlotContextMenu id="contractSheetService" hasDimension>
+                  <ServiceChart data={byService} chartType={serviceChartType} onDrill={onDrill} />
+                </ChartSlotContextMenu>
               </ChartCard>
+              )}
             </div>
           )}
 

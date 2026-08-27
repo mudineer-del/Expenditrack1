@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { applyPalette, CUSTOM_PALETTE_ID, DEFAULT_PALETTE_ID, getPalette, type PaletteVars } from "@/lib/colorPalettes"
 import { storeGet, storeSet } from "@/lib/localCache"
+import type { ChartMeasure, GroupBy } from "@/lib/reports"
 
 export type CardScale = "compact" | "comfortable" | "spacious"
 export type Radius = "none" | "sm" | "md" | "lg"
@@ -22,6 +23,54 @@ export type ChartType =
   | "horizontalBar"
 export type BuiltinFont = "inter" | "nunito" | "roboto" | "open-sans" | "montserrat" | "poppins" | "system" | "serif" | "mono"
 export type FontSize = "sm" | "md" | "lg"
+export type ChartLabelPosition = "outside" | "inside"
+
+/** What a configurable chart slot is grouped by — reuses lib/reports.ts's GroupBy
+ *  (vendor/service/type/region/status/well/contract/department/rig/location/month/
+ *  quarter/year) since a chart's "dimension" and a report's "group by" are the same idea. */
+export type ChartDimension = GroupBy
+
+/** Every chart slot the Settings ▸ Charts tab can reconfigure. The 9 "Sheet"/Dashboard
+ *  slots get both a dimension and a measure; the 4 Reports slots get a measure only —
+ *  their dimension is either driven by that report's own "Group by" filter (period*) or
+ *  intentionally fixed to the report's purpose (compareTa: always by contract;
+ *  contractBuckets/contractMonthly: bucketed/time logic baked into the chart itself).
+ *  periodPaid and compareValue are deliberately NOT here — both are fixed paid-vs-
+ *  outstanding comparisons, not a single togglable measure. */
+export type ChartSlotId =
+  | "dashTrend" | "dashService" | "dashVendor" | "dashBreakdown" | "dashStatus"
+  | "vendorSheetTrend" | "vendorSheetService" | "contractSheetTrend" | "contractSheetService"
+  | "periodValue" | "compareTa" | "contractBuckets" | "contractMonthly"
+
+export interface ChartSlotConfig {
+  dimension?: ChartDimension
+  measure: ChartMeasure
+  /** When true, this chart's card is skipped entirely wherever it would normally render.
+   *  Undefined/false means visible — every existing chart stays visible by default. */
+  hidden?: boolean
+}
+
+/** Defaults reproduce today's exact chart behavior — nothing changes visually until the
+ *  user opens Settings ▸ Charts and picks something different. */
+const DEFAULT_CHART_SLOTS: Record<ChartSlotId, ChartSlotConfig> = {
+  dashTrend: { dimension: "month", measure: "incl" },
+  dashService: { dimension: "service", measure: "incl" },
+  dashVendor: { dimension: "vendor", measure: "incl" },
+  // No `dimension` — undefined means "use the existing auto behavior" (Contractor
+  // breakdown normally, Type-of-work breakdown once a single contractor is picked via
+  // the dashVendor pill filter). An explicit dimension here overrides that automatic
+  // swap permanently, once the user picks one in Settings.
+  dashBreakdown: { measure: "count" },
+  dashStatus: { dimension: "status", measure: "incl" },
+  vendorSheetTrend: { dimension: "month", measure: "incl" },
+  vendorSheetService: { dimension: "service", measure: "incl" },
+  contractSheetTrend: { dimension: "month", measure: "incl" },
+  contractSheetService: { dimension: "service", measure: "incl" },
+  periodValue: { measure: "incl" },
+  compareTa: { measure: "taAvg" },
+  contractBuckets: { measure: "count" },
+  contractMonthly: { measure: "incl" },
+}
 
 export interface CustomFont {
   id: string
@@ -50,6 +99,11 @@ interface DisplayPrefs {
   vendorChartType: ChartType
   breakdownChartType: ChartType
   statusChartType: ChartType
+  /** App-wide — whether bars/lines/slices show their value directly on the chart. */
+  chartLabelsEnabled: boolean
+  chartLabelPosition: ChartLabelPosition
+  /** Per-chart-slot "what data does this show" — see ChartSlotId. */
+  chartSlots: Record<ChartSlotId, ChartSlotConfig>
   tableBanded: boolean
   tableHeaderShaded: boolean
   tableGridLines: boolean
@@ -72,6 +126,9 @@ interface DisplayState extends DisplayPrefs {
   uploadCustomFont: (file: File) => Promise<{ ok: boolean; error?: string }>
   removeCustomFont: (id: string) => void
   setChartType: (key: ChartKey, type: ChartType) => void
+  setChartLabelsEnabled: (v: boolean) => void
+  setChartLabelPosition: (p: ChartLabelPosition) => void
+  setChartSlot: (id: ChartSlotId, patch: Partial<ChartSlotConfig>) => void
   setTableBanded: (v: boolean) => void
   setTableHeaderShaded: (v: boolean) => void
   setTableGridLines: (v: boolean) => void
@@ -179,8 +236,14 @@ function loadPrefs(): DisplayPrefs {
     trendChartType: saved?.trendChartType || "bar",
     serviceChartType: saved?.serviceChartType || "bar",
     vendorChartType: saved?.vendorChartType || "bar",
-    breakdownChartType: saved?.breakdownChartType || "pie",
+    // Linked to vendorChartType — cards 3 and 4 always share one chart-type choice.
+    breakdownChartType: saved?.vendorChartType || "bar",
     statusChartType: saved?.statusChartType || "pie",
+    chartLabelsEnabled: saved?.chartLabelsEnabled ?? true,
+    chartLabelPosition: saved?.chartLabelPosition || "outside",
+    // Merged (not replaced) against defaults so a slot added in a later app update
+    // still gets a sane default even for a user with older saved prefs.
+    chartSlots: { ...DEFAULT_CHART_SLOTS, ...saved?.chartSlots },
     tableBanded: saved?.tableBanded ?? true,
     tableHeaderShaded: saved?.tableHeaderShaded ?? true,
     tableGridLines: saved?.tableGridLines ?? false,
@@ -222,6 +285,9 @@ function persist(state: DisplayPrefs): void {
     vendorChartType,
     breakdownChartType,
     statusChartType,
+    chartLabelsEnabled,
+    chartLabelPosition,
+    chartSlots,
     tableBanded,
     tableHeaderShaded,
     tableGridLines,
@@ -244,6 +310,9 @@ function persist(state: DisplayPrefs): void {
     vendorChartType,
     breakdownChartType,
     statusChartType,
+    chartLabelsEnabled,
+    chartLabelPosition,
+    chartSlots,
     tableBanded,
     tableHeaderShaded,
     tableGridLines,
@@ -323,7 +392,28 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
   },
 
   setChartType: (key, type) => {
-    set({ [key]: type } as Pick<DisplayState, ChartKey>)
+    // Cards 3 ("Invoice Value by Contractor") and 4 ("Contractor / Type Breakdown") always
+    // share one chart-type choice — changing either one changes both.
+    if (key === "vendorChartType" || key === "breakdownChartType") {
+      set({ vendorChartType: type, breakdownChartType: type })
+    } else {
+      set({ [key]: type } as Pick<DisplayState, ChartKey>)
+    }
+    persist(get())
+  },
+
+  setChartLabelsEnabled: (chartLabelsEnabled) => {
+    set({ chartLabelsEnabled })
+    persist(get())
+  },
+
+  setChartLabelPosition: (chartLabelPosition) => {
+    set({ chartLabelPosition })
+    persist(get())
+  },
+
+  setChartSlot: (id, patch) => {
+    set({ chartSlots: { ...get().chartSlots, [id]: { ...get().chartSlots[id], ...patch } } })
     persist(get())
   },
 

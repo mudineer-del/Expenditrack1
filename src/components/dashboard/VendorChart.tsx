@@ -61,6 +61,7 @@ export function VendorChart({
 }) {
   const chartType = useDisplayStore((s) => s.vendorChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
+  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
   const isMobile = useIsMobile()
   const gid = useId()
 
@@ -286,7 +287,7 @@ export function VendorChart({
                 cursor="pointer"
                 onClick={() => drillTypeSegment(t)}
               >
-                {i === types.length - 1 && (
+                {i === types.length - 1 && labelsEnabled && (
                   <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />
                 )}
               </Bar>
@@ -327,7 +328,7 @@ export function VendorChart({
               onClick={(d) => drillSegment((d as { payload?: VendorServiceRow })?.payload, s)}
             >
               {/* One total label per contractor, on the topmost segment of its stack. */}
-              {i === services.length - 1 && (
+              {i === services.length - 1 && labelsEnabled && (
                 <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />
               )}
             </Bar>
@@ -357,7 +358,7 @@ export function VendorChart({
               activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
               isAnimationActive={animate}
             >
-              <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />
+              {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
             </Line>
           )}
           {chartType === "area" && (
@@ -377,7 +378,9 @@ export function VendorChart({
                 fill="url(#vendorGradient)"
                 activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
                 isAnimationActive={animate}
-              />
+              >
+                {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
+              </Area>
             </>
           )}
         </ComposedChart>
@@ -423,7 +426,9 @@ export function VendorChart({
               fill="url(#vendorGradient)"
               activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
               isAnimationActive={animate}
-            />
+            >
+              {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
+            </Area>
           </>
         )}
       </ComposedChart>

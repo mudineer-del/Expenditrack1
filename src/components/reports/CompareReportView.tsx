@@ -7,9 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtMoney } from "@/lib/dashboard"
-import { groupRows, reportRows, shortContract, type ReportFilters, type ReportGroup } from "@/lib/reports"
+import { chartMeasureLabel, groupRows, reportRows, shortContract, type ReportFilters, type ReportGroup } from "@/lib/reports"
+import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
+import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
 import { CompareTaChart, CompareValueChart } from "@/components/reports/CompareCharts"
 import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
+import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Invoice } from "@/types/invoice"
 
 function normContract(s: string | null | undefined): string {
@@ -112,6 +115,8 @@ export function CompareReportView({
 }) {
   const rows = useMemo(() => reportRows(invoices, filters), [invoices, filters])
   const allGroups = useMemo(() => groupRows(rows, "contract").sort((a, b) => b.incl - a.incl), [rows])
+  const taMeasure = useDisplayStore((s) => s.chartSlots.compareTa.measure)
+  const taHidden = useDisplayStore((s) => s.chartSlots.compareTa.hidden)
 
   const showNone = compareSelection.includes("__none__")
   const selected = compareSelection.filter((x) => x !== "__none__")
@@ -303,13 +308,22 @@ export function CompareReportView({
               </div>
               <CompareValueChart groups={groups} onGroupClick={drillGroup} />
             </div>
+            {!taHidden && (
             <div className="rounded-lg border bg-card p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Avg Turnaround by Contract</h3>
-                <span className="text-xs text-muted-foreground">Click a bar for details</span>
+                <h3 className="text-sm font-semibold">
+                  {taMeasure === "taAvg" ? "Avg Turnaround by Contract" : `${chartMeasureLabel(taMeasure)} by Contract`}
+                </h3>
+                <div className="flex items-center gap-1">
+                  <ChartVisibilityToggle id="compareTa" />
+                  <span className="text-xs text-muted-foreground">Click a bar for details</span>
+                </div>
               </div>
-              <CompareTaChart groups={groups} onGroupClick={drillGroup} />
+              <ChartSlotContextMenu id="compareTa" hasDimension={false}>
+                <CompareTaChart groups={groups} measure={taMeasure} onGroupClick={drillGroup} />
+              </ChartSlotContextMenu>
             </div>
+            )}
           </div>
 
           <div className="rounded-lg border bg-card">

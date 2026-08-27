@@ -4,6 +4,7 @@ export type ReportMode = "contract" | "compare" | "period"
 
 export type GroupBy =
   | "month" | "quarter" | "year" | "contract" | "vendor" | "service" | "type" | "region" | "status" | "well"
+  | "department" | "rig" | "location"
 
 export interface ReportFilters {
   contract: string
@@ -121,6 +122,9 @@ export function groupRows(rows: Invoice[], groupBy: GroupBy): ReportGroup[] {
       case "region": key = r.region || "Unspecified"; break
       case "status": key = r.status || "Unspecified"; break
       case "well": key = r.wellName || "Unspecified"; break
+      case "department": key = r.department || "Unspecified"; break
+      case "rig": key = r.rig || "Unspecified"; break
+      case "location": key = r.location || "Unspecified"; break
       case "year": key = r.year || r.yr || "—"; break
       case "quarter": key = ((r.year || r.yr) ? (r.year || r.yr) + " " : "") + (r.qtr || "—"); break
       case "month": key = r.invoiceDate && /^\d{4}-\d{2}/.test(r.invoiceDate) ? r.invoiceDate.slice(0, 7) : "Undated"; break
@@ -134,11 +138,13 @@ export function groupRows(rows: Invoice[], groupBy: GroupBy): ReportGroup[] {
 
 export const GROUP_BY_OPTIONS: GroupBy[] = [
   "month", "quarter", "year", "contract", "vendor", "service", "type", "region", "status", "well",
+  "department", "rig", "location",
 ]
 
 const GROUP_LABELS: Record<GroupBy, string> = {
   contract: "Contract", vendor: "Contractor", service: "Service", type: "Type", region: "Region",
   status: "Status", well: "Well", month: "Month", quarter: "Quarter", year: "Year",
+  department: "Department", rig: "Rig", location: "Location",
 }
 export function reportGroupLabel(g: GroupBy): string {
   return GROUP_LABELS[g] || "Group"
@@ -160,6 +166,84 @@ export function shortContract(c: string | null | undefined): string {
 
 export function yearsInData(invoices: Invoice[]): string[] {
   return Array.from(new Set(invoices.map((r) => r.year || r.yr).filter(Boolean).map(String))).sort()
+}
+
+/** Curated subset of `Aggregate`'s fields worth plotting as a chart's measure — the
+ *  per-group data itself already carries every one of these (see `aggregate()`), this
+ *  is just the "what's worth a top-level toggle" shortlist for the chart-slot picker. */
+export type ChartMeasure = "count" | "incl" | "exclTax" | "paid" | "outstanding" | "taAvg" | "clearedPct"
+
+export const CHART_MEASURES: ChartMeasure[] = ["count", "incl", "exclTax", "paid", "outstanding", "taAvg", "clearedPct"]
+
+const MEASURE_LABELS: Record<ChartMeasure, string> = {
+  count: "Invoice count",
+  incl: "Total value (incl. tax)",
+  exclTax: "Total value (excl. tax)",
+  paid: "Amount paid",
+  outstanding: "Outstanding balance",
+  taAvg: "Avg turnaround (days)",
+  clearedPct: "% cleared",
+}
+export function chartMeasureLabel(m: ChartMeasure): string {
+  return MEASURE_LABELS[m] || m
+}
+
+const MONEY_MEASURES: ChartMeasure[] = ["incl", "exclTax", "paid", "outstanding"]
+
+/** Formats a raw measure value for an axis tick or tooltip — $ for money measures, "Nd"
+ *  for turnaround, "N%" for clearedPct, a plain rounded number for count. Money formatting
+ *  is delegated to the caller (via `fmtMoney`, from lib/dashboard.ts) to avoid this file
+ *  depending on it — pass it in once, reuse for every value. */
+export function formatMeasureValue(measure: ChartMeasure, value: number, fmtMoney: (n: number) => string): string {
+  if (measure === "taAvg") return `${value.toFixed(1)}d`
+  if (measure === "clearedPct") return `${value.toFixed(1)}%`
+  if (measure === "count") return String(Math.round(value))
+  if (MONEY_MEASURES.includes(measure)) return fmtMoney(value)
+  return String(value)
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+]
+
+/** Pretty-prints a `groupRows()` key for chart axis labels — every dimension's key is
+ *  already display-ready except month, which comes back as a raw "YYYY-MM" sort key. */
+export function formatGroupKey(dimension: GroupBy, key: string): string {
+  if (dimension === "month" && /^\d{4}-\d{2}$/.test(key)) {
+    const [y, m] = key.split("-")
+    return `${MONTH_NAMES[Number(m) - 1].slice(0, 3)} ${y.slice(2)}`
+  }
+  return key
+}
+
+export interface ChartSeriesPoint {
+  key: string
+  value: number
+  invoices: Invoice[]
+}
+
+export const TIME_DIMENSIONS: GroupBy[] = ["month", "quarter", "year"]
+
+/** groupRows()'s "undated" bucket key per time dimension — rows with no usable date land
+ *  here rather than being dropped. A trend chart should still drop them (the original
+ *  monthlyTrend() silently excluded undated rows entirely; a visible "Undated" bar would
+ *  be a new, unrequested change in appearance), so seriesFromGroups filters these out
+ *  whenever the dimension is time-based. */
+const UNDATED_KEYS: Partial<Record<GroupBy, string>> = { month: "Undated", year: "—" }
+
+/** Reads whichever `Aggregate` field the caller wants to plot off of every group —
+ *  `groupRows()` already computes all of them in one pass, so reconfiguring a chart's
+ *  measure never needs a new aggregation pass, just a different field read here. Sorted
+ *  chronologically for time dimensions (key ascending), by value descending otherwise —
+ *  same convention `PeriodReportView` already uses for its own groups. */
+export function seriesFromGroups(groups: ReportGroup[], dimension: GroupBy, measure: ChartMeasure): ChartSeriesPoint[] {
+  const undatedKey = UNDATED_KEYS[dimension]
+  const filtered = undatedKey ? groups.filter((g) => g.key !== undatedKey) : groups
+  const points = filtered.map((g) => ({ key: g.key, value: g[measure] ?? 0, invoices: g.rows }))
+  if (TIME_DIMENSIONS.includes(dimension)) points.sort((a, b) => a.key.localeCompare(b.key))
+  else points.sort((a, b) => b.value - a.value)
+  return points
 }
 
 /** CSV export for any report table shape. Ported in spirit from exportReport's csv branch (index.html:5030+). */

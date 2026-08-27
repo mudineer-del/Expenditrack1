@@ -22,13 +22,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CHART_OPTIONS, ChartTypeMenu } from "@/components/dashboard/ChartTypeMenu"
 import { ChartCard } from "@/components/dashboard/ChartCard"
+import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
+import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
 import { ContractorInvoicesChart } from "@/components/dashboard/ContractorInvoicesChart"
 import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
 import { KpiTile } from "@/components/dashboard/KpiTile"
 import { ServiceChart } from "@/components/dashboard/ServiceChart"
 import { Sparkline } from "@/components/dashboard/Sparkline"
 import { SpendingTicker } from "@/components/dashboard/SpendingTicker"
-import { TypeCountChart } from "@/components/dashboard/TypeCountChart"
 import { TrendChart } from "@/components/dashboard/TrendChart"
 import { VendorChart } from "@/components/dashboard/VendorChart"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -38,7 +39,6 @@ import {
   avgLeadTime,
   clearedInvoices,
   computeDashboardStats,
-  contractorInvoiceCounts,
   fmtMoney,
   invoicesForVendorName,
   invoicesInQuarter,
@@ -46,15 +46,13 @@ import {
   invoicesWithClearTime,
   monthlyTrend,
   pendingInvoices,
-  serviceBreakdown,
-  statusBreakdown,
-  typeInvoiceCounts,
   vendorBreakdown,
   vendorColor,
   vendorContractCost,
   vendorServiceBreakdown,
   vendorTypeBreakdown,
 } from "@/lib/dashboard"
+import { chartMeasureLabel, formatGroupKey, groupRows, reportGroupLabel, seriesFromGroups } from "@/lib/reports"
 import type { Invoice } from "@/types/invoice"
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
@@ -154,6 +152,7 @@ export default function DashboardPage() {
   const breakdownChartType = useDisplayStore((s) => s.breakdownChartType)
   const statusChartType = useDisplayStore((s) => s.statusChartType)
   const setChartType = useDisplayStore((s) => s.setChartType)
+  const chartSlots = useDisplayStore((s) => s.chartSlots)
 
   const invoices = invoicesQuery.data ?? []
   const contracts = contractsQuery.data ?? []
@@ -190,6 +189,8 @@ export default function DashboardPage() {
     [deptInvoices]
   )
   const recent = useMemo(() => rows.slice().sort((a, b) => (Number(b.srNo) || 0) - (Number(a.srNo) || 0)).slice(0, 6), [rows])
+  // Deliberately always month/$-total, independent of the dashTrend slot's own Settings
+  // config below — these sparklines are a small fixed indicator, not a reconfigurable chart.
   const trend = useMemo(() => monthlyTrend(rows), [rows])
   // Last 6 months' worth of trend points, for the KPI tiles' sparklines — same source data
   // as the Monthly Expenditure Trend chart, just sliced down and summarized differently.
@@ -197,13 +198,47 @@ export default function DashboardPage() {
   const valueSparkline = recentTrend.map((t) => t.total)
   const countSparkline = recentTrend.map((t) => t.invoices.length)
   const avgSparkline = recentTrend.map((t) => (t.invoices.length ? t.total / t.invoices.length : 0))
-  const byService = useMemo(() => serviceBreakdown(rows), [rows])
-  const byStatus = useMemo(() => statusBreakdown(rows), [rows])
+
+  // Chart cards 1, 2, 4, 5 — each reads its dimension/measure from Settings ▸ Charts
+  // (useDisplayStore's chartSlots), defaulting to today's exact behavior. groupRows/
+  // seriesFromGroups (lib/reports.ts) already compute every dimension x every measure in
+  // one pass, so reconfiguring a slot never needs new aggregation logic, just a different
+  // read of the same grouped data.
+  const dashTrendSeries = useMemo(() => {
+    const { dimension = "month", measure } = chartSlots.dashTrend
+    return seriesFromGroups(groupRows(rows, dimension), dimension, measure)
+  }, [rows, chartSlots.dashTrend])
+  const byService = useMemo(() => {
+    const { dimension = "service", measure } = chartSlots.dashService
+    return seriesFromGroups(groupRows(rows, dimension), dimension, measure)
+  }, [rows, chartSlots.dashService])
   const byVendor = useMemo(() => vendorBreakdown(rows), [rows])
   const byVendorService = useMemo(() => vendorServiceBreakdown(rows), [rows])
   const byVendorType = useMemo(() => vendorTypeBreakdown(rows), [rows])
-  const byVendorCount = useMemo(() => contractorInvoiceCounts(rows), [rows])
-  const byTypeCount = useMemo(() => typeInvoiceCounts(rows), [rows])
+  // Card 3 keeps its special stacked-by-service/type look only while its dimension is the
+  // default "vendor" (or unset); any other explicit choice falls back to a flat breakdown,
+  // since the stacking doesn't generalize to an arbitrary dimension.
+  const dashVendorDim = chartSlots.dashVendor.dimension ?? "vendor"
+  // The special stacked-by-service/type look only applies to the true default (vendor
+  // dimension, $ incl.-tax measure) — any other explicit choice, including just a
+  // different measure with "vendor" still picked, falls back to a flat breakdown.
+  const dashVendorIsDefault = dashVendorDim === "vendor" && chartSlots.dashVendor.measure === "incl"
+  const dashVendorSeries = useMemo(() => {
+    if (dashVendorIsDefault) return null
+    return seriesFromGroups(groupRows(rows, dashVendorDim), dashVendorDim, chartSlots.dashVendor.measure)
+  }, [rows, dashVendorDim, dashVendorIsDefault, chartSlots.dashVendor.measure])
+  // Card 4's dimension defaults to the existing auto-swap (Contractor breakdown normally,
+  // Type-of-work breakdown once a single contractor is picked) — an explicit Settings
+  // choice overrides that permanently.
+  const dashBreakdownDim = chartSlots.dashBreakdown.dimension ?? (dashVendor === "ALL" ? "vendor" : "type")
+  const byBreakdown = useMemo(
+    () => seriesFromGroups(groupRows(rows, dashBreakdownDim), dashBreakdownDim, chartSlots.dashBreakdown.measure),
+    [rows, dashBreakdownDim, chartSlots.dashBreakdown.measure]
+  )
+  const byStatus = useMemo(() => {
+    const { dimension = "status", measure } = chartSlots.dashStatus
+    return seriesFromGroups(groupRows(rows, dimension), dimension, measure)
+  }, [rows, chartSlots.dashStatus])
   const contractCost = dashVendor !== "ALL" ? vendorContractCost(deptContracts, dashVendor) : 0
 
   const [drill, setDrill] = useState<{ title: string; invoices: Invoice[] } | null>(null)
@@ -565,45 +600,130 @@ export default function DashboardPage() {
           <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
         </div>
         <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
+          {!chartSlots.dashTrend.hidden && (
           <ChartCard
             accent="var(--dataviz-1)"
-            title="Monthly Expenditure Trend"
-            action={<ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />}
+            title={(chartSlots.dashTrend.dimension && chartSlots.dashTrend.dimension !== "month") || chartSlots.dashTrend.measure !== "incl"
+              ? `${chartMeasureLabel(chartSlots.dashTrend.measure)} by ${reportGroupLabel(chartSlots.dashTrend.dimension ?? "month")}`
+              : "Monthly Expenditure Trend"}
+            action={
+              <div className="flex items-center gap-0.5">
+                <ChartVisibilityToggle id="dashTrend" />
+                <ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />
+              </div>
+            }
           >
-            <TrendChart data={trend} onDrill={onDrill} />
+            <ChartSlotContextMenu id="dashTrend" hasDimension>
+              <TrendChart
+                data={dashTrendSeries.map((p) => ({
+                  month: formatGroupKey(chartSlots.dashTrend.dimension ?? "month", p.key),
+                  key: p.key,
+                  total: p.value,
+                  invoices: p.invoices,
+                }))}
+                onDrill={onDrill}
+              />
+            </ChartSlotContextMenu>
           </ChartCard>
+          )}
+          {!chartSlots.dashService.hidden && (
           <ChartCard
             accent="var(--dataviz-3)"
-            title="Expenditure by Service"
-            action={<ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />}
+            title={chartSlots.dashService.dimension && (chartSlots.dashService.dimension !== "service" || chartSlots.dashService.measure !== "incl")
+              ? `${chartMeasureLabel(chartSlots.dashService.measure)} by ${reportGroupLabel(chartSlots.dashService.dimension)}`
+              : "Expenditure by Service"}
+            action={
+              <div className="flex items-center gap-0.5">
+                <ChartVisibilityToggle id="dashService" />
+                <ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />
+              </div>
+            }
           >
-            <ServiceChart data={byService} chartType={serviceChartType} onDrill={onDrill} />
+            <ChartSlotContextMenu id="dashService" hasDimension>
+              <ServiceChart
+                data={byService.map((p) => ({
+                  service: formatGroupKey(chartSlots.dashService.dimension ?? "service", p.key),
+                  total: p.value,
+                  invoices: p.invoices,
+                }))}
+                chartType={serviceChartType}
+                onDrill={onDrill}
+              />
+            </ChartSlotContextMenu>
           </ChartCard>
+          )}
+          {!chartSlots.dashVendor.hidden && (
           <ChartCard
             accent="var(--dataviz-4)"
-            title={dashVendor === "ALL" ? "Invoice Value by Contractor" : `Invoice Value — ${dashVendor}`}
-            action={<ChartTypeMenu options={CHART_OPTIONS.contractor} value={vendorChartType} onChange={(t) => setChartType("vendorChartType", t)} />}
+            title={dashVendorSeries
+              ? `${chartMeasureLabel(chartSlots.dashVendor.measure)} by ${reportGroupLabel(dashVendorDim)}`
+              : (dashVendor === "ALL" ? "Invoice Value by Contractor" : `Invoice Value — ${dashVendor}`)}
+            action={
+              <div className="flex items-center gap-0.5">
+                <ChartVisibilityToggle id="dashVendor" />
+                <ChartTypeMenu options={CHART_OPTIONS.contractor} value={vendorChartType} onChange={(t) => setChartType("vendorChartType", t)} />
+              </div>
+            }
           >
-            <VendorChart data={byVendor} serviceBreakdown={byVendorService} typeBreakdown={byVendorType} onDrill={onDrill} />
+            <ChartSlotContextMenu id="dashVendor" hasDimension>
+              {dashVendorSeries ? (
+                <ContractorInvoicesChart
+                  data={dashVendorSeries.map((p) => ({ vendor: formatGroupKey(dashVendorDim, p.key), count: p.value, invoices: p.invoices }))}
+                  onDrill={onDrill}
+                />
+              ) : (
+                <VendorChart data={byVendor} serviceBreakdown={byVendorService} typeBreakdown={byVendorType} onDrill={onDrill} />
+              )}
+            </ChartSlotContextMenu>
           </ChartCard>
+          )}
+          {!chartSlots.dashBreakdown.hidden && (
           <ChartCard
             accent="var(--dataviz-2)"
-            title={dashVendor === "ALL" ? "Invoices by Contractor" : `Invoices by Type — ${dashVendor}`}
-            action={<ChartTypeMenu options={CHART_OPTIONS.invoices} value={breakdownChartType} onChange={(t) => setChartType("breakdownChartType", t)} />}
+            title={chartSlots.dashBreakdown.dimension || chartSlots.dashBreakdown.measure !== "count"
+              ? `${chartMeasureLabel(chartSlots.dashBreakdown.measure)} by ${reportGroupLabel(dashBreakdownDim)}`
+              : (dashVendor === "ALL" ? "Invoices by Contractor" : `Invoices by Type — ${dashVendor}`)}
+            action={
+              <div className="flex items-center gap-0.5">
+                <ChartVisibilityToggle id="dashBreakdown" />
+                <ChartTypeMenu options={CHART_OPTIONS.invoices} value={breakdownChartType} onChange={(t) => setChartType("breakdownChartType", t)} />
+              </div>
+            }
           >
-            {dashVendor === "ALL" ? (
-              <ContractorInvoicesChart data={byVendorCount} onDrill={onDrill} />
-            ) : (
-              <TypeCountChart data={byTypeCount} onDrill={onDrill} />
-            )}
+            <ChartSlotContextMenu id="dashBreakdown" hasDimension>
+              <ContractorInvoicesChart
+                data={byBreakdown.map((p) => ({ vendor: formatGroupKey(dashBreakdownDim, p.key), count: p.value, invoices: p.invoices }))}
+                onDrill={onDrill}
+              />
+            </ChartSlotContextMenu>
           </ChartCard>
+          )}
+          {!chartSlots.dashStatus.hidden && (
           <ChartCard
             accent="var(--dataviz-5)"
-            title="Expenditure by Status"
-            action={<ChartTypeMenu options={CHART_OPTIONS.status} value={statusChartType} onChange={(t) => setChartType("statusChartType", t)} />}
+            title={chartSlots.dashStatus.dimension && (chartSlots.dashStatus.dimension !== "status" || chartSlots.dashStatus.measure !== "incl")
+              ? `${chartMeasureLabel(chartSlots.dashStatus.measure)} by ${reportGroupLabel(chartSlots.dashStatus.dimension)}`
+              : "Expenditure by Status"}
+            action={
+              <div className="flex items-center gap-0.5">
+                <ChartVisibilityToggle id="dashStatus" />
+                <ChartTypeMenu options={CHART_OPTIONS.status} value={statusChartType} onChange={(t) => setChartType("statusChartType", t)} />
+              </div>
+            }
           >
-            <ServiceChart data={byStatus} chartType={statusChartType} onDrill={onDrill} />
+            <ChartSlotContextMenu id="dashStatus" hasDimension>
+              <ServiceChart
+                data={byStatus.map((p) => ({
+                  service: formatGroupKey(chartSlots.dashStatus.dimension ?? "status", p.key),
+                  total: p.value,
+                  invoices: p.invoices,
+                }))}
+                chartType={statusChartType}
+                onDrill={onDrill}
+              />
+            </ChartSlotContextMenu>
           </ChartCard>
+          )}
         </div>
       </div>
 
