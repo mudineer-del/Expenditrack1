@@ -24,6 +24,13 @@ export type ChartType =
 export type BuiltinFont = "inter" | "nunito" | "roboto" | "open-sans" | "montserrat" | "poppins" | "system" | "serif" | "mono"
 export type FontSize = "sm" | "md" | "lg"
 export type ChartLabelPosition = "outside" | "inside"
+/** How strongly each chart card's background is tinted by its own accent color —
+ *  "flat" is a plain solid card (Office's "No fill"), "subtle" is today's soft accent
+ *  wash, "gradient" is a bolder sweep. */
+export type ChartBackground = "flat" | "subtle" | "gradient"
+/** Gradient sweep direction, only meaningful when chartBackground !== "flat" — mirrors
+ *  the small direction-thumbnail grid Office's own gradient-fill picker shows. */
+export type ChartBackgroundDirection = "diagonal" | "vertical" | "horizontal" | "radial"
 
 /** What a configurable chart slot is grouped by — reuses lib/reports.ts's GroupBy
  *  (vendor/service/type/region/status/well/contract/department/rig/location/month/
@@ -48,6 +55,15 @@ export interface ChartSlotConfig {
   /** When true, this chart's card is skipped entirely wherever it would normally render.
    *  Undefined/false means visible — every existing chart stays visible by default. */
   hidden?: boolean
+  /** Only meaningful on the three trend-chart slots (dashTrend/vendorSheetTrend/
+   *  contractSheetTrend) — whether the zoom/pan brush under the chart is shown. Undefined
+   *  means on, matching today's always-on-past-8-points behavior. */
+  zoomEnabled?: boolean
+  /** Per-chart height nudge, in steps of 2rem off the cardScale-driven --chart-h (see
+   *  index.css). 0/undefined is the normal height; clamped to [-2, 4] so a chart can't be
+   *  shrunk to nothing or blown out past the card. Set from the chart's own right-click
+   *  menu's size stepper. */
+  sizeStep?: number
 }
 
 /** Defaults reproduce today's exact chart behavior — nothing changes visually until the
@@ -102,6 +118,10 @@ interface DisplayPrefs {
   /** App-wide — whether bars/lines/slices show their value directly on the chart. */
   chartLabelsEnabled: boolean
   chartLabelPosition: ChartLabelPosition
+  /** App-wide — every chart card's background tint, from a plain solid card up through a
+   *  bolder accent gradient (see ChartBackground/ChartBackgroundDirection). */
+  chartBackground: ChartBackground
+  chartBackgroundDirection: ChartBackgroundDirection
   /** Per-chart-slot "what data does this show" — see ChartSlotId. */
   chartSlots: Record<ChartSlotId, ChartSlotConfig>
   tableBanded: boolean
@@ -128,6 +148,8 @@ interface DisplayState extends DisplayPrefs {
   setChartType: (key: ChartKey, type: ChartType) => void
   setChartLabelsEnabled: (v: boolean) => void
   setChartLabelPosition: (p: ChartLabelPosition) => void
+  setChartBackground: (v: ChartBackground) => void
+  setChartBackgroundDirection: (v: ChartBackgroundDirection) => void
   setChartSlot: (id: ChartSlotId, patch: Partial<ChartSlotConfig>) => void
   setTableBanded: (v: boolean) => void
   setTableHeaderShaded: (v: boolean) => void
@@ -241,6 +263,8 @@ function loadPrefs(): DisplayPrefs {
     statusChartType: saved?.statusChartType || "pie",
     chartLabelsEnabled: saved?.chartLabelsEnabled ?? true,
     chartLabelPosition: saved?.chartLabelPosition || "outside",
+    chartBackground: saved?.chartBackground || "subtle",
+    chartBackgroundDirection: saved?.chartBackgroundDirection || "diagonal",
     // Merged (not replaced) against defaults so a slot added in a later app update
     // still gets a sane default even for a user with older saved prefs.
     chartSlots: { ...DEFAULT_CHART_SLOTS, ...saved?.chartSlots },
@@ -287,6 +311,8 @@ function persist(state: DisplayPrefs): void {
     statusChartType,
     chartLabelsEnabled,
     chartLabelPosition,
+    chartBackground,
+    chartBackgroundDirection,
     chartSlots,
     tableBanded,
     tableHeaderShaded,
@@ -312,6 +338,8 @@ function persist(state: DisplayPrefs): void {
     statusChartType,
     chartLabelsEnabled,
     chartLabelPosition,
+    chartBackground,
+    chartBackgroundDirection,
     chartSlots,
     tableBanded,
     tableHeaderShaded,
@@ -409,6 +437,16 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
 
   setChartLabelPosition: (chartLabelPosition) => {
     set({ chartLabelPosition })
+    persist(get())
+  },
+
+  setChartBackground: (chartBackground) => {
+    set({ chartBackground })
+    persist(get())
+  },
+
+  setChartBackgroundDirection: (chartBackgroundDirection) => {
+    set({ chartBackgroundDirection })
     persist(get())
   },
 

@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { accentBackgroundStyle } from "@/components/dashboard/ChartCard"
 import { PALETTES } from "@/lib/colorPalettes"
 import { CHART_MEASURES, chartMeasureLabel, GROUP_BY_OPTIONS, reportGroupLabel, type ChartMeasure } from "@/lib/reports"
 import { cn } from "@/lib/utils"
@@ -25,6 +26,8 @@ import {
   type BorderWidth,
   type BuiltinFont,
   type CardScale,
+  type ChartBackground,
+  type ChartBackgroundDirection,
   type ChartDimension,
   type ChartLabelPosition,
   type ChartSlotId,
@@ -81,23 +84,101 @@ const CHART_TYPES: { key: ChartType; label: string }[] = [
   { key: "radar", label: "Radar" },
 ]
 
+const CHART_BG_LEVELS: { key: ChartBackground; label: string }[] = [
+  { key: "flat", label: "Flat" },
+  { key: "subtle", label: "Subtle" },
+  { key: "gradient", label: "Gradient" },
+]
+const CHART_BG_DIRECTIONS: { key: ChartBackgroundDirection; label: string }[] = [
+  { key: "diagonal", label: "Diagonal" },
+  { key: "vertical", label: "Down" },
+  { key: "horizontal", label: "Across" },
+  { key: "radial", label: "Radial" },
+]
+/** Stand-in accent for the Settings preview swatches — every real chart card has its own
+ *  (dataviz-1, dataviz-2, ...), but the picker just needs one representative color. */
+const CHART_BG_PREVIEW_ACCENT = "var(--primary)"
+
+/** Office-style small-thumbnail fill picker: a swatch grid for the background *level*
+ *  (flat/subtle/gradient), plus a second grid for gradient *direction* once a level with
+ *  an actual gradient is picked — each thumbnail is rendered with the real
+ *  accentBackgroundStyle() a chart card would get, so the preview is exact, not a mockup. */
+function ChartBackgroundPicker({
+  level,
+  direction,
+  onLevelChange,
+  onDirectionChange,
+}: {
+  level: ChartBackground
+  direction: ChartBackgroundDirection
+  onLevelChange: (v: ChartBackground) => void
+  onDirectionChange: (v: ChartBackgroundDirection) => void
+}) {
+  return (
+    <div className="grid gap-3">
+      <div className="grid grid-cols-3 gap-2">
+        {CHART_BG_LEVELS.map((l) => (
+          <button
+            key={l.key}
+            type="button"
+            onClick={() => onLevelChange(l.key)}
+            className={cn(
+              "flex flex-col items-center gap-1.5 rounded-lg border-2 p-1.5 transition-colors",
+              level === l.key ? "border-primary" : "border-transparent hover:border-border"
+            )}
+          >
+            <span
+              className="h-10 w-full rounded-md border"
+              style={accentBackgroundStyle(CHART_BG_PREVIEW_ACCENT, l.key, direction)}
+            />
+            <span className="text-[11px] font-medium text-muted-foreground">{l.label}</span>
+          </button>
+        ))}
+      </div>
+      {level !== "flat" && (
+        <div className="grid grid-cols-4 gap-2">
+          {CHART_BG_DIRECTIONS.map((d) => (
+            <button
+              key={d.key}
+              type="button"
+              onClick={() => onDirectionChange(d.key)}
+              className={cn(
+                "flex flex-col items-center gap-1.5 rounded-lg border-2 p-1.5 transition-colors",
+                direction === d.key ? "border-primary" : "border-transparent hover:border-border"
+              )}
+            >
+              <span
+                className="h-8 w-full rounded-md border"
+                style={accentBackgroundStyle(CHART_BG_PREVIEW_ACCENT, "gradient", d.key)}
+              />
+              <span className="text-[10.5px] font-medium text-muted-foreground">{d.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface ChartSlotMeta {
   id: ChartSlotId
   title: string
   hasDimension: boolean
+  /** Only the three trend-chart slots have a Brush/zoom control to toggle. */
+  hasZoom?: boolean
 }
 
 const DASHBOARD_SLOTS: ChartSlotMeta[] = [
-  { id: "dashTrend", title: "Monthly Expenditure Trend", hasDimension: true },
+  { id: "dashTrend", title: "Monthly Expenditure Trend", hasDimension: true, hasZoom: true },
   { id: "dashService", title: "Expenditure by Service", hasDimension: true },
   { id: "dashVendor", title: "Invoice Value by Contractor", hasDimension: true },
   { id: "dashBreakdown", title: "Contractor / Type Breakdown", hasDimension: true },
   { id: "dashStatus", title: "Expenditure by Status", hasDimension: true },
 ]
 const DETAIL_SHEET_SLOTS: ChartSlotMeta[] = [
-  { id: "vendorSheetTrend", title: "Vendor sheet — Spending Trend", hasDimension: true },
+  { id: "vendorSheetTrend", title: "Vendor sheet — Spending Trend", hasDimension: true, hasZoom: true },
   { id: "vendorSheetService", title: "Vendor sheet — Expenditure by Service", hasDimension: true },
-  { id: "contractSheetTrend", title: "Contract sheet — Spending Trend", hasDimension: true },
+  { id: "contractSheetTrend", title: "Contract sheet — Spending Trend", hasDimension: true, hasZoom: true },
   { id: "contractSheetService", title: "Contract sheet — Expenditure by Service", hasDimension: true },
 ]
 const REPORTS_SLOTS: ChartSlotMeta[] = [
@@ -113,7 +194,7 @@ const AUTO_DIMENSION = "__auto__"
  *  off the store so each row only re-renders when its own slot changes. `dashBreakdown` is the one
  *  slot whose dimension defaults to "unset" (an automatic Contractor/Type swap driven by the
  *  Dashboard's contractor filter) — its picker gets an extra "Automatic" option for that state. */
-function ChartSlotRow({ id, title, hasDimension }: ChartSlotMeta) {
+function ChartSlotRow({ id, title, hasDimension, hasZoom }: ChartSlotMeta) {
   const cfg = useDisplayStore((s) => s.chartSlots[id])
   const setChartSlot = useDisplayStore((s) => s.setChartSlot)
   const canBeAuto = id === "dashBreakdown"
@@ -164,6 +245,20 @@ function ChartSlotRow({ id, title, hasDimension }: ChartSlotMeta) {
           </SelectContent>
         </Select>
       </div>
+      {hasZoom && (
+        <div className="mt-2 flex items-center justify-between gap-2 border-t pt-2">
+          <Label htmlFor={`${id}-zoom`} className="text-xs font-normal text-muted-foreground">
+            Zoom bar
+          </Label>
+          <Switch
+            id={`${id}-zoom`}
+            className="shrink-0"
+            checked={cfg.zoomEnabled ?? true}
+            onCheckedChange={(checked) => setChartSlot(id, { zoomEnabled: checked })}
+            title={cfg.zoomEnabled === false ? "Show the zoom/pan bar" : "Hide the zoom/pan bar"}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -442,6 +537,16 @@ export function FormatDialog() {
                 onChange={store.setChartLabelPosition}
               />
             </Section>
+
+            <Section title="Chart background" hint="Applies to every chart card app-wide — Dashboard, Vendor/Contract sheets, and Reports.">
+              <ChartBackgroundPicker
+                level={store.chartBackground}
+                direction={store.chartBackgroundDirection}
+                onLevelChange={store.setChartBackground}
+                onDirectionChange={store.setChartBackgroundDirection}
+              />
+            </Section>
+
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="animations-toggle" className="text-sm font-medium">

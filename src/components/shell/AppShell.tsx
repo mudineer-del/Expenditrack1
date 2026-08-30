@@ -1,6 +1,6 @@
 import { Layers, LogOut, Search, Settings, User } from "lucide-react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -115,6 +115,7 @@ export function AppShell() {
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-2 rounded-md p-1 outline-none hover:bg-muted">
                   <Avatar className="size-7">
+                    {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
                     <AvatarFallback className="text-xs">{user?.initials || "?"}</AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>

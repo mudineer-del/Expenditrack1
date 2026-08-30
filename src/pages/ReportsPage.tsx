@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CompareReportView } from "@/components/reports/CompareReportView"
 import { ContractReportView } from "@/components/reports/ContractReportView"
+import { ManagementReportView } from "@/components/reports/management/ManagementReportView"
 import { PeriodReportView } from "@/components/reports/PeriodReportView"
 import { ReportDetailDrawer, type ReportDetail } from "@/components/reports/ReportDetailDrawer"
 import { ReportFiltersBar } from "@/components/reports/ReportFiltersBar"
@@ -28,6 +29,7 @@ const MODE_TABS: { key: ReportMode; label: string }[] = [
   { key: "contract", label: "Contract report" },
   { key: "compare", label: "Compare contracts" },
   { key: "period", label: "Period analysis" },
+  { key: "management", label: "Management report" },
 ]
 
 /** Ported from renderReports and its 3 sub-modes (index.html:4375-4703). */
@@ -114,8 +116,8 @@ export default function ReportsPage() {
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      <div className="rounded-lg border bg-card p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="rounded-lg border bg-card p-4 print:hidden">
+        <div className={mode === "management" ? "flex flex-wrap items-center justify-between gap-3" : "mb-3 flex flex-wrap items-center justify-between gap-3"}>
           <h3 className="text-sm font-semibold">Financial Reporting</h3>
           <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg border bg-muted/50 p-1">
             {MODE_TABS.map((t) => (
@@ -131,17 +133,19 @@ export default function ReportsPage() {
             ))}
           </div>
         </div>
-        <ReportFiltersBar
-          mode={mode}
-          filters={filters}
-          onFiltersChange={setFilters}
-          refLists={refLists}
-          contractNumbers={contractNumbers}
-          contractLabels={contractLabels}
-          yearOptions={yearOptions}
-          wellOptions={wellOptions}
-          onExportCsv={exportCsv}
-        />
+        {mode !== "management" && (
+          <ReportFiltersBar
+            mode={mode}
+            filters={filters}
+            onFiltersChange={setFilters}
+            refLists={refLists}
+            contractNumbers={contractNumbers}
+            contractLabels={contractLabels}
+            yearOptions={yearOptions}
+            wellOptions={wellOptions}
+            onExportCsv={exportCsv}
+          />
+        )}
       </div>
 
       {mode === "contract" && <ContractReportView invoices={invoices} contracts={contracts} filters={filters} onDrill={openDrill} />}
@@ -155,6 +159,7 @@ export default function ReportsPage() {
         />
       )}
       {mode === "period" && <PeriodReportView invoices={invoices} filters={filters} onDrill={openDrill} />}
+      {mode === "management" && <ManagementReportView invoices={invoices} onDrill={openDrill} />}
 
       <ReportDetailDrawer detail={detail} onOpenChange={(v) => !v && setDetail(null)} />
     </div>

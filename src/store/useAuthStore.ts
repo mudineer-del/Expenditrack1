@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js"
 import { getSupabaseClient } from "@/lib/supabase"
+import { uploadAvatarFile } from "@/lib/avatars"
 import { fromProfileRow, type ProfileRow } from "@/lib/profiles"
 import type { AppUser, Role } from "@/types/user"
 
@@ -19,7 +20,9 @@ interface AuthState {
   signOut: () => Promise<void>
   sendRecovery: (email: string) => Promise<{ ok: boolean; error?: string }>
   updatePassword: (password: string) => Promise<{ ok: boolean; error?: string }>
-  updateProfile: (patch: Partial<Pick<AppUser, "name" | "phone" | "dept" | "designation">>) => Promise<{ ok: boolean; error?: string }>
+  updateProfile: (patch: Partial<Pick<AppUser, "name" | "phone" | "dept" | "designation" | "avatarUrl">>) => Promise<{ ok: boolean; error?: string }>
+  uploadAvatar: (file: File) => Promise<{ ok: boolean; error?: string }>
+  removeAvatar: () => Promise<{ ok: boolean; error?: string }>
 }
 
 /** Fallback only: used if the profiles row can't be read (e.g. supabase/profiles_setup.sql
@@ -45,6 +48,7 @@ function fallbackUserFromSbUser(u: User): AppUser {
     dept: (md.dept as string) || "Drilling Fluids",
     designation: md.designation as string | undefined,
     twofa: !!md.twofa,
+    avatarUrl: md.avatarUrl as string | undefined,
   }
 }
 
@@ -159,9 +163,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const supabase = getSupabaseClient()
     const current = get().user
     if (!current) return { ok: false, error: "Not signed in." }
-    const { data, error } = await supabase.from("profiles").update(patch).eq("id", current.id).select().single()
+    const { avatarUrl, ...rest } = patch
+    const dbPatch: Record<string, unknown> = { ...rest }
+    if ("avatarUrl" in patch) dbPatch.avatar_url = avatarUrl ?? null
+    const { data, error } = await supabase.from("profiles").update(dbPatch).eq("id", current.id).select().single()
     if (error) return { ok: false, error: error.message }
     set({ user: fromProfileRow(data as ProfileRow) })
     return { ok: true }
+  },
+
+  uploadAvatar: async (file) => {
+    const current = get().user
+    if (!current) return { ok: false, error: "Not signed in." }
+    const r = await uploadAvatarFile(current.id, file)
+    if (!r.ok) return r
+    return get().updateProfile({ avatarUrl: r.url })
+  },
+
+  removeAvatar: async () => {
+    return get().updateProfile({ avatarUrl: undefined })
   },
 }))

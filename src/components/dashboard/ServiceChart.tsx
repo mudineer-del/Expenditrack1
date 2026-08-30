@@ -29,13 +29,16 @@ import { fmtMoney, type CategoryTotal } from "@/lib/dashboard"
 import { useDisplayStore, type ChartType } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import {
+  computeRadialLabelStagger,
   DONUT_CORNER_RADIUS,
   DONUT_OUTER_RADIUS_LABELED,
   DONUT_PAD_ANGLE,
   DonutDefs,
   donutActiveShape,
   donutGradientId,
-  donutOuterLabel,
+  makeDonutOuterLabel,
+  makePolarValueLabel,
+  makeRadialBarValueLabel,
 } from "./donut3d"
 
 const config = {
@@ -88,7 +91,7 @@ export function ServiceChart({
             paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
             cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
             activeShape={isMobile ? donutActiveShape : undefined}
-            label={isMobile || !labelsEnabled ? undefined : donutOuterLabel}
+            label={isMobile || !labelsEnabled ? undefined : makeDonutOuterLabel(PIE_COLORS)}
             labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
             // Recharts only shows Pie labels once its entrance animation resolves
             // (showLabels: !isAnimating internally) — with `top` a fresh array
@@ -121,7 +124,9 @@ export function ServiceChart({
           <PolarAngleAxis dataKey="service" fontSize={10} />
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
+          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
+            {labelsEnabled && <LabelList dataKey="total" content={makePolarValueLabel(PIE_COLORS, valueLabel)} />}
+          </Radar>
         </RadarChart>
       </ChartContainer>
     )
@@ -151,19 +156,24 @@ export function ServiceChart({
   }
 
   if (chartType === "radial") {
+    // Rings with a similar value sweep by a similar amount from the shared start angle, so
+    // their labels would otherwise land at nearly the same angle — spread those out before
+    // handing the per-index push to the label renderer.
+    const radialStagger = computeRadialLabelStagger(top.map((d) => d.total))
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <RadialBarChart
           data={top}
           innerRadius="18%"
-          outerRadius="82%"
+          outerRadius={labelsEnabled ? "52%" : "82%"}
           startAngle={90}
           endAngle={-270}
           onClick={(e) => drill(activeChartPayload<CategoryTotal>(e))}
         >
           <PolarAngleAxis type="number" domain={[0, "dataMax"]} tick={false} />
-          <RadialBar dataKey="total" background={{ fill: "var(--muted)" }} cornerRadius={8} isAnimationActive={animate}>
+          <RadialBar dataKey="total" background={{ fill: "var(--muted)" }} cornerRadius={8} isAnimationActive={labelsEnabled ? false : animate}>
             {top.map((d, i) => <Cell key={d.service} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+            {labelsEnabled && <LabelList dataKey="total" content={makeRadialBarValueLabel(PIE_COLORS, valueLabel, radialStagger)} />}
           </RadialBar>
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
         </RadialBarChart>

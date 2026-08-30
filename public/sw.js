@@ -67,9 +67,22 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
+// Every strategy below routed through this — a bare fetch() has no upper
+// bound, and on a flaky mobile connection (dropped/throttled while the tab is
+// backgrounded, a common Android Chrome behavior iOS Safari doesn't share)
+// it can hang indefinitely rather than reject. That's fatal for a lazy-loaded
+// route chunk: the dynamic import() waiting on it just never resolves, and
+// with no timeout there's nothing to fall back to cache from. 8s comfortably
+// covers a slow connection without keeping a genuinely stuck page frozen.
+function fetchWithTimeout(request, ms = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(request, { signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 // Network first strategy
 function networkFirst(request) {
-  return fetch(request)
+  return fetchWithTimeout(request)
     .then((response) => {
       if (!response || response.status !== 200 || response.type === 'error') {
         return response;
@@ -85,25 +98,38 @@ function networkFirst(request) {
     });
 }
 
-// Cache first strategy
+// Cache first strategy — the fetch fallback previously had no .catch(): a
+// rejected (timed-out, offline, or just network-flaky) fetch propagated as
+// an unhandled rejection straight into whatever awaited this response —
+// for a route's JS chunk, that's the dynamic import(), which then throws
+// with no cached copy to recover from and no further attempt made.
 function cacheFirst(request) {
-  return caches.match(request).then((response) => {
-    return response || fetch(request).then((response) => {
-      if (!response || response.status !== 200) {
+  return caches.match(request).then((cached) => {
+    if (cached) return cached;
+    return fetchWithTimeout(request)
+      .then((response) => {
+        if (!response || response.status !== 200) {
+          return response;
+        }
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(request, responseToCache);
+        });
         return response;
-      }
-      const responseToCache = response.clone();
-      caches.open(CACHE_NAME).then((cache) => {
-        cache.put(request, responseToCache);
+      })
+      .catch(() => {
+        // Nothing cached and the network attempt failed — surface a real
+        // network-error response instead of an unhandled rejection, so the
+        // caller (e.g. a lazy import()) gets a normal failed fetch to catch
+        // and retry/report, rather than hanging or crashing uncaught.
+        return Response.error();
       });
-      return response;
-    });
   });
 }
 
 // Network first with cache fallback
 function networkFirstWithCacheFallback(request) {
-  return fetch(request)
+  return fetchWithTimeout(request)
     .then((response) => {
       if (!response || response.status !== 200) {
         return response;

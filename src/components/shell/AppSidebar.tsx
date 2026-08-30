@@ -24,7 +24,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { OgdclMark } from "@/components/shared/OgdclMark"
 import { DepartmentSwitcher } from "@/components/shell/DepartmentSwitcher"
 import { NavIconChip } from "@/components/shell/NavIconChip"
@@ -171,6 +171,7 @@ export function AppSidebar() {
             <SidebarMenuButton asChild tooltip="Profile & settings">
               <NavLink to="/settings">
                 <Avatar className="size-5">
+                  {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
                   <AvatarFallback className="text-[10px]">{user?.initials || "?"}</AvatarFallback>
                 </Avatar>
                 <span className="truncate">{user?.name || "Account"}</span>

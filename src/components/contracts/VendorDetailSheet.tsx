@@ -155,8 +155,15 @@ export function VendorDetailSheet({
                     </div>
                   }
                 >
-                  <ChartSlotContextMenu id="vendorSheetTrend" hasDimension>
-                    <TrendChart data={trend} onDrill={onDrill} />
+                  <ChartSlotContextMenu
+                    id="vendorSheetTrend"
+                    hasDimension
+                    hasZoom
+                    chartTypeOptions={CHART_OPTIONS.trend}
+                    chartTypeValue={trendChartType}
+                    onChartTypeChange={(t) => setChartType("trendChartType", t)}
+                  >
+                    <TrendChart data={trend} onDrill={onDrill} zoomEnabled={trendCfg.zoomEnabled ?? true} />
                   </ChartSlotContextMenu>
                 </ChartCard>
                 )}
@@ -173,7 +180,13 @@ export function VendorDetailSheet({
                     </div>
                   }
                 >
-                  <ChartSlotContextMenu id="vendorSheetService" hasDimension>
+                  <ChartSlotContextMenu
+                    id="vendorSheetService"
+                    hasDimension
+                    chartTypeOptions={CHART_OPTIONS.service}
+                    chartTypeValue={serviceChartType}
+                    onChartTypeChange={(t) => setChartType("serviceChartType", t)}
+                  >
                     <ServiceChart data={byService} chartType={serviceChartType} onDrill={onDrill} />
                   </ChartSlotContextMenu>
                 </ChartCard>

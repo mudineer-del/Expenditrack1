@@ -11,6 +11,7 @@ export interface ProfileRow {
   dept: string | null
   designation: string | null
   twofa: boolean
+  avatar_url: string | null
 }
 
 const ROLES: Role[] = ["Admin", "Editor", "Viewer"]
@@ -37,5 +38,6 @@ export function fromProfileRow(row: ProfileRow): AppUser {
     dept: row.dept ?? "Drilling Fluids",
     designation: row.designation ?? undefined,
     twofa: !!row.twofa,
+    avatarUrl: row.avatar_url ?? undefined,
   }
 }

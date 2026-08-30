@@ -10,6 +10,7 @@ export interface AppUser {
   dept?: string
   designation?: string
   twofa?: boolean
+  avatarUrl?: string
 }
 
 export type Action = "add" | "edit" | "delete" | "export"

@@ -33,3 +33,18 @@ export function useUpdateProfileRole() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PROFILES_QUERY_KEY }),
   })
 }
+
+/** Setting someone else's photo (the file itself already uploaded via uploadAvatarFile).
+ *  RLS (see supabase/avatars_setup.sql + profiles_setup.sql) rejects the storage write and
+ *  this update unless the caller is an Admin. */
+export function useUpdateProfileAvatar() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, avatarUrl }: { id: string; avatarUrl: string | null }) => {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PROFILES_QUERY_KEY }),
+  })
+}

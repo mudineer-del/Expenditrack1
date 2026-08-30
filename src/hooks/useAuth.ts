@@ -14,6 +14,8 @@ export function useAuth() {
   const sendRecovery = useAuthStore((s) => s.sendRecovery)
   const updatePassword = useAuthStore((s) => s.updatePassword)
   const updateProfile = useAuthStore((s) => s.updateProfile)
+  const uploadAvatar = useAuthStore((s) => s.uploadAvatar)
+  const removeAvatar = useAuthStore((s) => s.removeAvatar)
 
   return {
     status,
@@ -29,5 +31,7 @@ export function useAuth() {
     sendRecovery,
     updatePassword,
     updateProfile,
+    uploadAvatar,
+    removeAvatar,
   }
 }

@@ -5,6 +5,7 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
+  LabelList,
   Line,
   Pie,
   PieChart,
@@ -22,16 +23,33 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { activeChartPayload } from "@/lib/chartClick"
 import { fmtMoney, type TrendPoint } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { makeDonutOuterLabel, makePolarValueLabel } from "./donut3d"
 
 const config = {
   total: { label: "Expenditure (incl. tax)", color: "var(--dataviz-1)" },
 } satisfies ChartConfig
 
 const PIE_COLORS = ["var(--dataviz-1)", "var(--dataviz-2)", "var(--dataviz-3)", "var(--dataviz-4)", "var(--dataviz-5)", "var(--dataviz-6)"]
+const valueLabel = (v: unknown) => fmtMoney(Number(v)).replace(".00", "")
 
-export function TrendChart({ data, onDrill }: { data: TrendPoint[]; onDrill: (title: string, invoices: TrendPoint["invoices"]) => void }) {
+export function TrendChart({
+  data,
+  onDrill,
+  zoomEnabled = true,
+}: {
+  data: TrendPoint[]
+  onDrill: (title: string, invoices: TrendPoint["invoices"]) => void
+  /** Settings ▸ Format ▸ Charts (or the chart's own right-click menu) ▸ "Zoom bar" — shows
+   *  or hides the Brush/pan control under the trend line. Defaults on, matching today's
+   *  always-on-past-8-points behavior for any caller that doesn't pass this yet. */
+  zoomEnabled?: boolean
+}) {
   const chartType = useDisplayStore((s) => s.trendChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
+  // Only gates the pie/radar labels below — the line/bar/composed view further down stays
+  // label-less on purpose (too many months of per-point labels turns into unreadable noise;
+  // see the Brush/zoom control added for that same density problem).
+  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
 
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No dated invoices</div>
@@ -51,7 +69,9 @@ export function TrendChart({ data, onDrill }: { data: TrendPoint[]; onDrill: (ti
             dataKey="total"
             nameKey="month"
             innerRadius="45%"
-            outerRadius="80%"
+            outerRadius={labelsEnabled ? "62%" : "80%"}
+            label={labelsEnabled ? makeDonutOuterLabel(PIE_COLORS) : undefined}
+            labelLine={labelsEnabled ? { stroke: "var(--border)" } : false}
             isAnimationActive={animate}
             cursor="pointer"
             onClick={(_, index) => drill(data[index])}
@@ -73,7 +93,9 @@ export function TrendChart({ data, onDrill }: { data: TrendPoint[]; onDrill: (ti
           <PolarAngleAxis dataKey="month" fontSize={10} />
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
+          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
+            {labelsEnabled && <LabelList dataKey="total" content={makePolarValueLabel(PIE_COLORS, valueLabel)} />}
+          </Radar>
         </RadarChart>
       </ChartContainer>
     )
@@ -148,7 +170,7 @@ export function TrendChart({ data, onDrill }: { data: TrendPoint[]; onDrill: (ti
             />
           </>
         )}
-        {data.length > 8 && (
+        {zoomEnabled && data.length > 8 && (
           <Brush dataKey="month" height={22} travellerWidth={8} stroke="var(--color-total)" fill="var(--muted)" className="text-xs" />
         )}
       </ComposedChart>

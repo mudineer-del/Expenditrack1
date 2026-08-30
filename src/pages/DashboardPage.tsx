@@ -613,7 +613,14 @@ export default function DashboardPage() {
               </div>
             }
           >
-            <ChartSlotContextMenu id="dashTrend" hasDimension>
+            <ChartSlotContextMenu
+              id="dashTrend"
+              hasDimension
+              hasZoom
+              chartTypeOptions={CHART_OPTIONS.trend}
+              chartTypeValue={trendChartType}
+              onChartTypeChange={(t) => setChartType("trendChartType", t)}
+            >
               <TrendChart
                 data={dashTrendSeries.map((p) => ({
                   month: formatGroupKey(chartSlots.dashTrend.dimension ?? "month", p.key),
@@ -622,6 +629,7 @@ export default function DashboardPage() {
                   invoices: p.invoices,
                 }))}
                 onDrill={onDrill}
+                zoomEnabled={chartSlots.dashTrend.zoomEnabled ?? true}
               />
             </ChartSlotContextMenu>
           </ChartCard>
@@ -639,7 +647,13 @@ export default function DashboardPage() {
               </div>
             }
           >
-            <ChartSlotContextMenu id="dashService" hasDimension>
+            <ChartSlotContextMenu
+              id="dashService"
+              hasDimension
+              chartTypeOptions={CHART_OPTIONS.service}
+              chartTypeValue={serviceChartType}
+              onChartTypeChange={(t) => setChartType("serviceChartType", t)}
+            >
               <ServiceChart
                 data={byService.map((p) => ({
                   service: formatGroupKey(chartSlots.dashService.dimension ?? "service", p.key),
@@ -665,7 +679,13 @@ export default function DashboardPage() {
               </div>
             }
           >
-            <ChartSlotContextMenu id="dashVendor" hasDimension>
+            <ChartSlotContextMenu
+              id="dashVendor"
+              hasDimension
+              chartTypeOptions={CHART_OPTIONS.contractor}
+              chartTypeValue={vendorChartType}
+              onChartTypeChange={(t) => setChartType("vendorChartType", t)}
+            >
               {dashVendorSeries ? (
                 <ContractorInvoicesChart
                   data={dashVendorSeries.map((p) => ({ vendor: formatGroupKey(dashVendorDim, p.key), count: p.value, invoices: p.invoices }))}
@@ -690,7 +710,13 @@ export default function DashboardPage() {
               </div>
             }
           >
-            <ChartSlotContextMenu id="dashBreakdown" hasDimension>
+            <ChartSlotContextMenu
+              id="dashBreakdown"
+              hasDimension
+              chartTypeOptions={CHART_OPTIONS.invoices}
+              chartTypeValue={breakdownChartType}
+              onChartTypeChange={(t) => setChartType("breakdownChartType", t)}
+            >
               <ContractorInvoicesChart
                 data={byBreakdown.map((p) => ({ vendor: formatGroupKey(dashBreakdownDim, p.key), count: p.value, invoices: p.invoices }))}
                 onDrill={onDrill}
@@ -711,7 +737,13 @@ export default function DashboardPage() {
               </div>
             }
           >
-            <ChartSlotContextMenu id="dashStatus" hasDimension>
+            <ChartSlotContextMenu
+              id="dashStatus"
+              hasDimension
+              chartTypeOptions={CHART_OPTIONS.status}
+              chartTypeValue={statusChartType}
+              onChartTypeChange={(t) => setChartType("statusChartType", t)}
+            >
               <ServiceChart
                 data={byStatus.map((p) => ({
                   service: formatGroupKey(chartSlots.dashStatus.dimension ?? "status", p.key),

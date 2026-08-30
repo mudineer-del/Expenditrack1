@@ -1,5 +1,22 @@
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { useDisplayStore, type ChartBackground, type ChartBackgroundDirection } from "@/store/useDisplayStore"
+
+/** Settings ▸ Format ▸ Charts ▸ "Chart background" controls this — from a plain solid
+ *  card ("flat", Office's "No fill") up through today's soft accent wash ("subtle") to a
+ *  bolder sweep ("gradient"), in any of the direction presets Office's own gradient-fill
+ *  picker offers. `direction` is ignored once level is "flat" (nothing to point). */
+export function accentBackgroundStyle(accent: string, level: ChartBackground, direction: ChartBackgroundDirection): React.CSSProperties {
+  if (level === "flat") return {}
+  const tintPct = level === "gradient" ? 20 : 7
+  const cardStopPct = level === "gradient" ? 88 : 62
+  const from = `color-mix(in oklch, ${accent} ${tintPct}%, var(--card))`
+  if (direction === "radial") {
+    return { backgroundImage: `radial-gradient(120% 120% at 12% 10%, ${from} 0%, var(--card) ${cardStopPct}%)` }
+  }
+  const angle = direction === "vertical" ? 180 : direction === "horizontal" ? 100 : 155
+  return { backgroundImage: `linear-gradient(${angle}deg, ${from} 0%, var(--card) ${cardStopPct}%)` }
+}
 
 /** Each chart card gets its own color identity (drawn from the warm --dataviz palette)
  *  instead of every card sharing one flat --primary blue — otherwise several differently
@@ -16,6 +33,9 @@ export function ChartCard({
   action?: ReactNode
   children: ReactNode
 }) {
+  const chartBackground = useDisplayStore((s) => s.chartBackground)
+  const chartBackgroundDirection = useDisplayStore((s) => s.chartBackgroundDirection)
+
   return (
     <div
       className={cn(
@@ -33,7 +53,7 @@ export function ChartCard({
       style={
         {
           borderColor: `color-mix(in oklch, ${accent} 22%, var(--border))`,
-          backgroundImage: `linear-gradient(155deg, color-mix(in oklch, ${accent} 7%, var(--card)) 0%, var(--card) 62%)`,
+          ...accentBackgroundStyle(accent, chartBackground, chartBackgroundDirection),
           "--accent-shadow": `color-mix(in oklch, ${accent} 25%, var(--border))`,
           "--accent-glow": `color-mix(in oklch, ${accent} 35%, transparent)`,
         } as React.CSSProperties

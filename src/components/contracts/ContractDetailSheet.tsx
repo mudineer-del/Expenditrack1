@@ -189,8 +189,15 @@ export function ContractDetailSheet({
                   </div>
                 }
               >
-                <ChartSlotContextMenu id="contractSheetTrend" hasDimension>
-                  <TrendChart data={trend} onDrill={onDrill} />
+                <ChartSlotContextMenu
+                  id="contractSheetTrend"
+                  hasDimension
+                  hasZoom
+                  chartTypeOptions={CHART_OPTIONS.trend}
+                  chartTypeValue={trendChartType}
+                  onChartTypeChange={(t) => setChartType("trendChartType", t)}
+                >
+                  <TrendChart data={trend} onDrill={onDrill} zoomEnabled={trendCfg.zoomEnabled ?? true} />
                 </ChartSlotContextMenu>
               </ChartCard>
               )}
@@ -207,7 +214,13 @@ export function ContractDetailSheet({
                   </div>
                 }
               >
-                <ChartSlotContextMenu id="contractSheetService" hasDimension>
+                <ChartSlotContextMenu
+                  id="contractSheetService"
+                  hasDimension
+                  chartTypeOptions={CHART_OPTIONS.service}
+                  chartTypeValue={serviceChartType}
+                  onChartTypeChange={(t) => setChartType("serviceChartType", t)}
+                >
                   <ServiceChart data={byService} chartType={serviceChartType} onDrill={onDrill} />
                 </ChartSlotContextMenu>
               </ChartCard>

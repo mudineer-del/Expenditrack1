@@ -31,7 +31,8 @@ import {
   DonutDefs,
   donutActiveShape,
   donutGradientId,
-  donutOuterLabel,
+  makeDonutOuterLabel,
+  makePolarValueLabel,
 } from "./donut3d"
 
 const config = {
@@ -53,6 +54,7 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No invoice data</div>
   }
   const top = data.slice(0, 10)
+  const vendorColors = top.map((d, i) => vendorColor(d.vendor, i))
 
   function drill(d: VendorCount | null) {
     if (d) onDrill(`Invoices — ${d.vendor}`, d.invoices)
@@ -73,7 +75,7 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
             paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
             cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
             activeShape={isMobile ? donutActiveShape : undefined}
-            label={isMobile || !labelsEnabled ? undefined : donutOuterLabel}
+            label={isMobile || !labelsEnabled ? undefined : makeDonutOuterLabel(vendorColors)}
             labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
             isAnimationActive={isMobile ? animate : false}
             cursor="pointer"
@@ -101,7 +103,9 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
           <PolarAngleAxis dataKey="vendor" fontSize={10} />
           <PolarRadiusAxis fontSize={9} allowDecimals={false} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Radar dataKey="count" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
+          <Radar dataKey="count" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
+            {labelsEnabled && <LabelList dataKey="count" content={makePolarValueLabel(vendorColors)} />}
+          </Radar>
         </RadarChart>
       </ChartContainer>
     )

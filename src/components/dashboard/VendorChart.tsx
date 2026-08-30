@@ -32,7 +32,7 @@ import {
 import { useDisplayStore } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import type { Invoice } from "@/types/invoice"
-import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, DonutDefs, donutActiveShape, donutGradientId } from "./donut3d"
+import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, DonutDefs, donutActiveShape, donutGradientId, makeDonutOuterLabel, makePolarValueLabel } from "./donut3d"
 
 const config = {
   total: { label: "Expenditure (incl. tax)" },
@@ -104,10 +104,12 @@ export function VendorChart({
               dataKey="total"
               nameKey="type"
               innerRadius="45%"
-              outerRadius="80%"
+              outerRadius={isMobile || !labelsEnabled ? "80%" : "62%"}
               paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
               cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
               activeShape={isMobile ? donutActiveShape : undefined}
+              label={isMobile || !labelsEnabled ? undefined : makeDonutOuterLabel(SERVICE_COLORS)}
+              labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
               isAnimationActive={animate}
               cursor="pointer"
               onClick={(_, index) => drillType(bySingleVendorType[index])}
@@ -139,10 +141,12 @@ export function VendorChart({
             dataKey="total"
             nameKey="vendor"
             innerRadius="45%"
-            outerRadius="80%"
+            outerRadius={isMobile || !labelsEnabled ? "80%" : "62%"}
             paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
             cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
             activeShape={isMobile ? donutActiveShape : undefined}
+            label={isMobile || !labelsEnabled ? undefined : makeDonutOuterLabel(top.map((d, i) => vendorColor(d.vendor, i)))}
+            labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
             isAnimationActive={animate}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
@@ -171,7 +175,9 @@ export function VendorChart({
             <PolarAngleAxis dataKey="type" fontSize={10} />
             <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
             <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-            <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
+            <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
+              {labelsEnabled && <LabelList dataKey="total" content={makePolarValueLabel(SERVICE_COLORS, totalLabelFormatter)} />}
+            </Radar>
           </RadarChart>
         </ChartContainer>
       )
@@ -183,7 +189,9 @@ export function VendorChart({
           <PolarAngleAxis dataKey="vendor" fontSize={10} />
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
+          <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
+            {labelsEnabled && <LabelList dataKey="total" content={makePolarValueLabel(top.map((d, i) => vendorColor(d.vendor, i)), totalLabelFormatter)} />}
+          </Radar>
         </RadarChart>
       </ChartContainer>
     )

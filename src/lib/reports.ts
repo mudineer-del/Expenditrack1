@@ -1,6 +1,6 @@
 import type { Invoice } from "@/types/invoice"
 
-export type ReportMode = "contract" | "compare" | "period"
+export type ReportMode = "contract" | "compare" | "period" | "management"
 
 export type GroupBy =
   | "month" | "quarter" | "year" | "contract" | "vendor" | "service" | "type" | "region" | "status" | "well"

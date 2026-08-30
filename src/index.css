@@ -556,3 +556,28 @@ body {
   --color-status-under: var(--status-under);
   --color-status-returned: var(--status-returned);
 }
+
+/* Print isolation for the Management Report (and any future #print-report user): hides the
+   sidebar/header/filters chrome without needing print:hidden on every chrome element across
+   AppShell — only the element with this id (plus its children) stays visible on the page. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-report,
+  #print-report * {
+    visibility: visible;
+  }
+  #print-report {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0.5in;
+  }
+  #print-report .recharts-wrapper,
+  #print-report svg {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

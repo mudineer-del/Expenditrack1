@@ -1,15 +1,16 @@
-import { KeyRound, Send } from "lucide-react"
-import { useState } from "react"
+import { Camera, KeyRound, Send } from "lucide-react"
+import { useRef, useState } from "react"
 import { toast } from "sonner"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SetPasswordDialog } from "@/components/users/SetPasswordDialog"
+import { AVATAR_ACCEPT, uploadAvatarFile } from "@/lib/avatars"
 import { errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
-import { useProfilesQuery, useUpdateProfileRole } from "@/hooks/useProfiles"
+import { useProfilesQuery, useUpdateProfileAvatar, useUpdateProfileRole } from "@/hooks/useProfiles"
 import type { AppUser, Role } from "@/types/user"
 
 const ROLES: Role[] = ["Admin", "Editor", "Viewer"]
@@ -24,8 +25,11 @@ export default function UsersPage() {
   const { user, isAdmin, sendRecovery } = useAuth()
   const profilesQuery = useProfilesQuery()
   const updateRole = useUpdateProfileRole()
+  const updateAvatar = useUpdateProfileAvatar()
   const [passwordTarget, setPasswordTarget] = useState<AppUser | null>(null)
   const [sendingResetFor, setSendingResetFor] = useState<string | null>(null)
+  const [pendingAvatarFor, setPendingAvatarFor] = useState<string | null>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   if (!user) return null
 
@@ -49,6 +53,31 @@ export default function UsersPage() {
     else toast.error(r.error || "Could not send reset email.")
   }
 
+  function triggerAvatarUpload(userId: string) {
+    setPendingAvatarFor(userId)
+    avatarInputRef.current?.click()
+  }
+
+  async function onAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    const targetId = pendingAvatarFor
+    e.target.value = ""
+    setPendingAvatarFor(null)
+    if (!file || !targetId) return
+    const r = await uploadAvatarFile(targetId, file)
+    if (!r.ok) {
+      toast.error(r.error)
+      return
+    }
+    updateAvatar.mutate(
+      { id: targetId, avatarUrl: r.url },
+      {
+        onSuccess: () => toast.success("Photo updated."),
+        onError: (e) => toast.error(errorMessage(e, "Could not update photo.")),
+      }
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4">
       <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
@@ -56,10 +85,13 @@ export default function UsersPage() {
         app's code.
       </div>
 
+      <input ref={avatarInputRef} type="file" accept={AVATAR_ACCEPT} className="hidden" onChange={onAvatarFileChange} />
+
       <div className="rounded-lg border bg-card p-4">
         <h3 className="mb-3 text-sm font-semibold">Your Account</h3>
         <div className="flex items-center gap-3">
           <Avatar>
+            {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
             <AvatarFallback>{user.initials}</AvatarFallback>
           </Avatar>
           <div>
@@ -107,9 +139,22 @@ export default function UsersPage() {
                   <TableRow key={p.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Avatar className="size-7">
-                          <AvatarFallback className="text-xs">{p.initials}</AvatarFallback>
-                        </Avatar>
+                        <div className="group/row-photo relative">
+                          <Avatar className="size-7">
+                            {p.avatarUrl && <AvatarImage src={p.avatarUrl} alt={p.name} />}
+                            <AvatarFallback className="text-xs">{p.initials}</AvatarFallback>
+                          </Avatar>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              title={`Set ${p.name}'s photo`}
+                              onClick={() => triggerAvatarUpload(p.id)}
+                              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover/row-photo:opacity-100"
+                            >
+                              <Camera className="size-3" />
+                            </button>
+                          )}
+                        </div>
                         <div>
                           <div className="font-medium">
                             {p.name}

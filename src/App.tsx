@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react"
 import { Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { AppShell } from "@/components/shell/AppShell"
 import { RequireAdmin, RequireAuth } from "@/components/shell/RequireAuth"
+import { RouteErrorBoundary } from "@/components/shell/RouteErrorBoundary"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/useAuth"
 import LoginPage from "@/pages/LoginPage"
@@ -41,30 +42,32 @@ function App() {
   }
 
   return (
-    <Suspense fallback={<RouteFallback />}>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <RouteErrorBoundary>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        <Route element={<RequireAuth />}>
-          <Route element={<AppShell />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="invoices" element={<InvoicesPage />} />
-            <Route path="vendors" element={<VendorsContractsPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="activity" element={<ActivityLogPage />} />
-            <Route path="messages" element={<MessageCentrePage />} />
-            <Route path="install" element={<InstallPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route element={<RequireAdmin />}>
-              <Route path="users" element={<UsersPage />} />
+          <Route element={<RequireAuth />}>
+            <Route element={<AppShell />}>
+              <Route index element={<DashboardPage />} />
+              <Route path="invoices" element={<InvoicesPage />} />
+              <Route path="vendors" element={<VendorsContractsPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="activity" element={<ActivityLogPage />} />
+              <Route path="messages" element={<MessageCentrePage />} />
+              <Route path="install" element={<InstallPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route element={<RequireAdmin />}>
+                <Route path="users" element={<UsersPage />} />
+              </Route>
             </Route>
           </Route>
-        </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </RouteErrorBoundary>
   )
 }
 

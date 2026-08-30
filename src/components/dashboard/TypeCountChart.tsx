@@ -31,7 +31,8 @@ import {
   DonutDefs,
   donutActiveShape,
   donutGradientId,
-  donutOuterLabel,
+  makeDonutOuterLabel,
+  makePolarValueLabel,
 } from "./donut3d"
 
 const config = {
@@ -75,7 +76,7 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
             paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
             cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
             activeShape={isMobile ? donutActiveShape : undefined}
-            label={isMobile || !labelsEnabled ? undefined : donutOuterLabel}
+            label={isMobile || !labelsEnabled ? undefined : makeDonutOuterLabel(PIE_COLORS)}
             labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
             isAnimationActive={isMobile ? animate : false}
             cursor="pointer"
@@ -103,7 +104,9 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
           <PolarAngleAxis dataKey="type" fontSize={10} />
           <PolarRadiusAxis fontSize={9} allowDecimals={false} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Radar dataKey="count" stroke="var(--color-count)" fill="var(--color-count)" fillOpacity={0.35} isAnimationActive={animate} className="cursor-pointer" />
+          <Radar dataKey="count" stroke="var(--color-count)" fill="var(--color-count)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
+            {labelsEnabled && <LabelList dataKey="count" content={makePolarValueLabel(PIE_COLORS)} />}
+          </Radar>
         </RadarChart>
       </ChartContainer>
     )
