@@ -3,11 +3,16 @@ import { toast } from "sonner"
 import { getSupabaseClient } from "@/lib/supabase"
 import { toRow, type Invoice } from "@/types/invoice"
 import { toContractRow, type Contract } from "@/types/contract"
+import { toWellRow, type Well } from "@/types/well"
+import { toWellCostCentreRow, toWellCostTransactionRow, type WellCostCentre, type WellCostTransaction } from "@/types/wellCost"
 import { useActivityStore, type Snapshot, type UndoEntry } from "@/store/useActivityStore"
 import { logActivity, useActivityLogQuery } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
 import { INVOICES_QUERY_KEY } from "@/hooks/useInvoices"
 import { CONTRACTS_QUERY_KEY } from "@/hooks/useContracts"
+import { WELLS_QUERY_KEY } from "@/hooks/useWells"
+import { WELL_COST_CENTRES_QUERY_KEY } from "@/hooks/useWellCostCentres"
+import { WELL_COST_TRANSACTIONS_QUERY_KEY } from "@/hooks/useWellCostTransactions"
 import { REFERENCE_LISTS_QUERY_KEY, type ReferenceLists } from "@/lib/referenceLists"
 
 /**
@@ -51,6 +56,57 @@ export async function reconcileContractsTo(snapshot: Contract[], current: Contra
   }
 }
 
+/** Same idea as reconcileInvoicesTo, for the `wells` table. */
+export async function reconcileWellsTo(snapshot: Well[], current: Well[]) {
+  const supabase = getSupabaseClient()
+  const snapshotIds = new Set(snapshot.map((w) => w.id))
+  const toDelete = current.filter((w) => !snapshotIds.has(w.id)).map((w) => w.id)
+
+  const rows = snapshot.map(toWellRow)
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await supabase.from("wells").upsert(rows.slice(i, i + 200), { onConflict: "id" })
+    if (error) throw error
+  }
+  for (let i = 0; i < toDelete.length; i += 100) {
+    const { error } = await supabase.from("wells").delete().in("id", toDelete.slice(i, i + 100))
+    if (error) throw error
+  }
+}
+
+/** Same idea as reconcileInvoicesTo, for the `well_cost_centres` table. */
+export async function reconcileWellCostCentresTo(snapshot: WellCostCentre[], current: WellCostCentre[]) {
+  const supabase = getSupabaseClient()
+  const snapshotIds = new Set(snapshot.map((c) => c.id))
+  const toDelete = current.filter((c) => !snapshotIds.has(c.id)).map((c) => c.id)
+
+  const rows = snapshot.map(toWellCostCentreRow)
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await supabase.from("well_cost_centres").upsert(rows.slice(i, i + 200), { onConflict: "id" })
+    if (error) throw error
+  }
+  for (let i = 0; i < toDelete.length; i += 100) {
+    const { error } = await supabase.from("well_cost_centres").delete().in("id", toDelete.slice(i, i + 100))
+    if (error) throw error
+  }
+}
+
+/** Same idea as reconcileInvoicesTo, for the `well_cost_transactions` table. */
+export async function reconcileWellCostTransactionsTo(snapshot: WellCostTransaction[], current: WellCostTransaction[]) {
+  const supabase = getSupabaseClient()
+  const snapshotIds = new Set(snapshot.map((t) => t.id))
+  const toDelete = current.filter((t) => !snapshotIds.has(t.id)).map((t) => t.id)
+
+  const rows = snapshot.map(toWellCostTransactionRow)
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await supabase.from("well_cost_transactions").upsert(rows.slice(i, i + 200), { onConflict: "id" })
+    if (error) throw error
+  }
+  for (let i = 0; i < toDelete.length; i += 100) {
+    const { error } = await supabase.from("well_cost_transactions").delete().in("id", toDelete.slice(i, i + 100))
+    if (error) throw error
+  }
+}
+
 /** `reference_lists` rows are one per list key, never deleted — reverting just overwrites values. */
 export async function reconcileRefListsTo(snapshot: ReferenceLists) {
   const supabase = getSupabaseClient()
@@ -64,7 +120,10 @@ async function reconcileSnapshot(
   snapshot: Snapshot,
   queryClient: ReturnType<typeof useQueryClient>,
   currentInvoices: Invoice[],
-  currentContracts: Contract[]
+  currentContracts: Contract[],
+  currentWells: Well[],
+  currentWellCostCentres: WellCostCentre[],
+  currentWellCostTransactions: WellCostTransaction[]
 ) {
   if (snapshot.invoices) {
     await reconcileInvoicesTo(snapshot.invoices, currentInvoices)
@@ -73,6 +132,18 @@ async function reconcileSnapshot(
   if (snapshot.contracts) {
     await reconcileContractsTo(snapshot.contracts, currentContracts)
     await queryClient.invalidateQueries({ queryKey: CONTRACTS_QUERY_KEY })
+  }
+  if (snapshot.wells) {
+    await reconcileWellsTo(snapshot.wells, currentWells)
+    await queryClient.invalidateQueries({ queryKey: WELLS_QUERY_KEY })
+  }
+  if (snapshot.wellCostCentres) {
+    await reconcileWellCostCentresTo(snapshot.wellCostCentres, currentWellCostCentres)
+    await queryClient.invalidateQueries({ queryKey: WELL_COST_CENTRES_QUERY_KEY })
+  }
+  if (snapshot.wellCostTransactions) {
+    await reconcileWellCostTransactionsTo(snapshot.wellCostTransactions, currentWellCostTransactions)
+    await queryClient.invalidateQueries({ queryKey: WELL_COST_TRANSACTIONS_QUERY_KEY })
   }
   if (snapshot.refLists) {
     await reconcileRefListsTo(snapshot.refLists)
@@ -96,8 +167,20 @@ export function useUndo() {
     const discardedCount = undoStack.length - idx
     const currentInvoices = (queryClient.getQueryData(INVOICES_QUERY_KEY) as Invoice[] | undefined) ?? []
     const currentContracts = (queryClient.getQueryData(CONTRACTS_QUERY_KEY) as Contract[] | undefined) ?? []
+    const currentWells = (queryClient.getQueryData(WELLS_QUERY_KEY) as Well[] | undefined) ?? []
+    const currentWellCostCentres = (queryClient.getQueryData(WELL_COST_CENTRES_QUERY_KEY) as WellCostCentre[] | undefined) ?? []
+    const currentWellCostTransactions =
+      (queryClient.getQueryData(WELL_COST_TRANSACTIONS_QUERY_KEY) as WellCostTransaction[] | undefined) ?? []
 
-    await reconcileSnapshot(target.snapshot, queryClient, currentInvoices, currentContracts)
+    await reconcileSnapshot(
+      target.snapshot,
+      queryClient,
+      currentInvoices,
+      currentContracts,
+      currentWells,
+      currentWellCostCentres,
+      currentWellCostTransactions
+    )
     useActivityStore.setState({ undoStack: undoStack.slice(0, idx) })
     return { target, discardedCount }
   }

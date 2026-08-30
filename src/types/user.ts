@@ -14,4 +14,4 @@ export interface AppUser {
 }
 
 export type Action = "add" | "edit" | "delete" | "export"
-export type Resource = "invoice" | "contract"
+export type Resource = "invoice" | "contract" | "well" | "wellCostEntry"

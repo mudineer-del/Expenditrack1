@@ -10,6 +10,7 @@ import { fmtMoney } from "@/lib/dashboard"
 import { chartMeasureLabel, groupRows, reportRows, shortContract, type ReportFilters, type ReportGroup } from "@/lib/reports"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
+import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
 import { CompareTaChart, CompareValueChart } from "@/components/reports/CompareCharts"
 import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
 import { useDisplayStore } from "@/store/useDisplayStore"
@@ -315,6 +316,7 @@ export function CompareReportView({
                   {taMeasure === "taAvg" ? "Avg Turnaround by Contract" : `${chartMeasureLabel(taMeasure)} by Contract`}
                 </h3>
                 <div className="flex items-center gap-1">
+                  <ChartZoomStepper id="compareTa" />
                   <ChartVisibilityToggle id="compareTa" />
                   <span className="text-xs text-muted-foreground">Click a bar for details</span>
                 </div>

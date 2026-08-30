@@ -14,6 +14,9 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage"
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"))
 const InvoicesPage = lazy(() => import("@/pages/InvoicesPage"))
 const VendorsContractsPage = lazy(() => import("@/pages/VendorsContractsPage"))
+const WellDashboardPage = lazy(() => import("@/pages/WellDashboardPage"))
+const ManageWellsPage = lazy(() => import("@/pages/ManageWellsPage"))
+const WellCostStructurePage = lazy(() => import("@/pages/WellCostStructurePage"))
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"))
 const ActivityLogPage = lazy(() => import("@/pages/ActivityLogPage"))
 const MessageCentrePage = lazy(() => import("@/pages/MessageCentrePage"))
@@ -53,6 +56,9 @@ function App() {
               <Route index element={<DashboardPage />} />
               <Route path="invoices" element={<InvoicesPage />} />
               <Route path="vendors" element={<VendorsContractsPage />} />
+              <Route path="well-cost" element={<WellDashboardPage />} />
+              <Route path="well-cost/wells" element={<ManageWellsPage />} />
+              <Route path="well-cost/structure" element={<WellCostStructurePage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="activity" element={<ActivityLogPage />} />
               <Route path="messages" element={<MessageCentrePage />} />

@@ -100,6 +100,7 @@ export function MobileBottomNav() {
   ]
 
   const moreNav = [
+    { to: "/well-cost", label: "Well Cost" },
     ...(unreadActivity > 0 ? [{ to: "/activity", label: "Activity", badge: unreadActivity }] : []),
     ...(unreadMessages > 0 ? [{ to: "/messages", label: "Messages", badge: unreadMessages }] : []),
   ]

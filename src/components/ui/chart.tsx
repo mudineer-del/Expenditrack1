@@ -63,7 +63,7 @@ function ChartContainer({
         data-slot="chart"
         data-chart={chartId}
         className={cn(
-          "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
+          "professional-chart flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/35 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-primary/40 [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border/45 [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-primary/8 [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border/60 [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
           className
         )}
         {...props}
@@ -189,7 +189,7 @@ function ChartTooltipContent({
   return (
     <div
       className={cn(
-        "grid min-w-32 items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl",
+        "grid min-w-40 max-w-72 items-start gap-2 rounded-xl border border-border/70 bg-popover/95 px-3 py-2.5 text-xs shadow-[0_18px_45px_-18px_rgba(15,23,42,0.55)] backdrop-blur-md",
         className
       )}
     >
@@ -292,7 +292,7 @@ function ChartLegendContent({
         // flex-wrap matters here: with many series (e.g. 10 contractors) or
         // long labels, an unwrapped row silently overflows its container on
         // a narrow screen instead of just taking a second line.
-        "flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5",
+        "flex flex-wrap items-center justify-center gap-x-3.5 gap-y-2 text-[clamp(0.68rem,0.64rem+0.12vw,0.76rem)] font-medium text-muted-foreground",
         verticalAlign === "top" ? "pb-3" : "pt-3",
         className
       )}
@@ -314,7 +314,7 @@ function ChartLegendContent({
                 <itemConfig.icon />
               ) : (
                 <div
-                  className="h-2 w-2 shrink-0 rounded-[2px]"
+                  className="h-2.5 w-2.5 shrink-0 rounded-full shadow-sm"
                   style={{
                     backgroundColor: item.color,
                   }}

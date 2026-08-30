@@ -5,7 +5,7 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { XIcon } from "lucide-react"
+import { Copy, Square, XIcon } from "lucide-react"
 
 function Dialog({
   ...props
@@ -51,9 +51,19 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  maximizable = false,
+  maximized = false,
+  onMaximizedChange,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  /** Adds a window-style maximize/restore toggle next to the close button, so the dialog
+   *  can fill the viewport (like maximizing a desktop window) and snap back to its normal
+   *  auto-fit size — the caller owns `maximized` state (and typically resets it to false
+   *  on close, so the sheet reopens at its normal size next time). */
+  maximizable?: boolean
+  maximized?: boolean
+  onMaximizedChange?: (v: boolean) => void
 }) {
   return (
     <DialogPortal>
@@ -62,24 +72,39 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground shadow-2xl ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-          className
+          className,
+          maximized &&
+            "inset-2 top-2 left-2 h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100dvw-1rem)] max-w-[calc(100dvw-1rem)] translate-x-0 translate-y-0 sm:max-w-[calc(100dvw-1rem)]"
         )}
         {...props}
       >
         {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close data-slot="dialog-close" asChild>
+        <div className="absolute top-2 right-2 flex items-center gap-1">
+          {maximizable && (
             <Button
               variant="ghost"
-              className="absolute top-2 right-2"
               size="icon-sm"
+              onClick={() => onMaximizedChange?.(!maximized)}
+              title={maximized ? "Restore down" : "Maximize"}
+              style={{
+                backgroundImage: "linear-gradient(155deg, color-mix(in oklch, var(--foreground) 10%, var(--card)) 0%, var(--card) 70%)",
+                boxShadow: "inset 0 1px 0 color-mix(in oklch, white 45%, transparent), 0 1px 2px rgba(0,0,0,0.15)",
+              }}
+              className="rounded-md border border-border/60"
             >
-              <XIcon
-              />
-              <span className="sr-only">Close</span>
+              {maximized ? <Copy className="size-3.5" /> : <Square className="size-3.5" />}
+              <span className="sr-only">{maximized ? "Restore down" : "Maximize"}</span>
             </Button>
-          </DialogPrimitive.Close>
-        )}
+          )}
+          {showCloseButton && (
+            <DialogPrimitive.Close data-slot="dialog-close" asChild>
+              <Button variant="ghost" size="icon-sm">
+                <XIcon />
+                <span className="sr-only">Close</span>
+              </Button>
+            </DialogPrimitive.Close>
+          )}
+        </div>
       </DialogPrimitive.Content>
     </DialogPortal>
   )

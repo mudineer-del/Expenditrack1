@@ -1,3 +1,4 @@
+import { useId } from "react"
 import {
   Area,
   Bar,
@@ -23,7 +24,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { activeChartPayload } from "@/lib/chartClick"
 import { fmtMoney, type TrendPoint } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
-import { makeDonutOuterLabel, makePolarValueLabel } from "./donut3d"
+import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, donut3DShape, donutActiveShape, makeDonutOuterLabel, makePolarValueLabel } from "./donut3d"
+import { Chart3DBoundary, LazyArea3DScene, LazyBar3DScene, type Chart3DDatum } from "./chart3d"
 
 const config = {
   total: { label: "Expenditure (incl. tax)", color: "var(--dataviz-1)" },
@@ -46,11 +48,10 @@ export function TrendChart({
 }) {
   const chartType = useDisplayStore((s) => s.trendChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
+  const areaId = useId().replace(/:/g, "")
   // Only gates the pie/radar labels below — the line/bar/composed view further down stays
   // label-less on purpose (too many months of per-point labels turns into unreadable noise;
   // see the Brush/zoom control added for that same density problem).
-  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
-
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No dated invoices</div>
   }
@@ -69,9 +70,13 @@ export function TrendChart({
             dataKey="total"
             nameKey="month"
             innerRadius="45%"
-            outerRadius={labelsEnabled ? "62%" : "80%"}
-            label={labelsEnabled ? makeDonutOuterLabel(PIE_COLORS) : undefined}
-            labelLine={labelsEnabled ? { stroke: "var(--border)" } : false}
+            outerRadius="55%"
+            paddingAngle={DONUT_PAD_ANGLE}
+            cornerRadius={DONUT_CORNER_RADIUS}
+            shape={donut3DShape}
+            activeShape={donutActiveShape}
+            label={makeDonutOuterLabel(PIE_COLORS, 28, data.map((d) => ({ name: d.month, value: d.total })))}
+            labelLine={false}
             isAnimationActive={animate}
             cursor="pointer"
             onClick={(_, index) => drill(data[index])}
@@ -93,8 +98,8 @@ export function TrendChart({
           <PolarAngleAxis dataKey="month" fontSize={10} />
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
-            {labelsEnabled && <LabelList dataKey="total" content={makePolarValueLabel(PIE_COLORS, valueLabel)} />}
+          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.22} isAnimationActive={false} className="cursor-pointer">
+            <LabelList dataKey="total" content={makePolarValueLabel(PIE_COLORS, valueLabel, -14)} />
           </Radar>
         </RadarChart>
       </ChartContainer>
@@ -124,56 +129,99 @@ export function TrendChart({
     )
   }
 
-  return (
-    <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
-      <ComposedChart data={data} onClick={(e) => drill(activeChartPayload<TrendPoint>(e))} className="cursor-pointer">
-        <CartesianGrid vertical={false} />
-        <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} />
-        <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
-        <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-        {chartType === "bar" && <Bar dataKey="total" fill="var(--color-total)" radius={[8, 8, 3, 3]} isAnimationActive={animate} />}
-        {chartType === "composed" && (
-          <>
-            <Bar dataKey="total" fill="var(--color-total)" fillOpacity={0.45} radius={[8, 8, 3, 3]} isAnimationActive={animate} />
-            <Line type="monotone" dataKey="total" stroke="var(--foreground)" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={animate} />
-          </>
-        )}
-        {chartType === "line" && (
-          <Line
-            type="monotone"
-            dataKey="total"
-            stroke="var(--color-total)"
-            strokeWidth={2.75}
-            strokeLinecap="round"
-            dot={{ r: 3.5 }}
-            activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
-            isAnimationActive={animate}
-          />
-        )}
-        {chartType === "area" && (
-          <>
-            <defs>
-              <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--color-total)" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="var(--color-total)" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <Area
+  function renderComposed(effectiveType: string) {
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <ComposedChart data={data} onClick={(e) => drill(activeChartPayload<TrendPoint>(e))} className="cursor-pointer">
+          <defs>
+            <linearGradient id={`${areaId}-fill`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--dataviz-1)" stopOpacity={0.38} />
+              <stop offset="58%" stopColor="var(--dataviz-1)" stopOpacity={0.13} />
+              <stop offset="100%" stopColor="var(--dataviz-1)" stopOpacity={0.015} />
+            </linearGradient>
+            <filter id={`${areaId}-glow`} x="-20%" y="-25%" width="140%" height="150%">
+              <feDropShadow dx="0" dy="3" stdDeviation="3.5" floodColor="var(--dataviz-1)" floodOpacity={0.16} />
+            </filter>
+          </defs>
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={11} />
+          <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
+          <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+          {effectiveType === "bar" && <Bar dataKey="total" fill="var(--color-total)" radius={8} isAnimationActive={animate} />}
+          {effectiveType === "composed" && (
+            <>
+              <Bar dataKey="total" fill="var(--color-total)" radius={8} isAnimationActive={animate} />
+              <Line type="monotone" dataKey="total" stroke="var(--foreground)" strokeWidth={2} dot={{ r: 3 }} isAnimationActive={animate} />
+            </>
+          )}
+          {effectiveType === "line" && (
+            <Line
               type="monotone"
               dataKey="total"
               stroke="var(--color-total)"
               strokeWidth={2.75}
               strokeLinecap="round"
-              fill="url(#trendGradient)"
+              dot={{ r: 3.5 }}
               activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
               isAnimationActive={animate}
             />
-          </>
-        )}
-        {zoomEnabled && data.length > 8 && (
-          <Brush dataKey="month" height={22} travellerWidth={8} stroke="var(--color-total)" fill="var(--muted)" className="text-xs" />
-        )}
-      </ComposedChart>
-    </ChartContainer>
-  )
+          )}
+          {effectiveType === "area" && (
+            <>
+              <Area
+                type="monotone"
+                dataKey="total"
+                stroke="var(--color-total)"
+                strokeWidth={3}
+                strokeLinecap="round"
+                fill={`url(#${areaId}-fill)`}
+                fillOpacity={1}
+                filter={`url(#${areaId}-glow)`}
+                dot={{ r: 3.25, fill: "var(--card)", stroke: "var(--dataviz-1)", strokeWidth: 2 }}
+                activeDot={{ r: 7, strokeWidth: 2, stroke: "var(--card)", fill: "var(--dataviz-1)" }}
+                isAnimationActive={animate}
+              />
+            </>
+          )}
+          {zoomEnabled && data.length > 8 && (
+            <Brush dataKey="month" height={22} travellerWidth={8} stroke="var(--color-total)" fill="var(--muted)" className="text-xs" />
+          )}
+        </ComposedChart>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "bar3d") {
+    const bars3D: Chart3DDatum[] = data.map((d, i) => ({ key: d.key, label: d.month, value: d.total, color: PIE_COLORS[i % PIE_COLORS.length], invoices: d.invoices }))
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderComposed("bar")}>
+          <LazyBar3DScene
+            data={bars3D}
+            otherColor="var(--muted-foreground)"
+            formatValue={valueLabel}
+            maxCategories={14}
+            onBarClick={(d) => drill(data.find((t) => (t.key) === d.key) ?? null)}
+          />
+        </Chart3DBoundary>
+      </div>
+    )
+  }
+
+  if (chartType === "area3d") {
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderComposed("area")}>
+          <LazyArea3DScene
+            points={data.map((d) => ({ key: d.key, label: d.month, value: d.total }))}
+            color="var(--dataviz-1)"
+            formatValue={valueLabel}
+            onPointClick={(p) => drill(data.find((t) => (t.key) === p.key) ?? null)}
+          />
+        </Chart3DBoundary>
+      </div>
+    )
+  }
+
+  return renderComposed(chartType)
 }

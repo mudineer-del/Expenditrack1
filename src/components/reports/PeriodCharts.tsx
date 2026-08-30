@@ -1,5 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, Line, LineChart, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { bar3DShape } from "@/components/dashboard/donut3d"
 import { fmtMoney } from "@/lib/dashboard"
 import { chartMeasureLabel, formatMeasureValue, type ChartMeasure, type ReportGroup } from "@/lib/reports"
 import { useDisplayStore } from "@/store/useDisplayStore"
@@ -63,7 +64,7 @@ export function PeriodValueChart({
           <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={10} angle={-30} textAnchor="end" height={50} />
           <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={fmt} width={60} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => formatMeasureValue(measure, Number(v), fmtMoney)} />} />
-          <Bar dataKey={measure} radius={4} cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)}>
+          <Bar dataKey={measure} shape={bar3DShape} cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)}>
             {data.map((_, i) => (
               <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />
             ))}
@@ -98,7 +99,7 @@ export function PeriodPaidChart({ groups, onGroupClick }: { groups: ReportGroup[
         <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
         <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
         <Bar dataKey="paid" stackId="s" fill="var(--color-paid)" cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)} />
-        <Bar dataKey="outstanding" stackId="s" fill="var(--color-outstanding)" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)}>
+        <Bar dataKey="outstanding" stackId="s" fill="var(--color-outstanding)" shape={bar3DShape} cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)}>
           {labelsEnabled && <LabelList dataKey="stackTotal" position="top" formatter={valueLabel} fontSize={10} fill="var(--muted-foreground)" />}
         </Bar>
       </BarChart>

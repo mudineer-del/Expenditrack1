@@ -29,17 +29,16 @@ import { fmtMoney, type CategoryTotal } from "@/lib/dashboard"
 import { useDisplayStore, type ChartType } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import {
-  computeRadialLabelStagger,
+  Area3DDefs,
   DONUT_CORNER_RADIUS,
-  DONUT_OUTER_RADIUS_LABELED,
   DONUT_PAD_ANGLE,
-  DonutDefs,
+  donut3DShape,
   donutActiveShape,
-  donutGradientId,
   makeDonutOuterLabel,
   makePolarValueLabel,
   makeRadialBarValueLabel,
 } from "./donut3d"
+import { Chart3DBoundary, LazyArea3DScene, LazyBar3DScene, LazyDonut3DScene, type Chart3DDatum } from "./chart3d"
 
 const config = {
   total: { label: "Expenditure (incl. tax)", color: "var(--dataviz-3)" },
@@ -76,23 +75,26 @@ export function ServiceChart({
     if (d) onDrill(`Invoices — ${d.service}`, d.invoices)
   }
 
-  if (chartType === "pie") {
+  const total3D: Chart3DDatum[] = top.map((d, i) => ({ key: d.service, label: d.service, value: d.total, color: PIE_COLORS[i % PIE_COLORS.length], invoices: d.invoices }))
+  const grandTotal = top.reduce((s, d) => s + d.total, 0)
+
+  function renderDonut2D() {
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <PieChart>
-          {isMobile && <DonutDefs idBase={gid} colors={PIE_COLORS} />}
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
           <Pie
             data={top}
             dataKey="total"
             nameKey="service"
             innerRadius="45%"
-            outerRadius={isMobile ? "80%" : DONUT_OUTER_RADIUS_LABELED}
-            paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
-            cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
-            activeShape={isMobile ? donutActiveShape : undefined}
-            label={isMobile || !labelsEnabled ? undefined : makeDonutOuterLabel(PIE_COLORS)}
-            labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
+            outerRadius={isMobile ? "76%" : "55%"}
+            paddingAngle={DONUT_PAD_ANGLE}
+            cornerRadius={DONUT_CORNER_RADIUS}
+            shape={donut3DShape}
+            activeShape={donutActiveShape}
+            label={isMobile ? undefined : makeDonutOuterLabel(PIE_COLORS, 28, top.map((d) => ({ name: d.service, value: d.total })))}
+            labelLine={false}
             // Recharts only shows Pie labels once its entrance animation resolves
             // (showLabels: !isAnimating internally) — with `top` a fresh array
             // every render, that transition seemingly never settles, so labels
@@ -103,16 +105,31 @@ export function ServiceChart({
             onClick={(_, index) => drill(top[index])}
           >
             {top.map((d, i) => (
-              <Cell
-                key={d.service}
-                fill={isMobile ? `url(#${donutGradientId(gid, i % PIE_COLORS.length)})` : PIE_COLORS[i % PIE_COLORS.length]}
-                stroke={isMobile ? "var(--card)" : undefined}
-                strokeWidth={isMobile ? 2 : undefined}
-              />
+              <Cell key={d.service} fill={PIE_COLORS[i % PIE_COLORS.length]} />
             ))}
           </Pie>
         </PieChart>
       </ChartContainer>
+    )
+  }
+
+  if (chartType === "pie") return renderDonut2D()
+
+  if (chartType === "donut3d" || chartType === "donut3dExploded" || chartType === "donutSemi3d") {
+    const variant = chartType === "donut3dExploded" ? "exploded" : chartType === "donutSemi3d" ? "semi" : "solid"
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderDonut2D()}>
+          <LazyDonut3DScene
+            data={total3D}
+            variant={variant}
+            otherColor="var(--muted-foreground)"
+            centerLabel={{ title: "Total", value: fmtMoney(grandTotal).replace(".00", "") }}
+            formatValue={valueLabel}
+            onSliceClick={(d) => drill(top.find((t) => t.service === d.key) ?? null)}
+          />
+        </Chart3DBoundary>
+      </div>
     )
   }
 
@@ -124,8 +141,8 @@ export function ServiceChart({
           <PolarAngleAxis dataKey="service" fontSize={10} />
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
-            {labelsEnabled && <LabelList dataKey="total" content={makePolarValueLabel(PIE_COLORS, valueLabel)} />}
+          <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.22} isAnimationActive={false} className="cursor-pointer">
+            <LabelList dataKey="total" content={makePolarValueLabel(PIE_COLORS, valueLabel, -14)} />
           </Radar>
         </RadarChart>
       </ChartContainer>
@@ -159,21 +176,21 @@ export function ServiceChart({
     // Rings with a similar value sweep by a similar amount from the shared start angle, so
     // their labels would otherwise land at nearly the same angle — spread those out before
     // handing the per-index push to the label renderer.
-    const radialStagger = computeRadialLabelStagger(top.map((d) => d.total))
+    const radialEntries = top.map((d) => ({ name: d.service, value: d.total }))
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <RadialBarChart
           data={top}
           innerRadius="18%"
-          outerRadius={labelsEnabled ? "52%" : "82%"}
+          outerRadius="52%"
           startAngle={90}
           endAngle={-270}
           onClick={(e) => drill(activeChartPayload<CategoryTotal>(e))}
         >
           <PolarAngleAxis type="number" domain={[0, "dataMax"]} tick={false} />
-          <RadialBar dataKey="total" background={{ fill: "var(--muted)" }} cornerRadius={8} isAnimationActive={labelsEnabled ? false : animate}>
+          <RadialBar dataKey="total" background={{ fill: "var(--muted)" }} cornerRadius={8} isAnimationActive={false}>
             {top.map((d, i) => <Cell key={d.service} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-            {labelsEnabled && <LabelList dataKey="total" content={makeRadialBarValueLabel(PIE_COLORS, valueLabel, radialStagger)} />}
+            <LabelList dataKey="total" content={makeRadialBarValueLabel(PIE_COLORS, valueLabel, radialEntries)} />
           </RadialBar>
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
         </RadialBarChart>
@@ -195,7 +212,7 @@ export function ServiceChart({
     )
   }
 
-  if (chartType === "bar") {
+  function renderBar2D() {
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <BarChart data={top} layout="vertical" margin={{ left: 8 }} onClick={(e) => drill(activeChartPayload<CategoryTotal>(e))} className="cursor-pointer">
@@ -203,7 +220,7 @@ export function ServiceChart({
           <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} />
           <YAxis dataKey="service" type="category" tickLine={false} axisLine={false} fontSize={11} width={110} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Bar dataKey="total" fill="var(--color-total)" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
+          <Bar dataKey="total" fill="var(--color-total)" radius={8} isAnimationActive={animate}>
             {labelsEnabled && (
               <LabelList
                 dataKey="total"
@@ -219,6 +236,68 @@ export function ServiceChart({
     )
   }
 
+  if (chartType === "bar") return renderBar2D()
+
+  if (chartType === "bar3d") {
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderBar2D()}>
+          <LazyBar3DScene
+            data={total3D}
+            otherColor="var(--muted-foreground)"
+            formatValue={valueLabel}
+            onBarClick={(d) => drill(top.find((t) => t.service === d.key) ?? null)}
+          />
+        </Chart3DBoundary>
+      </div>
+    )
+  }
+
+  function renderArea2D() {
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <ComposedChart data={top} onClick={(e) => drill(activeChartPayload<CategoryTotal>(e))} className="cursor-pointer">
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="service" tickLine={false} axisLine={false} fontSize={10} interval={0} angle={-20} textAnchor="end" height={45} />
+          <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
+          <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+          <Area3DDefs id={`${gid}-area`} color="var(--dataviz-3)" />
+          <Area
+            type="monotone"
+            dataKey="total"
+            stroke="var(--color-total)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            fill={`url(#${gid}-area)`}
+            filter={`url(#${gid}-area-glow)`}
+            dot={{ r: 3.5, fill: "var(--dataviz-3)", stroke: "var(--card)", strokeWidth: 1.5 }}
+            activeDot={{ r: 7, strokeWidth: 2, stroke: "var(--card)", fill: "var(--dataviz-3)" }}
+            isAnimationActive={animate}
+          >
+            {labelsEnabled && <LabelList dataKey="total" position="top" formatter={valueLabel} fontSize={10} fill="var(--muted-foreground)" />}
+          </Area>
+        </ComposedChart>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "area") return renderArea2D()
+
+  if (chartType === "area3d") {
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderArea2D()}>
+          <LazyArea3DScene
+            points={top.map((d) => ({ key: d.service, label: d.service, value: d.total }))}
+            color="var(--dataviz-3)"
+            formatValue={valueLabel}
+            onPointClick={(p) => drill(top.find((t) => t.service === p.key) ?? null)}
+          />
+        </Chart3DBoundary>
+      </div>
+    )
+  }
+
   return (
     <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
       <ComposedChart data={top} onClick={(e) => drill(activeChartPayload<CategoryTotal>(e))} className="cursor-pointer">
@@ -226,42 +305,18 @@ export function ServiceChart({
         <XAxis dataKey="service" tickLine={false} axisLine={false} fontSize={10} interval={0} angle={-20} textAnchor="end" height={45} />
         <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
         <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-        {chartType === "line" && (
-          <Line
-            type="monotone"
-            dataKey="total"
-            stroke="var(--color-total)"
-            strokeWidth={2.75}
-            strokeLinecap="round"
-            dot={{ r: 3.5 }}
-            activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
-            isAnimationActive={animate}
-          >
-            {labelsEnabled && <LabelList dataKey="total" position="top" formatter={valueLabel} fontSize={10} fill="var(--muted-foreground)" />}
-          </Line>
-        )}
-        {chartType === "area" && (
-          <>
-            <defs>
-              <linearGradient id="serviceGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--color-total)" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="var(--color-total)" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey="total"
-              stroke="var(--color-total)"
-              strokeWidth={2.75}
-              strokeLinecap="round"
-              fill="url(#serviceGradient)"
-              activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
-              isAnimationActive={animate}
-            >
-              {labelsEnabled && <LabelList dataKey="total" position="top" formatter={valueLabel} fontSize={10} fill="var(--muted-foreground)" />}
-            </Area>
-          </>
-        )}
+        <Line
+          type="monotone"
+          dataKey="total"
+          stroke="var(--color-total)"
+          strokeWidth={2.75}
+          strokeLinecap="round"
+          dot={{ r: 3.5 }}
+          activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
+          isAnimationActive={animate}
+        >
+          {labelsEnabled && <LabelList dataKey="total" position="top" formatter={valueLabel} fontSize={10} fill="var(--muted-foreground)" />}
+        </Line>
       </ComposedChart>
     </ChartContainer>
   )

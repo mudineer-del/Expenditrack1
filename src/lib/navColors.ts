@@ -4,6 +4,15 @@ export interface ChipColor {
   shadow: string
 }
 
+/** The active-row rules in index.css (`.app-sidebar a[aria-current="page"]`,
+ *  `.app-department-item[data-active="true"]`, `.app-sidebar-subnav:has(...)`) paint
+ *  --nav-active-from/-to over var(--primary) when set. Only used when Settings >
+ *  Labels > Sidebar Customization's active-color mode is "perItem" — the default
+ *  "theme" mode leaves these unset so every active row uses the theme's own primary. */
+export function activeNavStyle(color: ChipColor): React.CSSProperties {
+  return { "--nav-active-from": color.from, "--nav-active-to": color.to, "--nav-active-foreground": "#fff" } as React.CSSProperties
+}
+
 /**
  * Fixed per-item identity colors for the sidebar's nav icon chips — deliberately
  * theme-independent (same hues in light/dark and across every color palette) since
@@ -14,6 +23,10 @@ export const NAV_ITEM_COLORS: Record<string, ChipColor> = {
   "/": { from: "#4FA3DE", to: "#1C6FB8", shadow: "rgba(28,111,184,0.5)" },
   "/invoices": { from: "#E8A94F", to: "#B4720A", shadow: "rgba(180,114,10,0.42)" },
   "/vendors": { from: "#A97BF2", to: "#7C3AED", shadow: "rgba(124,58,237,0.42)" },
+  "/well-cost": { from: "#D08A4F", to: "#9A5B1F", shadow: "rgba(154,91,31,0.42)" },
+  "/well-cost/dashboard": { from: "#F1A85B", to: "#C36B19", shadow: "rgba(195,107,25,0.5)" },
+  "/well-cost/wells": { from: "#45C5C2", to: "#087E86", shadow: "rgba(8,126,134,0.5)" },
+  "/well-cost/structure": { from: "#A587F1", to: "#6845C7", shadow: "rgba(104,69,199,0.48)" },
   "/reports": { from: "#4DC4B5", to: "#0D9488", shadow: "rgba(13,148,136,0.42)" },
   "/messages": { from: "#E8659B", to: "#BE185D", shadow: "rgba(190,24,93,0.42)" },
   "/activity": { from: "#7B8CA3", to: "#475569", shadow: "rgba(71,85,105,0.4)" },

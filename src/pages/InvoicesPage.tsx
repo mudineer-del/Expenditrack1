@@ -22,6 +22,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ImportDialog } from "@/components/invoices/ImportDialog"
+import { InvoiceDetailSheet } from "@/components/invoices/InvoiceDetailSheet"
 import { InvoiceDrawer } from "@/components/invoices/InvoiceDrawer"
 import { InvoiceFiltersBar } from "@/components/invoices/InvoiceFiltersBar"
 import { InvoicesTable } from "@/components/invoices/InvoicesTable"
@@ -71,6 +72,7 @@ export default function InvoicesPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerMode, setDrawerMode] = useState<DrawerMode>("add")
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null)
+  const [detailInvoice, setDetailInvoice] = useState<Invoice | null>(null)
 
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null)
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
@@ -130,9 +132,7 @@ export default function InvoicesPage() {
     setDrawerOpen(true)
   }
   function openView(inv: Invoice) {
-    setDrawerMode("view")
-    setEditingInvoice(inv)
-    setDrawerOpen(true)
+    setDetailInvoice(inv)
   }
   function openEdit(inv: Invoice) {
     setDrawerMode("edit")
@@ -419,6 +419,18 @@ export default function InvoicesPage() {
         onOpenChange={setDrawerOpen}
         onSubmit={handleSave}
         onSwitchToEdit={() => setDrawerMode("edit")}
+      />
+
+      <InvoiceDetailSheet
+        open={!!detailInvoice}
+        invoice={detailInvoice}
+        invoices={invoices}
+        contractorLogos={contractorLogosQuery.data ?? {}}
+        onOpenChange={(v) => !v && setDetailInvoice(null)}
+        onEdit={() => {
+          if (detailInvoice) openEdit(detailInvoice)
+          setDetailInvoice(null)
+        }}
       />
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} existingInvoices={allInvoices} onImport={handleImport} />

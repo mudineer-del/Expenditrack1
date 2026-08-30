@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ChartCard } from "@/components/dashboard/ChartCard"
+import { ChartDataQuickMenu } from "@/components/dashboard/ChartDataQuickMenu"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
+import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
 import { ChartTypeMenu, CHART_OPTIONS } from "@/components/dashboard/ChartTypeMenu"
 import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
 import { ServiceChart } from "@/components/dashboard/ServiceChart"
@@ -52,9 +54,15 @@ export function ContractDetailSheet({
   const setChartType = useDisplayStore((s) => s.setChartType)
   const chartSlots = useDisplayStore((s) => s.chartSlots)
   const [drill, setDrill] = useState<{ title: string; invoices: Invoice[] } | null>(null)
+  const [maximized, setMaximized] = useState(false)
   const rows = contract
     ? invoicesForContract(invoices, contract.contractNo).sort((a, b) => (b.invoiceDate || "").localeCompare(a.invoiceDate || ""))
     : []
+
+  function handleOpenChange(v: boolean) {
+    if (!v) setMaximized(false)
+    onOpenChange(v)
+  }
 
   if (!contract) return <Dialog open={open} onOpenChange={onOpenChange} />
 
@@ -95,8 +103,13 @@ export function ContractDetailSheet({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] w-full overflow-y-auto sm:max-w-2xl">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="max-h-[88vh] w-full overflow-y-auto sm:max-w-2xl"
+        maximizable
+        maximized={maximized}
+        onMaximizedChange={setMaximized}
+      >
         <DialogHeader>
           <div className="flex items-start gap-3">
             <span className="mt-1 h-10 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
@@ -184,6 +197,8 @@ export function ContractDetailSheet({
                   : "Spending Trend"}
                 action={
                   <div className="flex items-center gap-0.5">
+                    <ChartZoomStepper id="contractSheetTrend" />
+                    <ChartDataQuickMenu id="contractSheetTrend" hasDimension />
                     <ChartVisibilityToggle id="contractSheetTrend" />
                     <ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />
                   </div>
@@ -209,6 +224,8 @@ export function ContractDetailSheet({
                   : "Expenditure by Service"}
                 action={
                   <div className="flex items-center gap-0.5">
+                    <ChartZoomStepper id="contractSheetService" />
+                    <ChartDataQuickMenu id="contractSheetService" hasDimension />
                     <ChartVisibilityToggle id="contractSheetService" />
                     <ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />
                   </div>

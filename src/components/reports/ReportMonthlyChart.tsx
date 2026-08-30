@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { bar3DShape } from "@/components/dashboard/donut3d"
 import { fmtMoney } from "@/lib/dashboard"
 import { chartMeasureLabel, formatGroupKey, formatMeasureValue, groupRows, seriesFromGroups, type ChartMeasure } from "@/lib/reports"
 import { useDisplayStore } from "@/store/useDisplayStore"
@@ -41,7 +42,7 @@ export function ReportMonthlyChart({
         <Bar
           dataKey="total"
           fill="var(--color-total)"
-          radius={4}
+          shape={bar3DShape}
           cursor="pointer"
           onClick={(d) => onMonthClick((d.payload as { invoices: Invoice[] }).invoices || [], `Month: ${(d.payload as { month: string }).month}`)}
         >

@@ -1,5 +1,6 @@
 import { Bar, BarChart, Cell, CartesianGrid, LabelList, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { bar3DShape } from "@/components/dashboard/donut3d"
 import { fmtMoney } from "@/lib/dashboard"
 import { chartMeasureLabel, formatMeasureValue, shortContract, type ChartMeasure, type ReportGroup } from "@/lib/reports"
 import { useDisplayStore } from "@/store/useDisplayStore"
@@ -27,8 +28,8 @@ export function CompareValueChart({ groups, onGroupClick }: { groups: ReportGrou
         <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} />
         <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} fontSize={11} width={140} />
         <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-        <Bar dataKey="paid" stackId="s" fill="var(--color-paid)" radius={[0, 0, 0, 0]} cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)} />
-        <Bar dataKey="outstanding" stackId="s" fill="var(--color-outstanding)" radius={[4, 4, 4, 4]} cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)}>
+        <Bar dataKey="paid" stackId="s" fill="var(--color-paid)" cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)} />
+        <Bar dataKey="outstanding" stackId="s" fill="var(--color-outstanding)" shape={bar3DShape} cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)}>
           {labelsEnabled && <LabelList dataKey="stackTotal" position="right" formatter={valueLabel} fontSize={10} fill="var(--muted-foreground)" />}
         </Bar>
       </BarChart>
@@ -51,7 +52,7 @@ export function CompareTaChart({ groups, measure, onGroupClick }: { groups: Repo
         <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={fmt} />
         <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} fontSize={11} width={140} />
         <ChartTooltip content={<ChartTooltipContent formatter={(v) => formatMeasureValue(measure, Number(v), fmtMoney)} />} />
-        <Bar dataKey="plotted" radius={4} cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)}>
+        <Bar dataKey="plotted" shape={bar3DShape} cursor="pointer" onClick={(d) => onGroupClick(d.payload as ReportGroup)}>
           {data.map((g, i) => (
             <Cell key={i} fill={measure === "taAvg" ? taColor(g.taAvg) : "var(--primary)"} />
           ))}

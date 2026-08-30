@@ -4,6 +4,7 @@ import { fmtMoney } from "@/lib/dashboard"
 import { aggregate, chartMeasureLabel, groupRows, reportGroupLabel, reportRows, turnaroundDays, type ReportFilters, type ReportGroup } from "@/lib/reports"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
+import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
 import { PeriodPaidChart, PeriodValueChart } from "@/components/reports/PeriodCharts"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Invoice } from "@/types/invoice"
@@ -92,6 +93,7 @@ export function PeriodReportView({
               {valueMeasure === "incl" ? `Expenditure by ${label}` : `${chartMeasureLabel(valueMeasure)} by ${label}`}
             </h3>
             <div className="flex items-center gap-1">
+              <ChartZoomStepper id="periodValue" />
               <ChartVisibilityToggle id="periodValue" />
               <span className="text-xs text-muted-foreground">Click a point/bar for details</span>
             </div>

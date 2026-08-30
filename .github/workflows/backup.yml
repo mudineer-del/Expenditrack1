@@ -1,0 +1,80 @@
+name: Automated Supabase backup
+
+# Daily export of every Supabase table this app owns, pushed to a private
+# backup repo. This repo (Expenditrack1) is PUBLIC, so the export must never
+# land here — it always goes to a separate private repository instead.
+#
+# One-time setup required (see docs/backup-setup.md):
+#   1. Create a private GitHub repo to hold backups (default name assumed
+#      below: mudineer-del/expenditrack-backups).
+#   2. Add secret SUPABASE_SERVICE_ROLE_KEY — Supabase dashboard > Project
+#      Settings > API > service_role key. Full read access, bypasses RLS —
+#      keep this to this one secret slot, never commit it, never print it.
+#   3. Add secret BACKUP_REPO_TOKEN — a GitHub personal access token (fine-
+#      grained, scoped to just the backup repo, Contents: Read and write)
+#      so this workflow can push there.
+#   4. If you named the backup repo something other than
+#      mudineer-del/expenditrack-backups, update BACKUP_REPO below to match.
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # 03:00 UTC daily
+  workflow_dispatch: {} # lets you trigger a manual run from the Actions tab
+
+env:
+  BACKUP_REPO: mudineer-del/expenditrack-backups
+  SUPABASE_URL: https://mwgzyguymlqyvroivhsf.supabase.co
+  # How many most-recent daily backups to keep in the backup repo before
+  # pruning older ones — bounds that repo's growth instead of keeping every
+  # daily dump forever.
+  RETENTION_COUNT: 60
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout app repo (for the export script)
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install @supabase/supabase-js
+        run: npm install --no-save @supabase/supabase-js@^2
+
+      - name: Export Supabase data
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_OUT_DIR: ./out
+        run: node scripts/export-backup.mjs
+
+      - name: Checkout private backup repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.BACKUP_REPO }}
+          token: ${{ secrets.BACKUP_REPO_TOKEN }}
+          path: backup-repo
+
+      - name: Copy export into backup repo and prune old backups
+        run: |
+          mkdir -p backup-repo/backups
+          cp out/backup-*.json backup-repo/backups/
+          cd backup-repo/backups
+          ls -1 backup-*.json | sort | head -n -"${RETENTION_COUNT}" | xargs -r rm --
+
+      - name: Commit and push
+        working-directory: backup-repo
+        run: |
+          git config user.name "expenditrack-backup-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add backups
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Backup $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push

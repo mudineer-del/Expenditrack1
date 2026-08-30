@@ -1,4 +1,4 @@
-import { AreaChart, BarChart3, LineChart, PieChart, Radar } from "lucide-react"
+import { AreaChart, BarChart3, Box, Disc2, Disc3, Gauge, LineChart, Mountain, PieChart, Radar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
@@ -16,6 +16,11 @@ const CHART_TYPE_ICONS: Record<ChartType, typeof BarChart3> = {
   treemap: PieChart,
   funnel: BarChart3,
   horizontalBar: BarChart3,
+  donut3d: Disc3,
+  donut3dExploded: Disc2,
+  donutSemi3d: Gauge,
+  bar3d: Box,
+  area3d: Mountain,
 }
 
 export interface ChartTypeOption {

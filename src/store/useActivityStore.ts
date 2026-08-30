@@ -1,6 +1,8 @@
 import { create } from "zustand"
 import type { Contract } from "@/types/contract"
 import type { Invoice } from "@/types/invoice"
+import type { Well } from "@/types/well"
+import type { WellCostCentre, WellCostTransaction } from "@/types/wellCost"
 import type { ReferenceLists } from "@/lib/referenceLists"
 
 export type ActivityAction = "Import" | "Add" | "Edit" | "Delete" | "Undo" | "Restore"
@@ -27,6 +29,9 @@ export interface Snapshot {
   invoices?: Invoice[]
   contracts?: Contract[]
   refLists?: ReferenceLists
+  wells?: Well[]
+  wellCostCentres?: WellCostCentre[]
+  wellCostTransactions?: WellCostTransaction[]
 }
 
 export interface UndoEntry {

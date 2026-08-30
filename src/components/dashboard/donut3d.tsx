@@ -3,31 +3,11 @@ import type { PieLabelRenderProps, PieSectorDataItem } from "recharts"
 
 const RADIAN = Math.PI / 180
 
-/** Shared look for every donut chart on the Dashboard: glossy per-slice gradient (instead
- *  of a flat fill) for a 3D, domed appearance, plus a small gap + rounded ends between
- *  slices so they read as separate objects rather than one flat disc. */
+/** Shared look for every donut chart on the Dashboard: an extruded 3D wedge (see
+ *  `donut3DShape` below) plus a small gap + rounded ends between slices so they read as
+ *  separate objects rather than one flat disc. */
 export const DONUT_CORNER_RADIUS = 6
 export const DONUT_PAD_ANGLE = 2
-
-/** Builds a `<radialGradient>` id + `<defs>` entry for a slice color, giving it a
- *  lit-from-top-left highlight fading to a darker edge — the "3D" part of the donut. */
-export function donutGradientId(idBase: string, i: number) {
-  return `${idBase}-${i}`
-}
-
-export function DonutDefs({ idBase, colors }: { idBase: string; colors: string[] }) {
-  return (
-    <defs>
-      {colors.map((c, i) => (
-        <radialGradient key={i} id={donutGradientId(idBase, i)} cx="32%" cy="28%" r="80%">
-          <stop offset="0%" stopColor={`color-mix(in oklch, ${c} 55%, white 45%)`} />
-          <stop offset="60%" stopColor={c} />
-          <stop offset="100%" stopColor={`color-mix(in oklch, ${c} 78%, black 22%)`} />
-        </radialGradient>
-      ))}
-    </defs>
-  )
-}
 
 /** Desktop-only outer radius, leaving room for donutOuterLabel's ring of labels
  *  around the circle — mobile keeps the larger 80% radius since it relies on
@@ -43,31 +23,73 @@ export const DONUT_OUTER_RADIUS_LABELED = "62%"
  *  Colored per-slice (from the same `colors` array the chart's own `<Cell>`s already
  *  cycle through) and bold, rather than one flat muted tone — a label should read as
  *  "that slice, spelled out" at a glance, not blend into the chrome around it. */
-export function makeDonutOuterLabel(colors: string[]) {
+export function makeDonutOuterLabel(
+  colors: string[],
+  distance = 18,
+  labelData: Array<{ name: string; value: number }> = [],
+) {
+  const total = labelData.reduce((sum, entry) => sum + Math.max(0, entry.value), 0)
+  let cumulative = 0
+  const polarItems = labelData.map((entry, itemIndex) => {
+    const share = total > 0 ? Math.max(0, entry.value) / total : 0
+    const middleShare = total > 0 ? (cumulative + Math.max(0, entry.value) / 2) / total : 0
+    cumulative += Math.max(0, entry.value)
+    const angle = 90 - middleShare * 360
+    return { itemIndex, share, value: entry.value, side: Math.cos(-angle * RADIAN) >= 0 ? "right" as const : "left" as const, ideal: Math.sin(-angle * RADIAN) }
+  })
+  // Direct labels remain useful only while they are legible. Keep the ten most
+  // significant categories; every other slice remains available through tooltip/drill.
+  const eligible = new Set(
+    polarItems.filter((item) => item.share >= 0.02).sort((a, b) => b.value - a.value).slice(0, 10).map((item) => item.itemIndex),
+  )
+  const lanes = new Map<number, { rank: number; count: number }>()
+  for (const side of ["left", "right"] as const) {
+    const sideItems = polarItems.filter((item) => eligible.has(item.itemIndex) && item.side === side).sort((a, b) => a.ideal - b.ideal)
+    sideItems.forEach((item, rank) => lanes.set(item.itemIndex, { rank, count: sideItems.length }))
+  }
   return function DonutOuterLabel(props: PieLabelRenderProps) {
     const { cx, cy, midAngle, outerRadius, percent, name, index } = props
     if (cx == null || cy == null || midAngle == null || outerRadius == null) return null
-    // Slices under 2% crowd their neighbors with barely-readable "(0%)"/"(1%)" labels
-    // that collide at the shared angle real near-zero values cluster around — skip
-    // them; the value is still available via hover/tap.
-    if (percent != null && percent < 0.02) return null
-    const radius = Number(outerRadius) + 18
-    const x = Number(cx) + radius * Math.cos(-midAngle * RADIAN)
-    const y = Number(cy) + radius * Math.sin(-midAngle * RADIAN)
+    const itemIndex = Number(index ?? 0)
+    const lane = lanes.get(itemIndex)
+    if (labelData.length && !lane) return null
+    if (!labelData.length && percent != null && percent < 0.02) return null
+    const centerX = Number(cx)
+    const centerY = Number(cy)
+    const ringRadius = Number(outerRadius)
+    const cos = Math.cos(-midAngle * RADIAN)
+    const sin = Math.sin(-midAngle * RADIAN)
+    const tipX = centerX + ringRadius * cos
+    const tipY = centerY + ringRadius * sin
+    const side: "left" | "right" = cos >= 0 ? "right" : "left"
+    const labelX = centerX + (side === "right" ? 1 : -1) * (ringRadius + distance + 24)
+    const availableHeight = ringRadius * 2 + 72
+    const laneGap = lane && lane.count > 1 ? Math.min(21, availableHeight / (lane.count - 1)) : 0
+    const y = lane ? centerY + (lane.rank - (lane.count - 1) / 2) * laneGap : centerY + (ringRadius + distance) * sin
+    const elbowX = centerX + (side === "right" ? 1 : -1) * (ringRadius + 10)
     const pct = percent != null ? `${Math.round(percent * 100)}%` : ""
-    const color = colors[Number(index ?? 0) % colors.length]
+    const color = colors[itemIndex % colors.length]
+    const rawName = String(labelData[itemIndex]?.name ?? name ?? "")
+    const displayName = rawName.length > 26 ? `${rawName.slice(0, 24)}…` : rawName
     return (
+      <g>
+        <polyline points={`${tipX},${tipY} ${elbowX},${y} ${labelX},${y}`} fill="none" stroke={color} strokeWidth={1} strokeOpacity={0.62} />
       <text
-        x={x}
+        x={labelX + (side === "right" ? 5 : -5)}
         y={y}
         fill={color}
         fontSize={11.5}
         fontWeight={700}
-        textAnchor={x > Number(cx) ? "start" : "end"}
+        textAnchor={side === "right" ? "start" : "end"}
         dominantBaseline="central"
+        paintOrder="stroke"
+        stroke="var(--card)"
+        strokeWidth={3}
+        strokeLinejoin="round"
       >
-        {name} {pct && `(${pct})`}
+        {displayName} {pct && `(${pct})`}
       </text>
+      </g>
     )
   }
 }
@@ -108,6 +130,7 @@ interface RadialBarLabelProps {
   viewBox?: unknown
   value?: unknown
   index?: unknown
+  payload?: Record<string, unknown>
 }
 
 interface PolarViewBox {
@@ -153,9 +176,26 @@ export function computeRadialLabelStagger(values: number[], thresholdDeg = 16, s
  *  is what actually spreads rings with different values around the circle instead of
  *  bunching them all near that shared start. `extraOffsetByIndex` (from
  *  computeRadialLabelStagger) pushes closely-angled rings further apart still. */
-export function makeRadialBarValueLabel(colors: string[], formatter?: (v: number) => string, extraOffsetByIndex?: Record<number, number>) {
+export function makeRadialBarValueLabel(
+  colors: string[],
+  formatter?: (v: number) => string,
+  labelData?: Record<number, number> | Array<{ name: string; value: number }>,
+) {
+  const entries = Array.isArray(labelData) ? labelData : []
+  const maxValue = Math.max(...entries.map((entry) => entry.value), 1)
+  const layout = entries.map((entry, itemIndex) => {
+    const itemEndAngle = 90 - (entry.value / maxValue) * 360
+    const itemCos = Math.cos(-itemEndAngle * RADIAN)
+    const itemSin = Math.sin(-itemEndAngle * RADIAN)
+    return { itemIndex, value: entry.value, side: itemCos >= 0 ? "right" as const : "left" as const, ideal: itemSin }
+  })
+  const lanes = new Map<number, { rank: number; count: number }>()
+  for (const side of ["left", "right"] as const) {
+    const sideItems = layout.filter((item) => item.value > 0 && item.side === side).sort((a, b) => a.ideal - b.ideal)
+    sideItems.forEach((item, rank) => lanes.set(item.itemIndex, { rank, count: sideItems.length }))
+  }
   return function RadialBarValueLabel(props: RadialBarLabelProps) {
-    const { value, index } = props
+    const { value, index, payload } = props
     const viewBox = props.viewBox as PolarViewBox | undefined
     if (!viewBox || value == null || typeof index !== "number") return null
     const { cx, cy, outerRadius, startAngle, endAngle } = viewBox
@@ -165,25 +205,43 @@ export function makeRadialBarValueLabel(colors: string[], formatter?: (v: number
     const sin = Math.sin(-endAngle * RADIAN)
     const tipX = cx + outerRadius * cos
     const tipY = cy + outerRadius * sin
-    const labelRadius = outerRadius + 34 + (extraOffsetByIndex?.[index] ?? 0)
-    const labelX = cx + labelRadius * cos
-    const labelY = cy + labelRadius * sin
+    const side = cos >= 0 ? "right" : "left"
+    const lane = lanes.get(index)
+    const availableHeight = outerRadius * 2 + 94
+    const laneGap = lane && lane.count > 1 ? Math.min(34, availableHeight / (lane.count - 1)) : 0
+    const labelY = lane ? cy + (lane.rank - (lane.count - 1) / 2) * laneGap : cy + outerRadius * sin
+    const labelX = cx + (side === "right" ? 1 : -1) * (outerRadius + 90)
+    const elbowX = cx + (side === "right" ? 1 : -1) * (outerRadius + 18)
     const color = colors[index % colors.length]
     const text = formatter ? formatter(Number(value)) : String(value)
-    const anchorRight = labelX >= cx
+    const rawCategory = entries[index]?.name ?? String(payload?.service ?? payload?.vendor ?? payload?.type ?? payload?.status ?? payload?.name ?? "")
+    const category = rawCategory.length > 24 ? `${rawCategory.slice(0, 22)}…` : rawCategory
+    const anchorRight = side === "right"
     return (
       <g>
-        <line x1={tipX} y1={tipY} x2={labelX} y2={labelY} stroke={color} strokeWidth={1} strokeOpacity={0.6} />
+        <polyline
+          points={`${tipX},${tipY} ${elbowX},${labelY} ${labelX},${labelY}`}
+          fill="none"
+          stroke={color}
+          strokeWidth={1}
+          strokeOpacity={0.52}
+          vectorEffect="non-scaling-stroke"
+        />
         <text
           x={labelX + (anchorRight ? 4 : -4)}
-          y={labelY}
+          y={labelY - (category ? 6 : 0)}
           textAnchor={anchorRight ? "start" : "end"}
           dominantBaseline="central"
-          fontSize={11}
+          fontSize={10.5}
           fontWeight={700}
           fill={color}
+          paintOrder="stroke"
+          stroke="var(--card)"
+          strokeWidth={3}
+          strokeLinejoin="round"
         >
-          {text}
+          {category && <tspan x={labelX + (anchorRight ? 4 : -4)} dy="0" stroke="var(--card)">{category}</tspan>}
+          <tspan x={labelX + (anchorRight ? 4 : -4)} dy={category ? "1.3em" : "0"} fontWeight={650} stroke="var(--card)">{text}</tspan>
         </text>
       </g>
     )
@@ -212,5 +270,105 @@ export function donutActiveShape(props: PieSectorDataItem) {
         strokeWidth={2}
       />
     </g>
+  )
+}
+
+/** Extrusion depth (px) for the isometric-wedge donut/pie look below — a fixed pixel
+ *  height (not proportional to radius) matches how real "3D pie" renderers do it: every
+ *  wedge gets the same physical thickness regardless of the chart's overall size. */
+export const DONUT_3D_DEPTH = 7
+
+/** Pie `shape` override giving every slice a genuine extruded, puzzle-piece look (thick
+ *  wedge, visible underside, white gap to its neighbors) instead of a flat/gradient-lit
+ *  disc — modeled on classic isometric 3D pie charts. Draws each slice as TWO stacked
+ *  `<Sector>`s sharing the exact same angles/radii: a darker one shifted straight down by
+ *  `DONUT_3D_DEPTH` (the wedge's visible "side wall"), and the real one on top in the
+ *  slice's own color with a `--card`-colored stroke (the "cut" separating it from its
+ *  neighbors). Reads `fill` off `props` — the same value the chart's own per-slice
+ *  `<Cell fill={...}>` already resolves — so no color list needs to be threaded through
+ *  here; just pass `shape={donut3DShape}` to `<Pie>` and keep the existing `<Cell>`s. */
+export function donut3DShape(props: PieSectorDataItem) {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, cornerRadius } = props
+  if (cx == null || cy == null || innerRadius == null || outerRadius == null || startAngle == null || endAngle == null || !fill) return <g />
+  const dark = `color-mix(in oklch, ${fill} 60%, black 40%)`
+  return (
+    <g>
+      <Sector
+        cx={cx}
+        cy={Number(cy) + DONUT_3D_DEPTH}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        cornerRadius={cornerRadius}
+        fill={dark}
+      />
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        cornerRadius={cornerRadius}
+        fill={fill}
+        stroke="var(--card)"
+        strokeWidth={1.5}
+      />
+    </g>
+  )
+}
+
+/** Extrusion depth (px) for the isometric 3D bars below. */
+export const BAR_3D_DEPTH = 7
+
+interface Bar3DShapeProps {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  fill?: string
+}
+
+/** Bar `shape` override giving every bar a glossy isometric box look — a top face and a
+ *  right-side face (light/dark tints of the bar's own color, same `color-mix` trick as
+ *  `donut3DShape`) extruded up-and-right off a rounded front face, like a stack of solid
+ *  3D blocks rather than a flat rect. Reads `fill` off `props`, same as `donut3DShape` —
+ *  works with either a `<Bar fill=...>` or per-segment `<Cell fill=...>` children. Meant
+ *  for one bar per category (or the outward-facing top segment of a stack); an inner
+ *  stack segment shouldn't get this, or the extruded top/side faces show as a floating
+ *  box in the middle of the stack instead of only at its visible outer edge. */
+export function bar3DShape(props: Bar3DShapeProps) {
+  const { x, y, width, height, fill } = props
+  if (x == null || y == null || width == null || height == null || !fill || width <= 0 || height <= 0) return <g />
+  const d = BAR_3D_DEPTH
+  const light = `color-mix(in oklch, ${fill} 55%, white 45%)`
+  const dark = `color-mix(in oklch, ${fill} 60%, black 40%)`
+  const r = Math.min(5, width / 2, height / 2)
+  return (
+    <g>
+      <polygon points={`${x + width},${y} ${x + width + d},${y - d} ${x + width + d},${y + height - d} ${x + width},${y + height}`} fill={dark} />
+      <polygon points={`${x},${y} ${x + d},${y - d} ${x + width + d},${y - d} ${x + width},${y}`} fill={light} />
+      <rect x={x} y={y} width={width} height={height} rx={r} ry={r} fill={fill} />
+    </g>
+  )
+}
+
+/** `<defs>` entry for the richer "3D" Area fill below — a brighter, glassier gradient
+ *  (light-tinted top band easing through the base color into a deep, near-transparent
+ *  tail) plus a soft drop-shadow filter so the filled curve reads with more depth than a
+ *  flat top-to-bottom fade. Pass the returned ids to the `<Area>`'s `fill`/`filter`. */
+export function Area3DDefs({ id, color }: { id: string; color: string }) {
+  return (
+    <defs>
+      <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={`color-mix(in oklch, ${color} 70%, white 30%)`} stopOpacity={0.9} />
+        <stop offset="35%" stopColor={color} stopOpacity={0.55} />
+        <stop offset="100%" stopColor={`color-mix(in oklch, ${color} 55%, black 45%)`} stopOpacity={0.08} />
+      </linearGradient>
+      <filter id={`${id}-glow`} x="-20%" y="-40%" width="140%" height="180%">
+        <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor={color} floodOpacity="0.35" />
+      </filter>
+    </defs>
   )
 }

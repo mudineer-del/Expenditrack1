@@ -1,5 +1,6 @@
 import { Bar, BarChart, Cell, CartesianGrid, LabelList, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { bar3DShape } from "@/components/dashboard/donut3d"
 import { fmtMoney } from "@/lib/dashboard"
 import { aggregate, chartMeasureLabel, formatMeasureValue, turnaroundDays, type ChartMeasure } from "@/lib/reports"
 import { useDisplayStore } from "@/store/useDisplayStore"
@@ -47,7 +48,7 @@ export function TaBucketChart({
         <ChartTooltip content={<ChartTooltipContent formatter={(v) => formatMeasureValue(measure, Number(v), fmtMoney)} />} />
         <Bar
           dataKey="plotted"
-          radius={4}
+          shape={bar3DShape}
           cursor="pointer"
           onClick={(_, i) => bucketRows[i].length && onBucketClick(bucketRows[i], `Turnaround: ${BUCKETS[i][0]}`)}
         >

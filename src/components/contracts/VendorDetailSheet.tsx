@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ChartCard } from "@/components/dashboard/ChartCard"
+import { ChartDataQuickMenu } from "@/components/dashboard/ChartDataQuickMenu"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
+import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
 import { ChartTypeMenu, CHART_OPTIONS } from "@/components/dashboard/ChartTypeMenu"
 import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
 import { ServiceChart } from "@/components/dashboard/ServiceChart"
@@ -58,7 +60,13 @@ export function VendorDetailSheet({
   const setChartType = useDisplayStore((s) => s.setChartType)
   const chartSlots = useDisplayStore((s) => s.chartSlots)
   const [drill, setDrill] = useState<{ title: string; invoices: Invoice[] } | null>(null)
+  const [maximized, setMaximized] = useState(false)
   const rows = vendor ? invoices.filter((r) => (r.vendor || "Unknown") === vendor) : []
+
+  function handleOpenChange(v: boolean) {
+    if (!v) setMaximized(false)
+    onOpenChange(v)
+  }
 
   if (!vendor) return <Dialog open={open} onOpenChange={onOpenChange} />
 
@@ -102,8 +110,13 @@ export function VendorDetailSheet({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[88vh] w-full overflow-y-auto sm:max-w-3xl">
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent
+          className="max-h-[88vh] w-full overflow-y-auto sm:max-w-3xl"
+          maximizable
+          maximized={maximized}
+          onMaximizedChange={setMaximized}
+        >
           <DialogHeader>
             <div className="flex items-start gap-3">
               <ContractorLogo vendor={vendor} logo={logo} color={color} size="lg" />
@@ -150,6 +163,8 @@ export function VendorDetailSheet({
                     : "Spending Trend"}
                   action={
                     <div className="flex items-center gap-0.5">
+                      <ChartZoomStepper id="vendorSheetTrend" />
+                      <ChartDataQuickMenu id="vendorSheetTrend" hasDimension />
                       <ChartVisibilityToggle id="vendorSheetTrend" />
                       <ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />
                     </div>
@@ -175,6 +190,8 @@ export function VendorDetailSheet({
                     : "Expenditure by Service"}
                   action={
                     <div className="flex items-center gap-0.5">
+                      <ChartZoomStepper id="vendorSheetService" />
+                      <ChartDataQuickMenu id="vendorSheetService" hasDimension />
                       <ChartVisibilityToggle id="vendorSheetService" />
                       <ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />
                     </div>

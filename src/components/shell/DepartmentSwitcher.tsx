@@ -1,4 +1,4 @@
-import { Building2, Check, Layers, Pencil, Plus, Trash2, X } from "lucide-react"
+import { Building2, Check, ChevronsUpDown, Layers, Pencil, Trash2, X } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import {
@@ -13,13 +13,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
-import { NavIconChip } from "@/components/shell/NavIconChip"
-import { ALL_DEPARTMENTS_COLOR, departmentChipColor } from "@/lib/navColors"
+import { SidebarIcon } from "@/components/shell/NavIcon"
+import { activeNavStyle, ALL_DEPARTMENTS_COLOR, departmentChipColor } from "@/lib/navColors"
 import { errorMessage } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useRenameDepartment } from "@/hooks/useDepartments"
 import { useReferenceLists } from "@/lib/referenceLists"
 import { useAppStore } from "@/store/useAppStore"
+import { useSidebarPrefsStore } from "@/store/useSidebarPrefsStore"
 
 export const ALL_DEPARTMENTS = "ALL"
 
@@ -40,31 +42,22 @@ export const ALL_DEPARTMENTS = "ALL"
  */
 export function DepartmentSwitcher() {
   const { isAdmin } = useAuth()
-  const { ref, addValue, removeValue, isSaving } = useReferenceLists()
+  const { ref, removeValue, isSaving } = useReferenceLists()
   const renameDepartment = useRenameDepartment()
+  const flatIcons = useSidebarPrefsStore((s) => s.iconStyle) === "flat"
+  const perItemActiveColor = useSidebarPrefsStore((s) => s.activeColorMode) === "perItem"
   const activeDept = useAppStore((s) => s.activeDept)
   const setActiveDept = useAppStore((s) => s.setActiveDept)
-  const [adding, setAdding] = useState(false)
-  const [newName, setNewName] = useState("")
   const [removeTarget, setRemoveTarget] = useState<string | null>(null)
   const [editTarget, setEditTarget] = useState<string | null>(null)
   const [editValue, setEditValue] = useState("")
+  const [departmentListOpen, setDepartmentListOpen] = useState(false)
 
   const departments = ref.departments
 
-  function submitAdd() {
-    const name = newName.trim()
-    if (!name) return
-    if (departments.some((d) => d.toLowerCase() === name.toLowerCase())) {
-      toast.error(`"${name}" is already a department.`)
-      return
-    }
-    addValue("departments", name, {
-      onSuccess: () => toast.success(`${name} added.`),
-      onError: (e) => toast.error(errorMessage(e, "Could not add department — check Supabase permissions.")),
-    })
-    setNewName("")
-    setAdding(false)
+  function selectDepartment(department: string) {
+    setActiveDept(department)
+    setDepartmentListOpen(false)
   }
 
   function confirmRemove() {
@@ -111,24 +104,46 @@ export function DepartmentSwitcher() {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="uppercase tracking-wide">Department</SidebarGroupLabel>
+      <SidebarGroupLabel className="app-sidebar-group-label uppercase tracking-[0.12em]">Department</SidebarGroupLabel>
       <SidebarGroupContent className="group-data-[collapsible=icon]:hidden">
-        <SidebarMenu>
+        <div
+          className="app-department-picker group/dept-picker"
+          onMouseEnter={() => setDepartmentListOpen(true)}
+          onMouseLeave={() => setDepartmentListOpen(false)}
+        >
+          <button
+            type="button"
+            className="app-department-summary flex w-full cursor-pointer items-center gap-2 rounded-xl px-2 py-2"
+            onClick={() => setDepartmentListOpen((open) => !open)}
+            aria-expanded={departmentListOpen}
+          >
+            <SidebarIcon
+              icon={activeDept === ALL_DEPARTMENTS ? Layers : Building2}
+              color={activeDept === ALL_DEPARTMENTS ? ALL_DEPARTMENTS_COLOR : departmentChipColor(activeDept)}
+              compact
+              flat={flatIcons}
+            />
+            <span className="min-w-0 flex-1 truncate text-sm font-bold">
+              {activeDept === ALL_DEPARTMENTS ? "All Departments" : activeDept}
+            </span>
+            <ChevronsUpDown className={cn("size-3.5 opacity-55 transition-transform duration-200", departmentListOpen && "rotate-180")} />
+          </button>
+        <div className={cn("app-department-options", departmentListOpen && "is-open")}>
+        <SidebarMenu className="mt-1.5">
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={activeDept === ALL_DEPARTMENTS}
-              onClick={() => setActiveDept(ALL_DEPARTMENTS)}
-              size="lg"
-              tooltip="All departments"
+              onClick={() => selectDepartment(ALL_DEPARTMENTS)}
+              size="default"
+              tooltip="All Departments"
+              className="app-department-item"
+              style={perItemActiveColor && activeDept === ALL_DEPARTMENTS ? activeNavStyle(ALL_DEPARTMENTS_COLOR) : undefined}
             >
               {activeDept === ALL_DEPARTMENTS && (
-                <span
-                  className="absolute inset-y-1.5 left-0 w-[3px] rounded-full"
-                  style={{ background: ALL_DEPARTMENTS_COLOR.to }}
-                />
+                <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-white/85" />
               )}
-              <NavIconChip icon={Layers} color={ALL_DEPARTMENTS_COLOR} />
-              <span>All departments</span>
+              <SidebarIcon icon={Layers} color={ALL_DEPARTMENTS_COLOR} active={activeDept === ALL_DEPARTMENTS} flat={flatIcons} />
+              <span>All Departments</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
 
@@ -170,18 +185,16 @@ export function DepartmentSwitcher() {
               <SidebarMenuItem key={d} className="group/dept">
                 <SidebarMenuButton
                   isActive={activeDept === d}
-                  onClick={() => setActiveDept(d)}
-                  size="lg"
-                  className={isAdmin ? "pr-14" : undefined}
+                  onClick={() => selectDepartment(d)}
+                  size="default"
+                  className={cn("app-department-item", isAdmin && "pr-14")}
                   tooltip={d}
+                  style={perItemActiveColor && activeDept === d ? activeNavStyle(departmentChipColor(d)) : undefined}
                 >
                   {activeDept === d && (
-                    <span
-                      className="absolute inset-y-1.5 left-0 w-[3px] rounded-full"
-                      style={{ background: departmentChipColor(d).to }}
-                    />
+                    <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-white/85" />
                   )}
-                  <NavIconChip icon={Building2} color={departmentChipColor(d)} />
+                  <SidebarIcon icon={Building2} color={departmentChipColor(d)} active={activeDept === d} flat={flatIcons} />
                   <span>{d}</span>
                 </SidebarMenuButton>
                 {isAdmin && (
@@ -209,51 +222,9 @@ export function DepartmentSwitcher() {
               </SidebarMenuItem>
             )
           )}
-
-          {isAdmin &&
-            (adding ? (
-              <SidebarMenuItem>
-                <div className="flex h-8 items-center gap-1 rounded-md border border-dashed border-sidebar-border bg-sidebar-accent/50 px-2">
-                  <Plus className="size-4 shrink-0 text-sidebar-accent-foreground" />
-                  <Input
-                    autoFocus
-                    className="h-7 min-w-0 flex-1 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
-                    placeholder="New department…"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") (e.preventDefault(), submitAdd())
-                      if (e.key === "Escape") (setAdding(false), setNewName(""))
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-                    title="Save"
-                    disabled={isSaving}
-                    onClick={submitAdd}
-                  >
-                    <Check className="size-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-destructive"
-                    title="Cancel"
-                    onClick={() => (setAdding(false), setNewName(""))}
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
-              </SidebarMenuItem>
-            ) : (
-              <SidebarMenuItem>
-                <SidebarMenuButton size="sm" onClick={() => setAdding(true)} tooltip="Add department">
-                  <Plus />
-                  <span>Add department</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
         </SidebarMenu>
+        </div>
+        </div>
       </SidebarGroupContent>
 
       <AlertDialog open={!!removeTarget} onOpenChange={(v) => !v && setRemoveTarget(null)}>

@@ -1,6 +1,6 @@
-import { Minus, Plus } from "lucide-react"
 import type { ReactNode } from "react"
 import type { ChartTypeOption } from "@/components/dashboard/ChartTypeMenu"
+import { ChartZoomStepper, chartZoomStyle } from "@/components/dashboard/ChartZoomStepper"
 import {
   ContextMenu,
   ContextMenuCheckboxItem,
@@ -25,8 +25,19 @@ import {
 } from "@/store/useDisplayStore"
 
 const AUTO_DIMENSION = "__auto__"
-const SIZE_STEP_MIN = -2
-const SIZE_STEP_MAX = 4
+
+const CHART_3D_TYPES = new Set<ChartType>(["donut3d", "donut3dExploded", "donutSemi3d", "bar3d", "area3d"])
+
+const DEPTH_PRESETS: { value: number; label: string }[] = [
+  { value: 0.7, label: "Shallow" },
+  { value: 1, label: "Default" },
+  { value: 1.4, label: "Deep" },
+]
+const TILT_PRESETS: { value: number; label: string }[] = [
+  { value: 18, label: "Low" },
+  { value: 35, label: "Medium" },
+  { value: 55, label: "High" },
+]
 
 const BG_LEVELS: { key: ChartBackground; label: string }[] = [
   { key: "flat", label: "Flat" },
@@ -81,19 +92,17 @@ export function ChartSlotContextMenu({
   const setChartBackground = useDisplayStore((s) => s.setChartBackground)
   const backgroundDirection = useDisplayStore((s) => s.chartBackgroundDirection)
   const setChartBackgroundDirection = useDisplayStore((s) => s.setChartBackgroundDirection)
-
-  const sizeStep = cfg.sizeStep ?? 0
-  function nudgeSize(delta: number) {
-    const next = Math.max(SIZE_STEP_MIN, Math.min(SIZE_STEP_MAX, sizeStep + delta))
-    setChartSlot(id, { sizeStep: next })
-  }
+  const reduce3DEffects = useDisplayStore((s) => s.reduce3DEffects)
+  const setReduce3DEffects = useDisplayStore((s) => s.setReduce3DEffects)
+  const chart3DDepth = useDisplayStore((s) => s.chart3DDepth)
+  const setChart3DDepth = useDisplayStore((s) => s.setChart3DDepth)
+  const chart3DTilt = useDisplayStore((s) => s.chart3DTilt)
+  const setChart3DTilt = useDisplayStore((s) => s.setChart3DTilt)
+  const is3DType = chartTypeValue !== undefined && CHART_3D_TYPES.has(chartTypeValue)
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger
-        className="contents"
-        style={sizeStep ? ({ "--chart-h": `calc(var(--chart-h) + ${sizeStep * 2}rem)` } as React.CSSProperties) : undefined}
-      >
+      <ContextMenuTrigger className="contents" style={chartZoomStyle(cfg.sizePercent)}>
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-56">
@@ -192,32 +201,39 @@ export function ChartSlotContextMenu({
           </ContextMenuSubContent>
         </ContextMenuSub>
 
+        {is3DType && (
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>3D effects</ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              <ContextMenuCheckboxItem checked={reduce3DEffects} onCheckedChange={setReduce3DEffects}>
+                Reduce 3D effects
+              </ContextMenuCheckboxItem>
+              <ContextMenuSeparator />
+              <ContextMenuLabel>Depth</ContextMenuLabel>
+              <ContextMenuRadioGroup value={String(chart3DDepth)} onValueChange={(v) => setChart3DDepth(Number(v))}>
+                {DEPTH_PRESETS.map((d) => (
+                  <ContextMenuRadioItem key={d.value} value={String(d.value)}>
+                    {d.label}
+                  </ContextMenuRadioItem>
+                ))}
+              </ContextMenuRadioGroup>
+              <ContextMenuSeparator />
+              <ContextMenuLabel>Tilt</ContextMenuLabel>
+              <ContextMenuRadioGroup value={String(chart3DTilt)} onValueChange={(v) => setChart3DTilt(Number(v))}>
+                {TILT_PRESETS.map((t) => (
+                  <ContextMenuRadioItem key={t.value} value={String(t.value)}>
+                    {t.label}
+                  </ContextMenuRadioItem>
+                ))}
+              </ContextMenuRadioGroup>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+        )}
+
         <ContextMenuSeparator />
         <div className="flex items-center justify-between px-1.5 py-1">
-          <span className="text-sm">Chart size</span>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={sizeStep <= SIZE_STEP_MIN}
-              onClick={() => nudgeSize(-1)}
-              className="flex size-6 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-40"
-              title="Shrink this chart"
-            >
-              <Minus className="size-3.5" />
-            </button>
-            <span className="w-10 text-center text-xs tabular-nums text-muted-foreground">
-              {sizeStep === 0 ? "Default" : sizeStep > 0 ? `+${sizeStep}` : sizeStep}
-            </span>
-            <button
-              type="button"
-              disabled={sizeStep >= SIZE_STEP_MAX}
-              onClick={() => nudgeSize(1)}
-              className="flex size-6 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-40"
-              title="Grow this chart"
-            >
-              <Plus className="size-3.5" />
-            </button>
-          </div>
+          <span className="text-sm">Chart zoom</span>
+          <ChartZoomStepper id={id} />
         </div>
       </ContextMenuContent>
     </ContextMenu>

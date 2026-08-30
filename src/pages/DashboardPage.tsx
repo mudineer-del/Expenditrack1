@@ -22,8 +22,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CHART_OPTIONS, ChartTypeMenu } from "@/components/dashboard/ChartTypeMenu"
 import { ChartCard } from "@/components/dashboard/ChartCard"
+import { ChartDataQuickMenu } from "@/components/dashboard/ChartDataQuickMenu"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
+import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
 import { ContractorInvoicesChart } from "@/components/dashboard/ContractorInvoicesChart"
 import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
 import { KpiTile } from "@/components/dashboard/KpiTile"
@@ -528,8 +530,8 @@ export default function DashboardPage() {
               <Link to="/vendors">Manage contracts</Link>
             </Button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-            {dataVendors.map((v) => {
+          <div className="contractor-deck grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+            {dataVendors.map((v, contractorIndex) => {
               const vRows = deptInvoices.filter((r) => r.vendor === v)
               const total = vRows.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0)
               const lead = avgLeadTime(vRows)
@@ -541,13 +543,18 @@ export default function DashboardPage() {
               return (
                 <button
                   key={v}
-                  className="group relative min-h-[190px] overflow-hidden rounded-2xl border p-4 text-left shadow-[0_5px_0_var(--contractor-shadow),0_12px_20px_-16px_var(--contractor-glow)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] active:translate-y-1 active:scale-[0.985] active:shadow-[0_2px_0_var(--contractor-shadow),0_7px_12px_-10px_var(--contractor-glow)] active:duration-100 md:min-h-[200px] md:rounded-2xl md:p-4 md:hover:-translate-y-1 md:hover:shadow-[0_7px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] md:active:translate-y-1 xl:min-h-[196px]"
+                  className={cn(
+                    "contractor-card group relative min-h-[190px] overflow-hidden rounded-2xl border p-4 text-left shadow-[0_5px_0_var(--contractor-shadow),0_12px_20px_-16px_var(--contractor-glow)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] active:translate-y-1 active:scale-[0.985] active:shadow-[0_2px_0_var(--contractor-shadow),0_7px_12px_-10px_var(--contractor-glow)] active:duration-100 md:min-h-[200px] md:rounded-2xl md:p-4 md:hover:-translate-y-1 md:hover:shadow-[0_7px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] md:active:translate-y-1 xl:min-h-[196px]",
+                    contractorIndex >= 5 && "contractor-card--overflow"
+                  )}
                   style={
                     {
                       borderColor: `color-mix(in oklch, ${accent} 28%, var(--border))`,
                       backgroundImage: `linear-gradient(145deg, color-mix(in oklch, ${accent} 7%, var(--card)) 0%, var(--card) 64%, color-mix(in oklch, ${accent} 3%, var(--card)) 100%)`,
                       "--contractor-shadow": `color-mix(in oklch, ${accent} 25%, var(--border))`,
                       "--contractor-glow": `color-mix(in oklch, ${accent} 42%, transparent)`,
+                      "--shuffle-index": Math.max(0, contractorIndex - 5),
+                      "--shuffle-rotate": `${contractorIndex % 2 === 0 ? -1.5 : 1.5}deg`,
                     } as React.CSSProperties
                   }
                   onClick={() => setDashVendor(v)}
@@ -608,6 +615,8 @@ export default function DashboardPage() {
               : "Monthly Expenditure Trend"}
             action={
               <div className="flex items-center gap-0.5">
+                <ChartZoomStepper id="dashTrend" />
+                <ChartDataQuickMenu id="dashTrend" hasDimension />
                 <ChartVisibilityToggle id="dashTrend" />
                 <ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />
               </div>
@@ -642,6 +651,8 @@ export default function DashboardPage() {
               : "Expenditure by Service"}
             action={
               <div className="flex items-center gap-0.5">
+                <ChartZoomStepper id="dashService" />
+                <ChartDataQuickMenu id="dashService" hasDimension />
                 <ChartVisibilityToggle id="dashService" />
                 <ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />
               </div>
@@ -674,6 +685,8 @@ export default function DashboardPage() {
               : (dashVendor === "ALL" ? "Invoice Value by Contractor" : `Invoice Value — ${dashVendor}`)}
             action={
               <div className="flex items-center gap-0.5">
+                <ChartZoomStepper id="dashVendor" />
+                <ChartDataQuickMenu id="dashVendor" hasDimension />
                 <ChartVisibilityToggle id="dashVendor" />
                 <ChartTypeMenu options={CHART_OPTIONS.contractor} value={vendorChartType} onChange={(t) => setChartType("vendorChartType", t)} />
               </div>
@@ -705,6 +718,8 @@ export default function DashboardPage() {
               : (dashVendor === "ALL" ? "Invoices by Contractor" : `Invoices by Type — ${dashVendor}`)}
             action={
               <div className="flex items-center gap-0.5">
+                <ChartZoomStepper id="dashBreakdown" />
+                <ChartDataQuickMenu id="dashBreakdown" hasDimension />
                 <ChartVisibilityToggle id="dashBreakdown" />
                 <ChartTypeMenu options={CHART_OPTIONS.invoices} value={breakdownChartType} onChange={(t) => setChartType("breakdownChartType", t)} />
               </div>
@@ -732,6 +747,8 @@ export default function DashboardPage() {
               : "Expenditure by Status"}
             action={
               <div className="flex items-center gap-0.5">
+                <ChartZoomStepper id="dashStatus" />
+                <ChartDataQuickMenu id="dashStatus" hasDimension />
                 <ChartVisibilityToggle id="dashStatus" />
                 <ChartTypeMenu options={CHART_OPTIONS.status} value={statusChartType} onChange={(t) => setChartType("statusChartType", t)} />
               </div>

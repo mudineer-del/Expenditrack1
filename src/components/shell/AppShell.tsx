@@ -1,4 +1,4 @@
-import { Layers, LogOut, Search, Settings, User } from "lucide-react"
+import { Home, Layers, LogOut, Search, Settings, User } from "lucide-react"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -15,12 +15,14 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/shell/AppSidebar"
 import { CommandPalette } from "@/components/shell/CommandPalette"
 import { FormatDialog } from "@/components/shell/FormatDialog"
+import { NavIconChip } from "@/components/shell/NavIconChip"
 import { QuickAddButton } from "@/components/shell/QuickAddButton"
 import { ThemeToggle } from "@/components/shell/ThemeToggle"
 import { MobileBottomNav } from "@/components/shell/MobileBottomNav"
 import { InstallPrompt } from "@/components/shell/InstallPrompt"
 import { OgdclLogoFull } from "@/components/shared/OgdclMark"
 import { useAuth } from "@/hooks/useAuth"
+import { NAV_ITEM_COLORS } from "@/lib/navColors"
 import { useAppStore } from "@/store/useAppStore"
 import { useCommandPaletteStore } from "@/store/useCommandPaletteStore"
 
@@ -29,7 +31,7 @@ const TITLES: Record<string, string> = {
   "/invoices": "Invoices",
   "/vendors": "Vendors & Contracts",
   "/reports": "Financial Reports",
-  "/activity": "Activity Log",
+  "/activity": "Audit Trail",
   "/users": "Users",
   "/settings": "Settings",
 }
@@ -92,6 +94,15 @@ export function AppShell() {
               </span>
             )}
             <div className="ml-auto flex items-center gap-1">
+              {location.pathname !== "/" && (
+                <NavLink
+                  to="/"
+                  title="Back to Dashboard"
+                  className="mr-1 transition-transform hover:scale-105 active:scale-95"
+                >
+                  <NavIconChip icon={Home} color={NAV_ITEM_COLORS["/"]} />
+                </NavLink>
+              )}
               <Button
                 variant="outline"
                 size="sm"

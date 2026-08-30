@@ -6,6 +6,7 @@ import { fmtMoney } from "@/lib/dashboard"
 import { aggregate, chartMeasureLabel, reportRows, turnaroundDays, type ReportFilters } from "@/lib/reports"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
+import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
 import { ReportMonthlyChart } from "@/components/reports/ReportMonthlyChart"
 import { TaBucketChart } from "@/components/reports/TaBucketChart"
 import { useDisplayStore } from "@/store/useDisplayStore"
@@ -127,6 +128,7 @@ export function ContractReportView({
               {bucketMeasure === "count" ? "Turnaround (Clearance Time)" : `${chartMeasureLabel(bucketMeasure)} by Turnaround Bucket`}
             </h3>
             <div className="flex items-center gap-1">
+              <ChartZoomStepper id="contractBuckets" />
               <ChartVisibilityToggle id="contractBuckets" />
               <span className="text-xs text-muted-foreground">Click a bar for details</span>
             </div>
@@ -166,6 +168,7 @@ export function ContractReportView({
               {monthlyMeasure === "incl" ? "Monthly Expenditure" : `${chartMeasureLabel(monthlyMeasure)} by Month`}
             </h3>
             <div className="flex items-center gap-1">
+              <ChartZoomStepper id="contractMonthly" />
               <ChartVisibilityToggle id="contractMonthly" />
               <span className="text-xs text-muted-foreground">Click a bar for details</span>
             </div>

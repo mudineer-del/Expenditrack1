@@ -19,6 +19,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet"
 import { ContractDrawer } from "@/components/contracts/ContractDrawer"
 import { ContractRow } from "@/components/contracts/ContractRow"
+import { ContractPortfolioCard } from "@/components/contracts/ContractPortfolioCard"
 import { VendorCard } from "@/components/contracts/VendorCard"
 import { VendorDetailSheet } from "@/components/contracts/VendorDetailSheet"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
@@ -314,7 +315,7 @@ export default function VendorsContractsPage() {
               })}
             </div>
 
-            <Table containerClassName="hidden md:block">
+            <div className="hidden grid-cols-1 gap-3 bg-gradient-to-b from-muted/20 to-transparent p-4 md:grid">{filteredContracts.map((c, index) => <ContractPortfolioCard key={c.id} contract={c} invoices={invoices} logo={getContractorLogo(contractorLogosQuery.data ?? {}, c.vendor.split("/")[0].trim())} index={index} canEdit={can("edit", "contract")} canDelete={can("delete", "contract")} onView={() => setViewingContract(c)} onEdit={() => openEdit(c)} onDelete={() => setDeleteTarget(c)} />)}</div><Table containerClassName="hidden">
               <TableHeader>
                 <TableRow>
                   <TableHead>Contract</TableHead>
@@ -412,3 +413,5 @@ export default function VendorsContractsPage() {
     </div>
   )
 }
+
+

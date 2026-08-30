@@ -32,7 +32,8 @@ import {
 import { useDisplayStore } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import type { Invoice } from "@/types/invoice"
-import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, DonutDefs, donutActiveShape, donutGradientId, makeDonutOuterLabel, makePolarValueLabel } from "./donut3d"
+import { Area3DDefs, bar3DShape, DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, donutActiveShape, makeDonutOuterLabel, makePolarValueLabel } from "./donut3d"
+import { Chart3DBoundary, LazyArea3DScene, LazyBar3DScene, LazyDonut3DScene, type Chart3DDatum } from "./chart3d"
 
 const config = {
   total: { label: "Expenditure (incl. tax)" },
@@ -89,7 +90,7 @@ export function VendorChart({
     if (d && singleVendorType) onDrill(`Invoices — ${singleVendorType.vendor} · ${d.type}`, d.invoices)
   }
 
-  if (chartType === "pie") {
+  function renderDonut2D() {
     if (bySingleVendorType) {
       const legendConfig: ChartConfig = Object.fromEntries(
         bySingleVendorType.map((d, i) => [d.type, { label: d.type, color: SERVICE_COLORS[i % SERVICE_COLORS.length] }]),
@@ -97,33 +98,26 @@ export function VendorChart({
       return (
         <ChartContainer config={legendConfig} className="h-[var(--chart-h)] w-full">
           <PieChart>
-            {isMobile && <DonutDefs idBase={gid} colors={SERVICE_COLORS} />}
             <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
             <Pie
               data={bySingleVendorType}
               dataKey="total"
               nameKey="type"
-              innerRadius="45%"
-              outerRadius={isMobile || !labelsEnabled ? "80%" : "62%"}
-              paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
-              cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
-              activeShape={isMobile ? donutActiveShape : undefined}
-              label={isMobile || !labelsEnabled ? undefined : makeDonutOuterLabel(SERVICE_COLORS)}
-              labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
+              innerRadius={isMobile ? "45%" : "37%"}
+              outerRadius={isMobile ? "76%" : "54%"}
+              paddingAngle={DONUT_PAD_ANGLE}
+              cornerRadius={DONUT_CORNER_RADIUS}
+              activeShape={donutActiveShape}
+              label={isMobile ? undefined : makeDonutOuterLabel(SERVICE_COLORS, 30, bySingleVendorType.map((d) => ({ name: d.type, value: d.total })))}
+              labelLine={false}
               isAnimationActive={animate}
               cursor="pointer"
               onClick={(_, index) => drillType(bySingleVendorType[index])}
             >
               {bySingleVendorType.map((d, i) => (
-                <Cell
-                  key={d.type}
-                  fill={isMobile ? `url(#${donutGradientId(gid, i % SERVICE_COLORS.length)})` : SERVICE_COLORS[i % SERVICE_COLORS.length]}
-                  stroke={isMobile ? "var(--card)" : undefined}
-                  strokeWidth={isMobile ? 2 : undefined}
-                />
+                <Cell key={d.type} fill={SERVICE_COLORS[i % SERVICE_COLORS.length]} />
               ))}
             </Pie>
-            <ChartLegend content={<ChartLegendContent nameKey="type" />} />
           </PieChart>
         </ChartContainer>
       )
@@ -134,35 +128,52 @@ export function VendorChart({
     return (
       <ChartContainer config={vendorLegendConfig} className="h-[var(--chart-h)] w-full">
         <PieChart>
-          {isMobile && <DonutDefs idBase={`${gid}-v`} colors={top.map((d, i) => vendorColor(d.vendor, i))} />}
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
           <Pie
             data={top}
             dataKey="total"
             nameKey="vendor"
-            innerRadius="45%"
-            outerRadius={isMobile || !labelsEnabled ? "80%" : "62%"}
-            paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
-            cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
-            activeShape={isMobile ? donutActiveShape : undefined}
-            label={isMobile || !labelsEnabled ? undefined : makeDonutOuterLabel(top.map((d, i) => vendorColor(d.vendor, i)))}
-            labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
+            innerRadius={isMobile ? "45%" : "37%"}
+            outerRadius={isMobile ? "76%" : "54%"}
+            paddingAngle={DONUT_PAD_ANGLE}
+            cornerRadius={DONUT_CORNER_RADIUS}
+            activeShape={donutActiveShape}
+            label={isMobile ? undefined : makeDonutOuterLabel(top.map((d, i) => vendorColor(d.vendor, i)), 30, top.map((d) => ({ name: d.vendor, value: d.total })))}
+            labelLine={false}
             isAnimationActive={animate}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
           >
             {top.map((d, i) => (
-              <Cell
-                key={d.vendor}
-                fill={isMobile ? `url(#${donutGradientId(`${gid}-v`, i)})` : vendorColor(d.vendor, i)}
-                stroke={isMobile ? "var(--card)" : undefined}
-                strokeWidth={isMobile ? 2 : undefined}
-              />
+              <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />
             ))}
           </Pie>
-          <ChartLegend content={<ChartLegendContent nameKey="vendor" />} />
         </PieChart>
       </ChartContainer>
+    )
+  }
+
+  if (chartType === "pie") return renderDonut2D()
+
+  if (chartType === "donut3d" || chartType === "donut3dExploded" || chartType === "donutSemi3d") {
+    const variant = chartType === "donut3dExploded" ? "exploded" : chartType === "donutSemi3d" ? "semi" : "solid"
+    const donutData: Chart3DDatum[] = bySingleVendorType
+      ? bySingleVendorType.map((d, i) => ({ key: d.type, label: d.type, value: d.total, color: SERVICE_COLORS[i % SERVICE_COLORS.length], invoices: d.invoices }))
+      : top.map((d, i) => ({ key: d.vendor, label: d.vendor, value: d.total, color: vendorColor(d.vendor, i), invoices: d.invoices }))
+    const donutTotal = donutData.reduce((s, d) => s + d.value, 0)
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderDonut2D()}>
+          <LazyDonut3DScene
+            data={donutData}
+            variant={variant}
+            otherColor="var(--muted-foreground)"
+            centerLabel={{ title: "Total", value: fmtMoney(donutTotal).replace(".00", "") }}
+            formatValue={totalLabelFormatter}
+            onSliceClick={(d) => (bySingleVendorType ? drillType(bySingleVendorType.find((t) => t.type === d.key) ?? null) : drill(top.find((t) => t.vendor === d.key) ?? null))}
+          />
+        </Chart3DBoundary>
+      </div>
     )
   }
 
@@ -175,8 +186,8 @@ export function VendorChart({
             <PolarAngleAxis dataKey="type" fontSize={10} />
             <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
             <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-            <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
-              {labelsEnabled && <LabelList dataKey="total" content={makePolarValueLabel(SERVICE_COLORS, totalLabelFormatter)} />}
+            <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.22} isAnimationActive={false} className="cursor-pointer">
+              <LabelList dataKey="total" content={makePolarValueLabel(SERVICE_COLORS, totalLabelFormatter, -14)} />
             </Radar>
           </RadarChart>
         </ChartContainer>
@@ -189,8 +200,8 @@ export function VendorChart({
           <PolarAngleAxis dataKey="vendor" fontSize={10} />
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
-            {labelsEnabled && <LabelList dataKey="total" content={makePolarValueLabel(top.map((d, i) => vendorColor(d.vendor, i)), totalLabelFormatter)} />}
+          <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.22} isAnimationActive={false} className="cursor-pointer">
+            <LabelList dataKey="total" content={makePolarValueLabel(top.map((d, i) => vendorColor(d.vendor, i)), totalLabelFormatter, -14)} />
           </Radar>
         </RadarChart>
       </ChartContainer>
@@ -231,7 +242,7 @@ export function VendorChart({
     )
   }
 
-  if (chartType === "horizontalBar") {
+  function renderHorizontalBar2D() {
     if (bySingleVendorType) {
       return (
         <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
@@ -240,7 +251,7 @@ export function VendorChart({
             <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} />
             <YAxis dataKey="type" type="category" tickLine={false} axisLine={false} fontSize={11} width={110} />
             <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-            <Bar dataKey="total" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
+            <Bar dataKey="total" radius={8} isAnimationActive={animate}>
               {bySingleVendorType.map((d, i) => <Cell key={d.type} fill={SERVICE_COLORS[i % SERVICE_COLORS.length]} />)}
             </Bar>
           </BarChart>
@@ -254,11 +265,31 @@ export function VendorChart({
           <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} />
           <YAxis dataKey="vendor" type="category" tickLine={false} axisLine={false} fontSize={11} width={115} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          <Bar dataKey="total" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
+          <Bar dataKey="total" radius={8} isAnimationActive={animate}>
             {top.map((d, i) => <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />)}
           </Bar>
         </BarChart>
       </ChartContainer>
+    )
+  }
+
+  if (chartType === "horizontalBar") return renderHorizontalBar2D()
+
+  if (chartType === "bar3d") {
+    const barData: Chart3DDatum[] = bySingleVendorType
+      ? bySingleVendorType.map((d, i) => ({ key: d.type, label: d.type, value: d.total, color: SERVICE_COLORS[i % SERVICE_COLORS.length], invoices: d.invoices }))
+      : top.map((d, i) => ({ key: d.vendor, label: d.vendor, value: d.total, color: vendorColor(d.vendor, i), invoices: d.invoices }))
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderHorizontalBar2D()}>
+          <LazyBar3DScene
+            data={barData}
+            otherColor="var(--muted-foreground)"
+            formatValue={totalLabelFormatter}
+            onBarClick={(d) => (bySingleVendorType ? drillType(bySingleVendorType.find((t) => t.type === d.key) ?? null) : drill(top.find((t) => t.vendor === d.key) ?? null))}
+          />
+        </Chart3DBoundary>
+      </div>
     )
   }
 
@@ -290,7 +321,8 @@ export function VendorChart({
                 name={t}
                 stackId="type"
                 fill={SERVICE_COLORS[i % SERVICE_COLORS.length]}
-                radius={i === types.length - 1 ? [8, 8, 0, 0] : 0}
+                shape={i === types.length - 1 ? bar3DShape : undefined}
+                radius={i === types.length - 1 ? undefined : 0}
                 isAnimationActive={animate}
                 cursor="pointer"
                 onClick={() => drillTypeSegment(t)}
@@ -330,7 +362,8 @@ export function VendorChart({
               name={s}
               stackId="service"
               fill={SERVICE_COLORS[i % SERVICE_COLORS.length]}
-              radius={i === services.length - 1 ? [8, 8, 0, 0] : 0}
+              shape={i === services.length - 1 ? bar3DShape : undefined}
+              radius={i === services.length - 1 ? undefined : 0}
               isAnimationActive={animate}
               cursor="pointer"
               onClick={(d) => drillSegment((d as { payload?: VendorServiceRow })?.payload, s)}
@@ -347,15 +380,61 @@ export function VendorChart({
   }
 
   // line / area
-  if (bySingleVendorType) {
+  function renderComposed(effectiveType: string) {
+    if (bySingleVendorType) {
+      return (
+        <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+          <ComposedChart data={bySingleVendorType} onClick={(e) => drillType(activeChartPayload<TypeSlice>(e))} className="cursor-pointer">
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="type" tickLine={false} axisLine={false} fontSize={10} interval={0} angle={-20} textAnchor="end" height={45} />
+            <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
+            <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
+            {effectiveType === "line" && (
+              <Line
+                type="monotone"
+                dataKey="total"
+                stroke="var(--dataviz-4)"
+                strokeWidth={2.75}
+                strokeLinecap="round"
+                dot={{ r: 3.5 }}
+                activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
+                isAnimationActive={animate}
+              >
+                {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
+              </Line>
+            )}
+            {effectiveType === "area" && (
+              <>
+                <Area3DDefs id={`${gid}-area`} color="var(--dataviz-4)" />
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  stroke="var(--dataviz-4)"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  fill={`url(#${gid}-area)`}
+                  filter={`url(#${gid}-area-glow)`}
+                  dot={{ r: 3.5, fill: "var(--dataviz-4)", stroke: "var(--card)", strokeWidth: 1.5 }}
+                  activeDot={{ r: 7, strokeWidth: 2, stroke: "var(--card)", fill: "var(--dataviz-4)" }}
+                  isAnimationActive={animate}
+                >
+                  {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
+                </Area>
+              </>
+            )}
+          </ComposedChart>
+        </ChartContainer>
+      )
+    }
+
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
-        <ComposedChart data={bySingleVendorType} onClick={(e) => drillType(activeChartPayload<TypeSlice>(e))} className="cursor-pointer">
+        <ComposedChart data={top} onClick={(e) => drill(activeChartPayload<VendorTotal>(e))} className="cursor-pointer">
           <CartesianGrid vertical={false} />
-          <XAxis dataKey="type" tickLine={false} axisLine={false} fontSize={10} interval={0} angle={-20} textAnchor="end" height={45} />
+          <XAxis dataKey="vendor" tickLine={false} axisLine={false} fontSize={11} interval={0} angle={-20} textAnchor="end" height={50} />
           <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-          {chartType === "line" && (
+          {effectiveType === "line" && (
             <Line
               type="monotone"
               dataKey="total"
@@ -366,25 +445,22 @@ export function VendorChart({
               activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
               isAnimationActive={animate}
             >
-              {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
+              <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />
             </Line>
           )}
-          {chartType === "area" && (
+          {effectiveType === "area" && (
             <>
-              <defs>
-                <linearGradient id="vendorGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--dataviz-4)" stopOpacity={0.45} />
-                  <stop offset="100%" stopColor="var(--dataviz-4)" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
+              <Area3DDefs id={`${gid}-area`} color="var(--dataviz-4)" />
               <Area
                 type="monotone"
                 dataKey="total"
                 stroke="var(--dataviz-4)"
-                strokeWidth={2.75}
+                strokeWidth={3}
                 strokeLinecap="round"
-                fill="url(#vendorGradient)"
-                activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
+                fill={`url(#${gid}-area)`}
+                filter={`url(#${gid}-area-glow)`}
+                dot={{ r: 3.5, fill: "var(--dataviz-4)", stroke: "var(--card)", strokeWidth: 1.5 }}
+                activeDot={{ r: 7, strokeWidth: 2, stroke: "var(--card)", fill: "var(--dataviz-4)" }}
                 isAnimationActive={animate}
               >
                 {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
@@ -396,50 +472,23 @@ export function VendorChart({
     )
   }
 
-  return (
-    <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
-      <ComposedChart data={top} onClick={(e) => drill(activeChartPayload<VendorTotal>(e))} className="cursor-pointer">
-        <CartesianGrid vertical={false} />
-        <XAxis dataKey="vendor" tickLine={false} axisLine={false} fontSize={11} interval={0} angle={-20} textAnchor="end" height={50} />
-        <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => fmtMoney(v).replace(".00", "")} width={60} />
-        <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
-        {chartType === "line" && (
-          <Line
-            type="monotone"
-            dataKey="total"
-            stroke="var(--dataviz-4)"
-            strokeWidth={2.75}
-            strokeLinecap="round"
-            dot={{ r: 3.5 }}
-            activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
-            isAnimationActive={animate}
-          >
-            <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />
-          </Line>
-        )}
-        {chartType === "area" && (
-          <>
-            <defs>
-              <linearGradient id="vendorGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--dataviz-4)" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="var(--dataviz-4)" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey="total"
-              stroke="var(--dataviz-4)"
-              strokeWidth={2.75}
-              strokeLinecap="round"
-              fill="url(#vendorGradient)"
-              activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
-              isAnimationActive={animate}
-            >
-              {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
-            </Area>
-          </>
-        )}
-      </ComposedChart>
-    </ChartContainer>
-  )
+  if (chartType === "area3d") {
+    const points = bySingleVendorType
+      ? bySingleVendorType.map((d) => ({ key: d.type, label: d.type, value: d.total }))
+      : top.map((d) => ({ key: d.vendor, label: d.vendor, value: d.total }))
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderComposed("area")}>
+          <LazyArea3DScene
+            points={points}
+            color="var(--dataviz-4)"
+            formatValue={totalLabelFormatter}
+            onPointClick={(p) => (bySingleVendorType ? drillType(bySingleVendorType.find((t) => t.type === p.key) ?? null) : drill(top.find((t) => t.vendor === p.key) ?? null))}
+          />
+        </Chart3DBoundary>
+      </div>
+    )
+  }
+
+  return renderComposed(chartType)
 }

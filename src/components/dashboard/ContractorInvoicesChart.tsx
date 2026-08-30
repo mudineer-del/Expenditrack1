@@ -25,19 +25,20 @@ import { vendorColor, type VendorCount } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import {
+  Area3DDefs,
   DONUT_CORNER_RADIUS,
-  DONUT_OUTER_RADIUS_LABELED,
   DONUT_PAD_ANGLE,
-  DonutDefs,
   donutActiveShape,
-  donutGradientId,
   makeDonutOuterLabel,
   makePolarValueLabel,
 } from "./donut3d"
+import { Chart3DBoundary, LazyArea3DScene, LazyBar3DScene, LazyDonut3DScene, type Chart3DDatum } from "./chart3d"
 
 const config = {
   count: { label: "Invoices" },
 } satisfies ChartConfig
+
+const countLabel = (v: unknown) => String(Math.round(Number(v)))
 
 /** Number of invoices on file per contractor — shown for the "All" contractor view.
  *  Once a specific contractor is picked on the Dashboard, this slot swaps to
@@ -60,38 +61,55 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
     if (d) onDrill(`Invoices — ${d.vendor}`, d.invoices)
   }
 
-  if (chartType === "pie") {
+  const vendor3D: Chart3DDatum[] = top.map((d, i) => ({ key: d.vendor, label: d.vendor, value: d.count, color: vendorColor(d.vendor, i), invoices: d.invoices }))
+  const vendorGrandTotal = top.reduce((s, d) => s + d.count, 0)
+
+  function renderDonut2D() {
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <PieChart>
-          {isMobile && <DonutDefs idBase={gid} colors={top.map((d, i) => vendorColor(d.vendor, i))} />}
           <ChartTooltip content={<ChartTooltipContent />} />
           <Pie
             data={top}
             dataKey="count"
             nameKey="vendor"
             innerRadius="45%"
-            outerRadius={isMobile ? "80%" : DONUT_OUTER_RADIUS_LABELED}
-            paddingAngle={isMobile ? DONUT_PAD_ANGLE : undefined}
-            cornerRadius={isMobile ? DONUT_CORNER_RADIUS : undefined}
-            activeShape={isMobile ? donutActiveShape : undefined}
-            label={isMobile || !labelsEnabled ? undefined : makeDonutOuterLabel(vendorColors)}
-            labelLine={isMobile || !labelsEnabled ? false : { stroke: "var(--border)" }}
+            outerRadius={isMobile ? "76%" : "55%"}
+            paddingAngle={DONUT_PAD_ANGLE}
+            cornerRadius={DONUT_CORNER_RADIUS}
+            activeShape={donutActiveShape}
+            label={isMobile ? undefined : makeDonutOuterLabel(vendorColors, 28, top.map((d) => ({ name: d.vendor, value: d.count })))}
+            labelLine={false}
             isAnimationActive={isMobile ? animate : false}
             cursor="pointer"
             onClick={(_, index) => drill(top[index])}
           >
             {top.map((d, i) => (
-              <Cell
-                key={d.vendor}
-                fill={isMobile ? `url(#${donutGradientId(gid, i)})` : vendorColor(d.vendor, i)}
-                stroke={isMobile ? "var(--card)" : undefined}
-                strokeWidth={isMobile ? 2 : undefined}
-              />
+              <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />
             ))}
           </Pie>
         </PieChart>
       </ChartContainer>
+    )
+  }
+
+  if (chartType === "pie") return renderDonut2D()
+
+  if (chartType === "donut3d" || chartType === "donut3dExploded" || chartType === "donutSemi3d") {
+    const variant = chartType === "donut3dExploded" ? "exploded" : chartType === "donutSemi3d" ? "semi" : "solid"
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderDonut2D()}>
+          <LazyDonut3DScene
+            data={vendor3D}
+            variant={variant}
+            otherColor="var(--muted-foreground)"
+            centerLabel={{ title: "Total", value: String(vendorGrandTotal) }}
+            formatValue={countLabel}
+            onSliceClick={(d) => drill(top.find((t) => t.vendor === d.key) ?? null)}
+          />
+        </Chart3DBoundary>
+      </div>
     )
   }
 
@@ -103,8 +121,8 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
           <PolarAngleAxis dataKey="vendor" fontSize={10} />
           <PolarRadiusAxis fontSize={9} allowDecimals={false} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Radar dataKey="count" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.35} isAnimationActive={labelsEnabled ? false : animate} className="cursor-pointer">
-            {labelsEnabled && <LabelList dataKey="count" content={makePolarValueLabel(vendorColors)} />}
+          <Radar dataKey="count" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.22} isAnimationActive={false} className="cursor-pointer">
+            <LabelList dataKey="count" content={makePolarValueLabel(vendorColors, undefined, -14)} />
           </Radar>
         </RadarChart>
       </ChartContainer>
@@ -142,7 +160,7 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
           <XAxis type="number" tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
           <YAxis dataKey="vendor" type="category" tickLine={false} axisLine={false} fontSize={11} width={115} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="count" radius={[0, 8, 8, 0]} isAnimationActive={animate}>
+          <Bar dataKey="count" radius={8} isAnimationActive={animate}>
             {top.map((d, i) => <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />)}
             {labelsEnabled && (
               <LabelList
@@ -158,7 +176,7 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
     )
   }
 
-  if (chartType === "bar") {
+  function renderBar2D() {
     return (
       <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
         <BarChart data={top} onClick={(e) => drill(activeChartPayload<VendorCount>(e))} className="cursor-pointer">
@@ -166,7 +184,7 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
           <XAxis dataKey="vendor" tickLine={false} axisLine={false} fontSize={11} interval={0} angle={-20} textAnchor="end" height={50} />
           <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} width={32} />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="count" radius={[8, 8, 3, 3]} isAnimationActive={animate}>
+          <Bar dataKey="count" radius={8} isAnimationActive={animate}>
             {top.map((d, i) => (
               <Cell key={d.vendor} fill={vendorColor(d.vendor, i)} />
             ))}
@@ -184,6 +202,68 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
     )
   }
 
+  if (chartType === "bar") return renderBar2D()
+
+  if (chartType === "bar3d") {
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderBar2D()}>
+          <LazyBar3DScene
+            data={vendor3D}
+            otherColor="var(--muted-foreground)"
+            formatValue={countLabel}
+            onBarClick={(d) => drill(top.find((t) => t.vendor === d.key) ?? null)}
+          />
+        </Chart3DBoundary>
+      </div>
+    )
+  }
+
+  function renderArea2D() {
+    return (
+      <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
+        <ComposedChart data={top} onClick={(e) => drill(activeChartPayload<VendorCount>(e))} className="cursor-pointer">
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="vendor" tickLine={false} axisLine={false} fontSize={11} interval={0} angle={-20} textAnchor="end" height={50} />
+          <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} width={32} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <Area3DDefs id={`${gid}-area`} color="var(--chart-1)" />
+          <Area
+            type="monotone"
+            dataKey="count"
+            stroke="var(--chart-1)"
+            strokeWidth={3}
+            strokeLinecap="round"
+            fill={`url(#${gid}-area)`}
+            filter={`url(#${gid}-area-glow)`}
+            dot={{ r: 3.5, fill: "var(--chart-1)", stroke: "var(--card)", strokeWidth: 1.5 }}
+            activeDot={{ r: 7, strokeWidth: 2, stroke: "var(--card)", fill: "var(--chart-1)" }}
+            isAnimationActive={animate}
+          >
+            {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={10} fill="var(--muted-foreground)" />}
+          </Area>
+        </ComposedChart>
+      </ChartContainer>
+    )
+  }
+
+  if (chartType === "area") return renderArea2D()
+
+  if (chartType === "area3d") {
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <Chart3DBoundary fallback={renderArea2D()}>
+          <LazyArea3DScene
+            points={top.map((d) => ({ key: d.vendor, label: d.vendor, value: d.count }))}
+            color="var(--chart-1)"
+            formatValue={countLabel}
+            onPointClick={(p) => drill(top.find((t) => t.vendor === p.key) ?? null)}
+          />
+        </Chart3DBoundary>
+      </div>
+    )
+  }
+
   return (
     <ChartContainer config={config} className="h-[var(--chart-h)] w-full">
       <ComposedChart data={top} onClick={(e) => drill(activeChartPayload<VendorCount>(e))} className="cursor-pointer">
@@ -191,42 +271,18 @@ export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]
         <XAxis dataKey="vendor" tickLine={false} axisLine={false} fontSize={11} interval={0} angle={-20} textAnchor="end" height={50} />
         <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} width={32} />
         <ChartTooltip content={<ChartTooltipContent />} />
-        {chartType === "line" && (
-          <Line
-            type="monotone"
-            dataKey="count"
-            stroke="var(--chart-1)"
-            strokeWidth={2.75}
-            strokeLinecap="round"
-            dot={{ r: 3.5 }}
-            activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
-            isAnimationActive={animate}
-          >
-            {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={10} fill="var(--muted-foreground)" />}
-          </Line>
-        )}
-        {chartType === "area" && (
-          <>
-            <defs>
-              <linearGradient id="contractorCountGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey="count"
-              stroke="var(--chart-1)"
-              strokeWidth={2.75}
-              strokeLinecap="round"
-              fill="url(#contractorCountGradient)"
-              activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
-              isAnimationActive={animate}
-            >
-              {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={10} fill="var(--muted-foreground)" />}
-            </Area>
-          </>
-        )}
+        <Line
+          type="monotone"
+          dataKey="count"
+          stroke="var(--chart-1)"
+          strokeWidth={2.75}
+          strokeLinecap="round"
+          dot={{ r: 3.5 }}
+          activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
+          isAnimationActive={animate}
+        >
+          {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={10} fill="var(--muted-foreground)" />}
+        </Line>
       </ComposedChart>
     </ChartContainer>
   )

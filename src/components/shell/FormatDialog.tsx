@@ -268,6 +268,17 @@ const LABEL_POSITIONS: { key: ChartLabelPosition; label: string }[] = [
   { key: "inside", label: "Inside" },
 ]
 
+const CHART_3D_DEPTHS: { key: string; label: string }[] = [
+  { key: "0.7", label: "Shallow" },
+  { key: "1", label: "Default" },
+  { key: "1.4", label: "Deep" },
+]
+const CHART_3D_TILTS: { key: string; label: string }[] = [
+  { key: "18", label: "Low" },
+  { key: "35", label: "Medium" },
+  { key: "55", label: "High" },
+]
+
 const FONT_FAMILIES: { key: BuiltinFont; label: string }[] = [
   { key: "inter", label: "Inter" },
   { key: "nunito", label: "Nunito" },
@@ -556,6 +567,31 @@ export function FormatDialog() {
               </div>
               <Switch id="animations-toggle" checked={store.animationsEnabled} onCheckedChange={store.setAnimationsEnabled} />
             </div>
+
+            <Section
+              title="3D charts"
+              hint="Depth, tilt, and motion for the 3D donut/bar/area chart types — pick one from any chart's own type switcher."
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="reduce-3d-toggle" className="text-sm font-medium">
+                    Reduce 3D effects
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Less depth, tilt, and shadow — matches your device's reduced-motion setting automatically too.</p>
+                </div>
+                <Switch id="reduce-3d-toggle" checked={store.reduce3DEffects} onCheckedChange={store.setReduce3DEffects} />
+              </div>
+              <div className="mt-3 grid gap-3">
+                <div>
+                  <div className="mb-1 text-xs text-muted-foreground">Depth</div>
+                  <SegmentedControl options={CHART_3D_DEPTHS} value={String(store.chart3DDepth)} onChange={(v) => store.setChart3DDepth(Number(v))} />
+                </div>
+                <div>
+                  <div className="mb-1 text-xs text-muted-foreground">Tilt</div>
+                  <SegmentedControl options={CHART_3D_TILTS} value={String(store.chart3DTilt)} onChange={(v) => store.setChart3DTilt(Number(v))} />
+                </div>
+              </div>
+            </Section>
 
             <Section title="Chart data" hint="Pick what each chart is grouped by and what value it plots — changes apply immediately, everywhere that chart appears.">
               <div className="grid gap-3">

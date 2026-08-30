@@ -21,6 +21,14 @@ export type ChartType =
   | "treemap"
   | "funnel"
   | "horizontalBar"
+  // Real WebGL 3D chart types (Three.js/react-three-fiber, see components/dashboard/chart3d) —
+  // genuine extruded geometry with camera tilt/rotate, not the SVG "3D-look" the other types
+  // above use. Falls back to the closest SVG type automatically when WebGL is unavailable.
+  | "donut3d"
+  | "donut3dExploded"
+  | "donutSemi3d"
+  | "bar3d"
+  | "area3d"
 export type BuiltinFont = "inter" | "nunito" | "roboto" | "open-sans" | "montserrat" | "poppins" | "system" | "serif" | "mono"
 export type FontSize = "sm" | "md" | "lg"
 export type ChartLabelPosition = "outside" | "inside"
@@ -59,11 +67,11 @@ export interface ChartSlotConfig {
    *  contractSheetTrend) — whether the zoom/pan brush under the chart is shown. Undefined
    *  means on, matching today's always-on-past-8-points behavior. */
   zoomEnabled?: boolean
-  /** Per-chart height nudge, in steps of 2rem off the cardScale-driven --chart-h (see
-   *  index.css). 0/undefined is the normal height; clamped to [-2, 4] so a chart can't be
-   *  shrunk to nothing or blown out past the card. Set from the chart's own right-click
-   *  menu's size stepper. */
-  sizeStep?: number
+  /** Per-chart zoom, as a percentage of the cardScale-driven --chart-h (see index.css) —
+   *  100 (or undefined) is the normal height. Clamped to [60, 160] so a chart can't be
+   *  zoomed to nothing or blown out past the card. Set from the chart's own right-click
+   *  menu or its on-card zoom stepper. */
+  sizePercent?: number
 }
 
 /** Defaults reproduce today's exact chart behavior — nothing changes visually until the
@@ -95,8 +103,10 @@ export interface CustomFont {
 }
 
 const PREFS_KEY = "displayPrefs"
+const CHART_DESIGN_VERSION = 3
 
 interface DisplayPrefs {
+  chartDesignVersion: number
   colorTheme: string
   customColors: PaletteVars | null
   cardScale: CardScale
@@ -122,6 +132,16 @@ interface DisplayPrefs {
    *  bolder accent gradient (see ChartBackground/ChartBackgroundDirection). */
   chartBackground: ChartBackground
   chartBackgroundDirection: ChartBackgroundDirection
+  /** App-wide — dials back extrusion depth, camera tilt, shadows and auto-rotation on
+   *  every WebGL 3D chart (donut3d/donut3dExploded/donutSemi3d/bar3d/area3d) while keeping
+   *  whichever of those types is selected — mirrors the OS's prefers-reduced-motion, but as
+   *  an explicit in-app override either direction. */
+  reduce3DEffects: boolean
+  /** App-wide — extrusion depth for WebGL 3D charts, as a multiplier (1 = default). */
+  chart3DDepth: number
+  /** App-wide — initial camera tilt (degrees off vertical) for WebGL 3D charts; the user
+   *  can still drag-rotate a chart further from there. */
+  chart3DTilt: number
   /** Per-chart-slot "what data does this show" — see ChartSlotId. */
   chartSlots: Record<ChartSlotId, ChartSlotConfig>
   tableBanded: boolean
@@ -150,6 +170,9 @@ interface DisplayState extends DisplayPrefs {
   setChartLabelPosition: (p: ChartLabelPosition) => void
   setChartBackground: (v: ChartBackground) => void
   setChartBackgroundDirection: (v: ChartBackgroundDirection) => void
+  setReduce3DEffects: (v: boolean) => void
+  setChart3DDepth: (v: number) => void
+  setChart3DTilt: (v: number) => void
   setChartSlot: (id: ChartSlotId, patch: Partial<ChartSlotConfig>) => void
   setTableBanded: (v: boolean) => void
   setTableHeaderShaded: (v: boolean) => void
@@ -242,7 +265,9 @@ function applyFontSize(size: FontSize): void {
 
 function loadPrefs(): DisplayPrefs {
   const saved = storeGet<Partial<DisplayPrefs>>(PREFS_KEY)
-  return {
+  const needsProfessionalChartMigration = (saved?.chartDesignVersion ?? 0) < CHART_DESIGN_VERSION
+  const prefs: DisplayPrefs = {
+    chartDesignVersion: CHART_DESIGN_VERSION,
     colorTheme: saved?.colorTheme || DEFAULT_PALETTE_ID,
     customColors: saved?.customColors ?? null,
     cardScale: saved?.cardScale || "comfortable",
@@ -255,16 +280,18 @@ function loadPrefs(): DisplayPrefs {
     fontFamily: saved?.fontFamily || "inter",
     fontSize: saved?.fontSize || "md",
     customFonts: saved?.customFonts ?? [],
-    trendChartType: saved?.trendChartType || "bar",
-    serviceChartType: saved?.serviceChartType || "bar",
-    vendorChartType: saved?.vendorChartType || "bar",
-    // Linked to vendorChartType — cards 3 and 4 always share one chart-type choice.
-    breakdownChartType: saved?.vendorChartType || "bar",
-    statusChartType: saved?.statusChartType || "pie",
-    chartLabelsEnabled: saved?.chartLabelsEnabled ?? true,
+    trendChartType: needsProfessionalChartMigration ? "area" : (saved?.trendChartType || "area"),
+    serviceChartType: needsProfessionalChartMigration ? "horizontalBar" : (saved?.serviceChartType || "horizontalBar"),
+    vendorChartType: needsProfessionalChartMigration ? "pie" : (saved?.vendorChartType || "pie"),
+    breakdownChartType: needsProfessionalChartMigration ? "bar" : (saved?.breakdownChartType || "bar"),
+    statusChartType: needsProfessionalChartMigration ? "horizontalBar" : (saved?.statusChartType || "horizontalBar"),
+    chartLabelsEnabled: needsProfessionalChartMigration ? false : (saved?.chartLabelsEnabled ?? false),
     chartLabelPosition: saved?.chartLabelPosition || "outside",
-    chartBackground: saved?.chartBackground || "subtle",
+    chartBackground: needsProfessionalChartMigration ? "flat" : (saved?.chartBackground || "flat"),
     chartBackgroundDirection: saved?.chartBackgroundDirection || "diagonal",
+    reduce3DEffects: saved?.reduce3DEffects ?? false,
+    chart3DDepth: saved?.chart3DDepth ?? 1,
+    chart3DTilt: saved?.chart3DTilt ?? 35,
     // Merged (not replaced) against defaults so a slot added in a later app update
     // still gets a sane default even for a user with older saved prefs.
     chartSlots: { ...DEFAULT_CHART_SLOTS, ...saved?.chartSlots },
@@ -272,6 +299,8 @@ function loadPrefs(): DisplayPrefs {
     tableHeaderShaded: saved?.tableHeaderShaded ?? true,
     tableGridLines: saved?.tableGridLines ?? false,
   }
+  if (needsProfessionalChartMigration) storeSet(PREFS_KEY, prefs)
+  return prefs
 }
 
 const initial = loadPrefs()
@@ -292,6 +321,7 @@ Promise.all(initial.customFonts.map((f) => registerCustomFont(f).catch(() => {})
 
 function persist(state: DisplayPrefs): void {
   const {
+    chartDesignVersion,
     colorTheme,
     customColors,
     cardScale,
@@ -313,12 +343,16 @@ function persist(state: DisplayPrefs): void {
     chartLabelPosition,
     chartBackground,
     chartBackgroundDirection,
+    reduce3DEffects,
+    chart3DDepth,
+    chart3DTilt,
     chartSlots,
     tableBanded,
     tableHeaderShaded,
     tableGridLines,
   } = state
   storeSet(PREFS_KEY, {
+    chartDesignVersion,
     colorTheme,
     customColors,
     cardScale,
@@ -340,6 +374,9 @@ function persist(state: DisplayPrefs): void {
     chartLabelPosition,
     chartBackground,
     chartBackgroundDirection,
+    reduce3DEffects,
+    chart3DDepth,
+    chart3DTilt,
     chartSlots,
     tableBanded,
     tableHeaderShaded,
@@ -420,13 +457,9 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
   },
 
   setChartType: (key, type) => {
-    // Cards 3 ("Invoice Value by Contractor") and 4 ("Contractor / Type Breakdown") always
-    // share one chart-type choice — changing either one changes both.
-    if (key === "vendorChartType" || key === "breakdownChartType") {
-      set({ vendorChartType: type, breakdownChartType: type })
-    } else {
-      set({ [key]: type } as Pick<DisplayState, ChartKey>)
-    }
+    // Each dashboard question gets its own best-fit visual: expenditure share can be a
+    // donut while invoice counts remain bars. Do not couple unrelated chart slots.
+    set({ [key]: type } as Pick<DisplayState, ChartKey>)
     persist(get())
   },
 
@@ -447,6 +480,21 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
 
   setChartBackgroundDirection: (chartBackgroundDirection) => {
     set({ chartBackgroundDirection })
+    persist(get())
+  },
+
+  setReduce3DEffects: (reduce3DEffects) => {
+    set({ reduce3DEffects })
+    persist(get())
+  },
+
+  setChart3DDepth: (chart3DDepth) => {
+    set({ chart3DDepth })
+    persist(get())
+  },
+
+  setChart3DTilt: (chart3DTilt) => {
+    set({ chart3DTilt })
     persist(get())
   },
 
