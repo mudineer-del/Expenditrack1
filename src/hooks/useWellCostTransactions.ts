@@ -55,6 +55,41 @@ export function useUpsertWellCostTransaction() {
   })
 }
 
+/** Bulk import path (see components/wells/DmrImportDialog.tsx) — one upsert call, one
+ *  undo snapshot, one "Import" activity-log entry, mirroring useBulkUpsertInvoices rather
+ *  than looping the single-record useUpsertWellCostTransaction (which would otherwise spam
+ *  the activity log with one entry per imported day). */
+export function useBulkUpsertWellCostTransactions() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+  return useMutation({
+    mutationFn: async (entries: WellCostTransaction[]) => {
+      const supabase = getSupabaseClient()
+      const current = (queryClient.getQueryData(WELL_COST_TRANSACTIONS_QUERY_KEY) as WellCostTransaction[] | undefined) ?? []
+      const undoId = useActivityStore
+        .getState()
+        .pushUndo(`Import of ${entries.length} cost entr${entries.length !== 1 ? "ies" : "y"}`, { wellCostTransactions: current })
+
+      const rows = entries.map(toWellCostTransactionRow)
+      const chunk = 200
+      for (let i = 0; i < rows.length; i += chunk) {
+        const { error } = await supabase.from("well_cost_transactions").upsert(rows.slice(i, i + chunk), { onConflict: "id" })
+        if (error) throw error
+      }
+
+      await logActivity(
+        queryClient,
+        { name: user?.name || "Unknown", role: user?.role || "" },
+        "Import",
+        `Imported ${entries.length} cost entr${entries.length !== 1 ? "ies" : "y"}`,
+        { count: entries.length, undoId }
+      )
+      return entries.length
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: WELL_COST_TRANSACTIONS_QUERY_KEY }),
+  })
+}
+
 export function useDeleteWellCostTransaction() {
   const queryClient = useQueryClient()
   const { user } = useAuth()

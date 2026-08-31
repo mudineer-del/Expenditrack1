@@ -41,7 +41,7 @@ export const ALL_DEPARTMENTS = "ALL"
  * it also needs to update every invoice/contract already tagged with the old name.
  */
 export function DepartmentSwitcher() {
-  const { isAdmin } = useAuth()
+  const { user, isAdmin } = useAuth()
   const { ref, removeValue, isSaving } = useReferenceLists()
   const renameDepartment = useRenameDepartment()
   const flatIcons = useSidebarPrefsStore((s) => s.iconStyle) === "flat"
@@ -53,7 +53,16 @@ export function DepartmentSwitcher() {
   const [editValue, setEditValue] = useState("")
   const [departmentListOpen, setDepartmentListOpen] = useState(false)
 
-  const departments = ref.departments
+  // Admins see the whole org's picklist (and can manage it); a scoped user only
+  // ever sees the departments an admin actually granted them (supabase/
+  // access_control_setup.sql, profile_departments) — RLS is the real boundary,
+  // this just keeps the picker from listing departments they'd get zero rows for.
+  // Falls back to the full list if access_control_setup.sql hasn't been run yet
+  // (accessControlInstalled === false), same fail-open reasoning as AppSidebar.
+  const departments =
+    isAdmin || user?.accessControlInstalled === false
+      ? ref.departments
+      : ref.departments.filter((d) => user?.departments.includes(d))
 
   function selectDepartment(department: string) {
     setActiveDept(department)
@@ -130,22 +139,24 @@ export function DepartmentSwitcher() {
           </button>
         <div className={cn("app-department-options", departmentListOpen && "is-open")}>
         <SidebarMenu className="mt-1.5">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={activeDept === ALL_DEPARTMENTS}
-              onClick={() => selectDepartment(ALL_DEPARTMENTS)}
-              size="default"
-              tooltip="All Departments"
-              className="app-department-item"
-              style={perItemActiveColor && activeDept === ALL_DEPARTMENTS ? activeNavStyle(ALL_DEPARTMENTS_COLOR) : undefined}
-            >
-              {activeDept === ALL_DEPARTMENTS && (
-                <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-white/85" />
-              )}
-              <SidebarIcon icon={Layers} color={ALL_DEPARTMENTS_COLOR} active={activeDept === ALL_DEPARTMENTS} flat={flatIcons} />
-              <span>All Departments</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {(isAdmin || user?.accessControlInstalled === false) && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={activeDept === ALL_DEPARTMENTS}
+                onClick={() => selectDepartment(ALL_DEPARTMENTS)}
+                size="default"
+                tooltip="All Departments"
+                className="app-department-item"
+                style={perItemActiveColor && activeDept === ALL_DEPARTMENTS ? activeNavStyle(ALL_DEPARTMENTS_COLOR) : undefined}
+              >
+                {activeDept === ALL_DEPARTMENTS && (
+                  <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-white/85" />
+                )}
+                <SidebarIcon icon={Layers} color={ALL_DEPARTMENTS_COLOR} active={activeDept === ALL_DEPARTMENTS} flat={flatIcons} />
+                <span>All Departments</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
 
           {departments.map((d) =>
             editTarget === d ? (

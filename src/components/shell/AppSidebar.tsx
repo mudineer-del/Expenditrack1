@@ -145,6 +145,12 @@ export function AppSidebar() {
   const flatIcons = iconStyle === "flat"
   const compactDensity = density === "compact"
   const topLevelSize = compactDensity ? "default" : "lg"
+  // Admin-granted areas (supabase/access_control_setup.sql, profile_areas) are the
+  // security floor — hiddenItems above is a purely cosmetic per-device layer on top
+  // of whatever this returns true for. Admins bypass grants entirely, same as RequireArea.
+  const grantedAreas = user?.areas ?? []
+  const canSeeArea = (path: string) =>
+    isAdmin || user?.accessControlInstalled === false || grantedAreas.includes(path)
   const activityLogQuery = useActivityLogQuery()
   const lastSeenTs = useLastSeenStore((s) => s.lastSeenTs)
   // Live (not snapshotted) — clears itself the moment the user actually visits Activity Log,
@@ -179,7 +185,10 @@ export function AppSidebar() {
         <DepartmentSwitcher />
         {NAV_GROUPS.map((group) => {
           const visibleItems = group.items.filter(
-            (item) => "children" in item || ALWAYS_VISIBLE_PATHS.has(item.to) || !hiddenItems.includes(item.to)
+            (item) =>
+              "children" in item ||
+              ALWAYS_VISIBLE_PATHS.has(item.to) ||
+              (canSeeArea(item.to) && !hiddenItems.includes(item.to))
           )
           if (visibleItems.length === 0) return null
           return (
@@ -190,7 +199,9 @@ export function AppSidebar() {
                   {visibleItems.map((item) => {
                     if ("children" in item) {
                       const color = NAV_ITEM_COLORS["/well-cost"]
-                      const visibleChildren = item.children.filter((child) => !hiddenItems.includes(child.to))
+                      const visibleChildren = item.children.filter(
+                        (child) => canSeeArea(child.to) && !hiddenItems.includes(child.to)
+                      )
                       if (visibleChildren.length === 0) return null
                       return (
                         <SidebarMenuItem

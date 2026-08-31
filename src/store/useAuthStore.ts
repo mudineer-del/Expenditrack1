@@ -5,7 +5,17 @@ import { uploadAvatarFile } from "@/lib/avatars"
 import { fromProfileRow, type ProfileRow } from "@/lib/profiles"
 import type { AppUser, Role } from "@/types/user"
 
-type AuthStatus = "loading" | "authenticated" | "unauthenticated"
+type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "pending" | "disabled"
+
+/** Maps an AppUser's profile status to the store's auth status — "active"
+ *  (or the pre-migration fallback path, which has no status column to read)
+ *  is the only one that gets into the app; "pending"/"disabled" instead show
+ *  AccountPendingPage via RequireAuth. */
+function statusFor(user: AppUser): AuthStatus {
+  if (user.status === "pending") return "pending"
+  if (user.status === "disabled") return "disabled"
+  return "authenticated"
+}
 
 interface AuthState {
   status: AuthStatus
@@ -49,17 +59,41 @@ function fallbackUserFromSbUser(u: User): AppUser {
     designation: md.designation as string | undefined,
     twofa: !!md.twofa,
     avatarUrl: md.avatarUrl as string | undefined,
+    // No profiles row to read a real status/grants from (this only runs if
+    // access_control_setup.sql — or profiles_setup.sql itself — hasn't been
+    // applied yet) — "active" + unscoped keeps existing behavior rather than
+    // locking everyone out because of a migration gap.
+    status: "active",
+    departments: [],
+    areas: [],
+    accessControlInstalled: false,
   }
 }
 
 /** Source of truth is public.profiles (see supabase/profiles_setup.sql), which — unlike
  *  auth.users.raw_user_meta_data — an Admin's session can read/edit for every account,
- *  not just their own. Falls back to auth metadata if the migration hasn't run yet. */
+ *  not just their own. Falls back to auth metadata if the migration hasn't run yet.
+ *  Also pulls this user's own department/area grants (supabase/access_control_setup.sql)
+ *  — RLS on those two tables already limits a non-admin to just their own rows, so no
+ *  extra filtering is needed here beyond the .eq("profile_id", ...) itself. */
 async function resolveUser(supabase: SupabaseClient, sbUser: User | null | undefined): Promise<AppUser | null> {
   if (!sbUser) return null
   const { data, error } = await supabase.from("profiles").select("*").eq("id", sbUser.id).single()
-  if (!error && data) return fromProfileRow(data as ProfileRow)
-  return fallbackUserFromSbUser(sbUser)
+  if (error || !data) return fallbackUserFromSbUser(sbUser)
+
+  const [deptRes, areaRes] = await Promise.all([
+    supabase.from("profile_departments").select("department").eq("profile_id", sbUser.id),
+    supabase.from("profile_areas").select("area").eq("profile_id", sbUser.id),
+  ])
+  // A query error here (as opposed to succeeding with zero rows) means those
+  // tables don't exist yet — access_control_setup.sql hasn't been run — not
+  // that this user genuinely has no grants. Fail OPEN in that case: full access,
+  // matching pre-migration behavior, instead of locking out every non-admin the
+  // moment this frontend code ships ahead of the SQL that's supposed to back it.
+  const accessControlInstalled = !deptRes.error && !areaRes.error
+  const departments = (deptRes.data ?? []).map((r) => r.department as string)
+  const areas = (areaRes.data ?? []).map((r) => r.area as string)
+  return fromProfileRow(data as ProfileRow, departments, areas, accessControlInstalled)
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -91,7 +125,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
           session,
           user,
-          status: session ? "authenticated" : "unauthenticated",
+          status: user ? statusFor(user) : "unauthenticated",
           ...(event === "PASSWORD_RECOVERY" ? { isRecovery: true } : {}),
         })
       })()
@@ -108,7 +142,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { ok: false, error: error.message }
     }
     const user = await resolveUser(supabase, data.user)
-    set({ session: data.session, user, status: "authenticated" })
+    set({ session: data.session, user, status: user ? statusFor(user) : "unauthenticated" })
     return { ok: true }
   },
 
@@ -132,7 +166,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     if (data.session) {
       const user = await resolveUser(supabase, data.user)
-      set({ session: data.session, user, status: "authenticated" })
+      // Freshly signed-up profiles default to 'pending' (see access_control_setup.sql),
+      // so this almost always resolves to "pending" here, not "authenticated" — RequireAuth
+      // shows AccountPendingPage instead of the app shell as soon as this status lands.
+      set({ session: data.session, user, status: user ? statusFor(user) : "unauthenticated" })
     }
     return { ok: true }
   },

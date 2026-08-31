@@ -12,7 +12,7 @@ type Mode = "login" | "signup" | "forgot"
 
 const COPY: Record<Mode, { title: string; description: string }> = {
   login: { title: "Sign in", description: "Access the OGDCL Drilling Fluids expenditure tracker." },
-  signup: { title: "Request access", description: "New accounts start with Viewer access." },
+  signup: { title: "Request access", description: "An admin will review and enable your account before you can sign in." },
   forgot: { title: "Reset password", description: "We'll email you a link to reset it." },
 }
 
@@ -27,7 +27,10 @@ export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("login")
   const loginTitle = useLabelsStore((s) => s.loginTitle)
 
-  if (status === "authenticated") return <Navigate to="/" replace />
+  // Pending/disabled accounts still have a real session — send them through "/"
+  // like anyone else so RequireAuth shows AccountPendingPage instead of this
+  // form again, rather than leaving them stuck looking like they need to sign in.
+  if (status === "authenticated" || status === "pending" || status === "disabled") return <Navigate to="/" replace />
 
   return (
     <div

@@ -43,6 +43,7 @@ export function WellCostTransactionDrawer({
   costCentreId,
   defaultKind,
   createdByName,
+  readOnly = false,
   onOpenChange,
   onSubmit,
 }: {
@@ -52,6 +53,8 @@ export function WellCostTransactionDrawer({
   /** Which ledger tab ("Actual" vs "Commitment") the + button was clicked from. */
   defaultKind: WellCostTransactionKind
   createdByName: string
+  /** Non-Admins/Editors get the same form disabled, read-only, no Save — the "View" action. */
+  readOnly?: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (values: WellCostTransaction) => void
 }) {
@@ -84,7 +87,7 @@ export function WellCostTransactionDrawer({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] w-full overflow-y-auto sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Entry" : "Log Cost Entry"}</DialogTitle>
+          <DialogTitle>{readOnly ? "Cost Entry" : isEdit ? "Edit Entry" : "Log Cost Entry"}</DialogTitle>
           <DialogDescription className="sr-only">Daily cost/commitment entry form</DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -95,6 +98,7 @@ export function WellCostTransactionDrawer({
             }}
             className="flex flex-col gap-4"
           >
+            <fieldset disabled={readOnly} className="contents">
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
@@ -115,7 +119,7 @@ export function WellCostTransactionDrawer({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Type</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue />
@@ -155,11 +159,15 @@ export function WellCostTransactionDrawer({
                 </FormItem>
               )}
             />
+            </fieldset>
+            {readOnly && entry?.createdByName && (
+              <p className="text-xs text-muted-foreground">Logged by {entry.createdByName}</p>
+            )}
             <DialogFooter>
-              <Button type="submit">Save</Button>
+              {!readOnly && <Button type="submit">Save</Button>}
               <DialogClose asChild>
                 <Button type="button" variant="outline">
-                  Cancel
+                  {readOnly ? "Close" : "Cancel"}
                 </Button>
               </DialogClose>
             </DialogFooter>

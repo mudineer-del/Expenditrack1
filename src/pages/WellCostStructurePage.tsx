@@ -1,6 +1,6 @@
-import { Drill, Eye, History, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { Drill, Eye, History, Pencil, Plus, Search, Trash2, Upload } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
-import { useLocation } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -18,10 +18,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CostSummaryCards, UtilizationBar } from "@/components/wells/CostSummary"
+import { DmrImportDialog } from "@/components/wells/DmrImportDialog"
 import { NameDialog } from "@/components/wells/NameDialog"
 import { WellCostCentreDrawer } from "@/components/wells/WellCostCentreDrawer"
-import { WellCostTransactionDrawer } from "@/components/wells/WellCostTransactionDrawer"
-import { WellCostTransactionSheet } from "@/components/wells/WellCostTransactionSheet"
 import { WellDrawer } from "@/components/wells/WellDrawer"
 import { WellSelector } from "@/components/wells/WellSelector"
 import { availableAmount, buildCostCentreTotals, fmtCurrency, groupByServiceCategory, rollup, ZERO_TOTALS } from "@/lib/wellCost"
@@ -35,14 +34,10 @@ import {
   useWellDepartmentsQuery,
 } from "@/hooks/useWellCostCatalog"
 import { useDeleteWellCostCentre, useUpsertWellCostCentre, useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
-import {
-  useDeleteWellCostTransaction,
-  useUpsertWellCostTransaction,
-  useWellCostTransactionsQuery,
-} from "@/hooks/useWellCostTransactions"
+import { useBulkUpsertWellCostTransactions, useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
 import { useUpsertWell, useWellsQuery } from "@/hooks/useWells"
 import type { Well } from "@/types/well"
-import type { WellCostCentre, WellCostTransaction, WellCostTransactionKind } from "@/types/wellCost"
+import type { WellCostCentre, WellCostTransaction } from "@/types/wellCost"
 
 interface CostCentreDrawerState {
   open: boolean
@@ -54,21 +49,13 @@ interface CostCentreDrawerState {
 
 const BLANK_DRAWER_STATE: CostCentreDrawerState = { open: false, item: null, departmentId: "", serviceCategoryId: "", readOnly: false }
 
-interface TransactionDrawerState {
-  open: boolean
-  entry: WellCostTransaction | null
-  costCentreId: string
-  defaultKind: WellCostTransactionKind
-}
-
-const BLANK_TRANSACTION_DRAWER_STATE: TransactionDrawerState = { open: false, entry: null, costCentreId: "", defaultKind: "actual" }
-
 /** The Well Cost workspace: pick a well, see its budget/actual/commitments/available roll
  *  up at the well level, then drill into one department tab at a time down to individual
  *  Cost/Fund Centre rows grouped by service category. */
 export default function WellCostStructurePage() {
   const { can, user } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const wellsQuery = useWellsQuery()
   const costCentresQuery = useWellCostCentresQuery()
   const departmentsQuery = useWellCostDepartmentsQuery()
@@ -81,8 +68,7 @@ export default function WellCostStructurePage() {
   const deleteCostCentre = useDeleteWellCostCentre()
   const addDepartment = useAddWellCostDepartment()
   const addServiceCategory = useAddServiceCategory()
-  const upsertTransaction = useUpsertWellCostTransaction()
-  const deleteTransaction = useDeleteWellCostTransaction()
+  const bulkImportTransactions = useBulkUpsertWellCostTransactions()
 
   const [selectedWellId, setSelectedWellId] = useState<string | null>(
     () => (location.state as { wellId?: string } | null)?.wellId ?? null
@@ -94,9 +80,7 @@ export default function WellCostStructurePage() {
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false)
   const [centreDrawer, setCentreDrawer] = useState<CostCentreDrawerState>(BLANK_DRAWER_STATE)
   const [deleteTarget, setDeleteTarget] = useState<WellCostCentre | null>(null)
-  const [historyCostCentre, setHistoryCostCentre] = useState<WellCostCentre | null>(null)
-  const [transactionDrawer, setTransactionDrawer] = useState<TransactionDrawerState>(BLANK_TRANSACTION_DRAWER_STATE)
-  const [deleteTransactionTarget, setDeleteTransactionTarget] = useState<WellCostTransaction | null>(null)
+  const [importServiceCategoryId, setImportServiceCategoryId] = useState<string | null>(null)
 
   const wells = wellsQuery.data ?? []
   const costCentres = costCentresQuery.data ?? []
@@ -199,31 +183,14 @@ export default function WellCostStructurePage() {
     setDeleteTarget(null)
   }
 
-  function openAddTransaction(kind: WellCostTransactionKind = "actual") {
-    if (!historyCostCentre) return
-    setTransactionDrawer({ open: true, entry: null, costCentreId: historyCostCentre.id, defaultKind: kind })
-  }
-  function openEditTransaction(entry: WellCostTransaction) {
-    setTransactionDrawer({ open: true, entry, costCentreId: entry.costCentreId, defaultKind: entry.kind })
-  }
-
-  function handleSaveTransaction(record: WellCostTransaction) {
-    upsertTransaction.mutate(record, {
+  function handleImportTransactions(rows: WellCostTransaction[]) {
+    bulkImportTransactions.mutate(rows, {
       onSuccess: () => {
-        toast.success(transactionDrawer.entry ? "Entry updated." : "Entry logged.")
-        setTransactionDrawer(BLANK_TRANSACTION_DRAWER_STATE)
+        toast.success(`Imported ${rows.length} cost entr${rows.length !== 1 ? "ies" : "y"}.`)
+        setImportServiceCategoryId(null)
       },
-      onError: (e) => toast.error(errorMessage(e, "Could not save entry.")),
+      onError: (e) => toast.error(errorMessage(e, "Could not import entries.")),
     })
-  }
-
-  function handleDeleteTransactionConfirm() {
-    if (!deleteTransactionTarget) return
-    deleteTransaction.mutate(deleteTransactionTarget, {
-      onSuccess: () => toast.success("Entry deleted."),
-      onError: (e) => toast.error(errorMessage(e, "Could not delete entry.")),
-    })
-    setDeleteTransactionTarget(null)
   }
 
   const anyLoading =
@@ -272,8 +239,6 @@ export default function WellCostStructurePage() {
   const canEdit = can("edit", "well")
   const canDelete = can("delete", "well")
   const canLogEntry = can("add", "wellCostEntry")
-  const canEditEntry = can("edit", "wellCostEntry")
-  const canDeleteEntry = can("delete", "wellCostEntry")
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -342,23 +307,52 @@ export default function WellCostStructurePage() {
 
                     <div className="flex flex-col gap-3">
                       {deptServiceCategories.map((svc) => {
-                        const items = (grouped[svc.id] ?? []).filter(
+                        const allItems = grouped[svc.id] ?? []
+                        const items = allItems.filter(
                           (i) => !q || [i.costCentre, i.fundCentre, i.description].some((v) => (v || "").toLowerCase().includes(q))
                         )
                         return (
                           <div key={svc.id} className="overflow-hidden rounded-2xl border bg-card shadow-sm md:rounded-lg md:shadow-none">
                             <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3.5">
                               <span className="text-sm font-semibold">{svc.name}</span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={!canAdd}
-                                title={canAdd ? "Add cost / fund centre" : "Only Admins can add cost / fund centres"}
-                                onClick={() => openAddCostCentre(dept.id, svc.id)}
-                              >
-                                <Plus /> Add Cost / Fund Centre
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!canLogEntry || !allItems.length}
+                                  title={
+                                    !allItems.length
+                                      ? "Add a cost / fund centre first"
+                                      : canLogEntry
+                                        ? "Import daily costs from Excel"
+                                        : "Only Admins/Editors can import entries"
+                                  }
+                                  onClick={() => setImportServiceCategoryId(svc.id)}
+                                >
+                                  <Upload /> Import from Excel
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!canAdd}
+                                  title={canAdd ? "Add cost / fund centre" : "Only Admins can add cost / fund centres"}
+                                  onClick={() => openAddCostCentre(dept.id, svc.id)}
+                                >
+                                  <Plus /> Add Cost / Fund Centre
+                                </Button>
+                              </div>
                             </div>
+                            {importServiceCategoryId === svc.id && (
+                              <DmrImportDialog
+                                open={importServiceCategoryId === svc.id}
+                                onOpenChange={(v) => !v && setImportServiceCategoryId(null)}
+                                costCentres={allItems}
+                                wellName={selectedWell?.name || ""}
+                                existingEntries={transactions.filter((t) => allItems.some((c) => c.id === t.costCentreId))}
+                                createdByName={user?.name || ""}
+                                onImport={handleImportTransactions}
+                              />
+                            )}
                             {items.length ? (
                               <Table>
                                 <TableHeader>
@@ -392,7 +386,7 @@ export default function WellCostStructurePage() {
                                               type="button"
                                               className="rounded-full p-2 hover:bg-muted"
                                               title="Daily cost / commitment log"
-                                              onClick={() => setHistoryCostCentre(item)}
+                                              onClick={() => navigate(`/well-cost/log/${item.id}`)}
                                             >
                                               <History className="size-4" />
                                             </button>
@@ -508,46 +502,6 @@ export default function WellCostStructurePage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <WellCostTransactionSheet
-        costCentre={historyCostCentre}
-        entries={transactions.filter((t) => t.costCentreId === historyCostCentre?.id)}
-        canAdd={canLogEntry}
-        canEdit={canEditEntry}
-        canDelete={canDeleteEntry}
-        onOpenChange={(v) => !v && setHistoryCostCentre(null)}
-        onAddEntry={() => openAddTransaction()}
-        onEditEntry={openEditTransaction}
-        onDeleteEntry={setDeleteTransactionTarget}
-      />
-
-      {transactionDrawer.open && (
-        <WellCostTransactionDrawer
-          open={transactionDrawer.open}
-          entry={transactionDrawer.entry}
-          costCentreId={transactionDrawer.costCentreId}
-          defaultKind={transactionDrawer.defaultKind}
-          createdByName={user?.name || ""}
-          onOpenChange={(v) => !v && setTransactionDrawer(BLANK_TRANSACTION_DRAWER_STATE)}
-          onSubmit={handleSaveTransaction}
-        />
-      )}
-
-      <AlertDialog open={!!deleteTransactionTarget} onOpenChange={(v) => !v && setDeleteTransactionTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteTransactionTarget &&
-                `The ${deleteTransactionTarget.kind} entry of ${deleteTransactionTarget.amount} on ${deleteTransactionTarget.entryDate} will be permanently deleted.`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteTransactionConfirm}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

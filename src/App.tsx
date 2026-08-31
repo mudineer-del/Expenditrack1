@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react"
 import { Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { AppShell } from "@/components/shell/AppShell"
-import { RequireAdmin, RequireAuth } from "@/components/shell/RequireAuth"
+import { RequireAdmin, RequireArea, RequireAuth } from "@/components/shell/RequireAuth"
 import { RouteErrorBoundary } from "@/components/shell/RouteErrorBoundary"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/useAuth"
@@ -17,6 +17,7 @@ const VendorsContractsPage = lazy(() => import("@/pages/VendorsContractsPage"))
 const WellDashboardPage = lazy(() => import("@/pages/WellDashboardPage"))
 const ManageWellsPage = lazy(() => import("@/pages/ManageWellsPage"))
 const WellCostStructurePage = lazy(() => import("@/pages/WellCostStructurePage"))
+const WellCostDailyLogPage = lazy(() => import("@/pages/WellCostDailyLogPage"))
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"))
 const ActivityLogPage = lazy(() => import("@/pages/ActivityLogPage"))
 const MessageCentrePage = lazy(() => import("@/pages/MessageCentrePage"))
@@ -54,15 +55,34 @@ function App() {
           <Route element={<RequireAuth />}>
             <Route element={<AppShell />}>
               <Route index element={<DashboardPage />} />
-              <Route path="invoices" element={<InvoicesPage />} />
-              <Route path="vendors" element={<VendorsContractsPage />} />
-              <Route path="well-cost" element={<WellDashboardPage />} />
-              <Route path="well-cost/wells" element={<ManageWellsPage />} />
-              <Route path="well-cost/structure" element={<WellCostStructurePage />} />
-              <Route path="reports" element={<ReportsPage />} />
-              <Route path="activity" element={<ActivityLogPage />} />
-              <Route path="messages" element={<MessageCentrePage />} />
-              <Route path="install" element={<InstallPage />} />
+              <Route element={<RequireArea area="/invoices" />}>
+                <Route path="invoices" element={<InvoicesPage />} />
+              </Route>
+              <Route element={<RequireArea area="/vendors" />}>
+                <Route path="vendors" element={<VendorsContractsPage />} />
+              </Route>
+              <Route element={<RequireArea area="/well-cost" />}>
+                <Route path="well-cost" element={<WellDashboardPage />} />
+              </Route>
+              <Route element={<RequireArea area="/well-cost/wells" />}>
+                <Route path="well-cost/wells" element={<ManageWellsPage />} />
+              </Route>
+              <Route element={<RequireArea area="/well-cost/structure" />}>
+                <Route path="well-cost/structure" element={<WellCostStructurePage />} />
+                <Route path="well-cost/log/:costCentreId" element={<WellCostDailyLogPage />} />
+              </Route>
+              <Route element={<RequireArea area="/reports" />}>
+                <Route path="reports" element={<ReportsPage />} />
+              </Route>
+              <Route element={<RequireArea area="/activity" />}>
+                <Route path="activity" element={<ActivityLogPage />} />
+              </Route>
+              <Route element={<RequireArea area="/messages" />}>
+                <Route path="messages" element={<MessageCentrePage />} />
+              </Route>
+              <Route element={<RequireArea area="/install" />}>
+                <Route path="install" element={<InstallPage />} />
+              </Route>
               <Route path="settings" element={<SettingsPage />} />
               <Route element={<RequireAdmin />}>
                 <Route path="users" element={<UsersPage />} />
