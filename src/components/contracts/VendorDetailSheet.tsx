@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { ChartCard } from "@/components/dashboard/ChartCard"
 import { ChartDataQuickMenu } from "@/components/dashboard/ChartDataQuickMenu"
+import { ChartFormatMenu } from "@/components/dashboard/ChartFormatMenu"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
 import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
@@ -167,6 +168,7 @@ export function VendorDetailSheet({
                       <ChartDataQuickMenu id="vendorSheetTrend" hasDimension />
                       <ChartVisibilityToggle id="vendorSheetTrend" />
                       <ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />
+                      <ChartFormatMenu id="vendorSheetTrend" hasZoom chartType={trendChartType} />
                     </div>
                   }
                 >
@@ -194,6 +196,7 @@ export function VendorDetailSheet({
                       <ChartDataQuickMenu id="vendorSheetService" hasDimension />
                       <ChartVisibilityToggle id="vendorSheetService" />
                       <ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />
+                      <ChartFormatMenu id="vendorSheetService" chartType={serviceChartType} />
                     </div>
                   }
                 >

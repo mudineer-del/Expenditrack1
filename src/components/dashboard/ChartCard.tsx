@@ -46,29 +46,39 @@ export function ChartCard({
         // hover/tap popup — depth is conveyed with shadow alone instead, which never
         // moves anything. Only :active gets a (tiny, safe) scale, and only after the
         // click has already been resolved against the pre-press geometry.
-        "dashboard-chart-card group relative overflow-hidden rounded-[1.35rem] border bg-card p-4 shadow-[0_12px_35px_-24px_rgba(15,23,42,0.48)] transition-[box-shadow,border-color] duration-300 ease-out md:p-5",
+        "dashboard-chart-card group relative overflow-hidden rounded-[1.35rem] border bg-card shadow-[0_12px_35px_-24px_rgba(15,23,42,0.48)] transition-[box-shadow,border-color] duration-300 ease-out",
         "hover:shadow-[0_20px_45px_-26px_var(--accent-glow)]",
         "transition-transform active:scale-[0.99] active:duration-100 active:ease-in md:active:scale-[0.995]"
       )}
       style={
         {
           borderColor: `color-mix(in oklch, ${accent} 30%, var(--border))`,
-          ...accentBackgroundStyle(accent, chartBackground, chartBackgroundDirection),
           "--accent-shadow": `color-mix(in oklch, ${accent} 25%, var(--border))`,
           "--accent-glow": `color-mix(in oklch, ${accent} 35%, transparent)`,
+          "--chart-accent": accent,
         } as React.CSSProperties
       }
     >
-      <span className="pointer-events-none absolute inset-x-5 top-0 h-px opacity-90" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
-      <span className="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full opacity-[0.07] blur-2xl" style={{ backgroundColor: accent }} />
-      <div className="relative mb-3 flex min-h-9 items-start justify-between gap-3 border-b border-border/45 pb-3 md:mb-4">
+      {/* Distinct, prominent title bar — tinted from this card's own accent so every
+          card reads as its own clearly-bounded "window" rather than a title floating
+          on the same flat surface as the chart. Buttons rendered into `action` (the
+          zoom stepper, data/visibility/type menus) inherit --chart-accent from here
+          for their own hover/press color via .chart-toolbar-btn in index.css. */}
+      <div className="chart-card-titlebar relative flex min-h-11 items-center justify-between gap-3 px-4 py-2.5 md:px-5">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="h-6 w-1 shrink-0 rounded-full" style={{ backgroundColor: accent, boxShadow: `0 0 14px ${accent}` }} />
-          <span className="min-w-0 text-[clamp(0.82rem,0.74rem+0.22vw,0.98rem)] font-semibold leading-tight tracking-[-0.01em] text-foreground">{title}</span>
+          <span className="chart-card-accent-chip" />
+          <span className="min-w-0 truncate text-[clamp(0.86rem,0.78rem+0.24vw,1.02rem)] font-bold leading-tight tracking-[-0.01em] text-foreground">
+            {title}
+          </span>
         </div>
-        {action}
+        {action && <div className="flex shrink-0 items-center gap-1">{action}</div>}
       </div>
-      <div className="relative min-w-0">{children}</div>
+      <div className="relative p-4 md:p-5">
+        <span className="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full opacity-[0.07] blur-2xl" style={{ backgroundColor: accent }} />
+        <div className="relative min-w-0" style={accentBackgroundStyle(accent, chartBackground, chartBackgroundDirection)}>
+          {children}
+        </div>
+      </div>
     </div>
   )
 }

@@ -19,7 +19,7 @@ export function NavIconChip({
         boxShadow: `inset 0 1px 0 rgba(255,255,255,.24), 0 3px 8px -2px ${color.shadow}`,
       }}
     >
-      <Icon className={compact ? "size-[12px]! stroke-[2.4]" : "size-[15px]!"} />
+      <Icon className={compact ? "size-[16px]! stroke-[2.2]" : "size-[19px]!"} />
     </div>
   )
 }

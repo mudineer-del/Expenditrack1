@@ -88,7 +88,7 @@ export function ChartTypeMenu({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-6" title="Change chart type">
+        <Button variant="ghost" size="icon" className="chart-toolbar-btn size-6" title="Change chart type">
           <Icon className="size-3.5" />
         </Button>
       </PopoverTrigger>

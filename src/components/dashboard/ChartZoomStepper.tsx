@@ -27,13 +27,13 @@ export function ChartZoomStepper({ id }: { id: ChartSlotId }) {
   }
 
   return (
-    <div className="flex items-center gap-0.5 rounded-md border pr-0.5 pl-1">
+    <div className="chart-toolbar-group flex items-center gap-0.5 rounded-md pr-0.5 pl-1">
       <button
         type="button"
         disabled={percent <= CHART_ZOOM_MIN}
         onClick={() => nudge(-CHART_ZOOM_STEP)}
         title="Zoom out"
-        className="flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-40"
+        className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:text-[var(--chart-accent)] disabled:pointer-events-none disabled:opacity-40"
       >
         <Minus className="size-3" />
       </button>
@@ -43,7 +43,7 @@ export function ChartZoomStepper({ id }: { id: ChartSlotId }) {
         disabled={percent >= CHART_ZOOM_MAX}
         onClick={() => nudge(CHART_ZOOM_STEP)}
         title="Zoom in"
-        className="flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-40"
+        className="flex size-5 items-center justify-center rounded text-muted-foreground transition-colors hover:text-[var(--chart-accent)] disabled:pointer-events-none disabled:opacity-40"
       >
         <Plus className="size-3" />
       </button>

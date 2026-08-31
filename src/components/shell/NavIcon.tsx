@@ -20,7 +20,7 @@ export function NavIcon({
   // The `!` important-modifier matches NavIconChip's own convention — SidebarMenuSubButton
   // and friends ship their own `[&_svg]:size-4` defaults at equal specificity, so an
   // unmodified size utility here isn't guaranteed to win the cascade.
-  return <Icon className={compact ? "size-3.5! shrink-0" : "size-4! shrink-0"} style={active ? undefined : { color: color.to }} />
+  return <Icon className={compact ? "size-4! shrink-0" : "size-[18px]! shrink-0"} style={active ? undefined : { color: color.to }} />
 }
 
 /** Renders either NavIconChip's gradient badge or NavIcon's flat glyph depending on

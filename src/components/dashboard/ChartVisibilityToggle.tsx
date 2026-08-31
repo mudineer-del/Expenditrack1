@@ -12,7 +12,7 @@ export function ChartVisibilityToggle({ id }: { id: ChartSlotId }) {
     <Button
       variant="ghost"
       size="icon"
-      className="size-6"
+      className="chart-toolbar-btn size-6"
       title="Hide this chart"
       aria-label="Hide this chart"
       onClick={() => setChartSlot(id, { hidden: true })}

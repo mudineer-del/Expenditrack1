@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CHART_OPTIONS, ChartTypeMenu } from "@/components/dashboard/ChartTypeMenu"
 import { ChartCard } from "@/components/dashboard/ChartCard"
 import { ChartDataQuickMenu } from "@/components/dashboard/ChartDataQuickMenu"
+import { ChartFormatMenu } from "@/components/dashboard/ChartFormatMenu"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
 import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
@@ -619,6 +620,7 @@ export default function DashboardPage() {
                 <ChartDataQuickMenu id="dashTrend" hasDimension />
                 <ChartVisibilityToggle id="dashTrend" />
                 <ChartTypeMenu options={CHART_OPTIONS.trend} value={trendChartType} onChange={(t) => setChartType("trendChartType", t)} />
+                <ChartFormatMenu id="dashTrend" hasZoom chartType={trendChartType} />
               </div>
             }
           >
@@ -655,6 +657,7 @@ export default function DashboardPage() {
                 <ChartDataQuickMenu id="dashService" hasDimension />
                 <ChartVisibilityToggle id="dashService" />
                 <ChartTypeMenu options={CHART_OPTIONS.service} value={serviceChartType} onChange={(t) => setChartType("serviceChartType", t)} />
+                <ChartFormatMenu id="dashService" chartType={serviceChartType} />
               </div>
             }
           >
@@ -689,6 +692,7 @@ export default function DashboardPage() {
                 <ChartDataQuickMenu id="dashVendor" hasDimension />
                 <ChartVisibilityToggle id="dashVendor" />
                 <ChartTypeMenu options={CHART_OPTIONS.contractor} value={vendorChartType} onChange={(t) => setChartType("vendorChartType", t)} />
+                <ChartFormatMenu id="dashVendor" chartType={vendorChartType} />
               </div>
             }
           >
@@ -722,6 +726,7 @@ export default function DashboardPage() {
                 <ChartDataQuickMenu id="dashBreakdown" hasDimension />
                 <ChartVisibilityToggle id="dashBreakdown" />
                 <ChartTypeMenu options={CHART_OPTIONS.invoices} value={breakdownChartType} onChange={(t) => setChartType("breakdownChartType", t)} />
+                <ChartFormatMenu id="dashBreakdown" chartType={breakdownChartType} />
               </div>
             }
           >
@@ -751,6 +756,7 @@ export default function DashboardPage() {
                 <ChartDataQuickMenu id="dashStatus" hasDimension />
                 <ChartVisibilityToggle id="dashStatus" />
                 <ChartTypeMenu options={CHART_OPTIONS.status} value={statusChartType} onChange={(t) => setChartType("statusChartType", t)} />
+                <ChartFormatMenu id="dashStatus" chartType={statusChartType} />
               </div>
             }
           >

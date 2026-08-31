@@ -4,19 +4,19 @@ import {
   Building2,
   ChevronRight,
   Download,
-  Gauge,
   History,
   LayoutGrid,
   List,
-  ListTree,
-  Database,
   MessagesSquare,
   Settings,
   Users,
 } from "lucide-react"
 import type { ComponentType, CSSProperties } from "react"
 import { NavLink, useLocation } from "react-router-dom"
-import wellCostNavIcon from "@/assets/well-cost-nav-icon.png"
+import wellCostNavIcon from "@/assets/well-cost-nav-icon-3d.png"
+import wellCostDashboardIcon from "@/assets/well-cost-dashboard-icon-3d.png"
+import wellRegistryIcon from "@/assets/well-registry-icon-3d.png"
+import costStructureIcon from "@/assets/cost-structure-icon-3d.png"
 import {
   Sidebar,
   SidebarContent,
@@ -49,12 +49,18 @@ import { useLastSeenStore } from "@/store/useLastSeenStore"
 import { useMessagesLastSeenStore } from "@/store/useMessagesLastSeenStore"
 import { useSidebarPrefsStore } from "@/store/useSidebarPrefsStore"
 
-/** Wraps the icons8 rig glyph so it drops into NavIconChip's/NavIcon's `icon` slot
- *  alongside the lucide components — both just need something that accepts
+/** Wraps a static icons8 3D glyph so it drops into NavIconChip's/NavIcon's `icon`
+ *  slot alongside the lucide components — both just need something that accepts
  *  className (and, for NavIcon, an ignorable style pass-through). */
-function WellCostRigIcon({ className, style }: { className?: string; style?: CSSProperties }) {
-  return <img src={wellCostNavIcon} alt="" className={className} style={style} />
+function imgIcon(src: string) {
+  return function ImgIcon({ className, style }: { className?: string; style?: CSSProperties }) {
+    return <img src={src} alt="" className={className} style={style} />
+  }
 }
+const WellCostRigIcon = imgIcon(wellCostNavIcon)
+const WellCostDashboardIcon = imgIcon(wellCostDashboardIcon)
+const WellRegistryIcon = imgIcon(wellRegistryIcon)
+const CostStructureIcon = imgIcon(costStructureIcon)
 
 /** Routes that stay visible regardless of Settings > Labels > Sidebar Customization's
  *  hidden-items list — Dashboard as a guaranteed landing spot, Settings as the only
@@ -77,9 +83,9 @@ export const NAV_GROUPS = [
         label: "Well Cost",
         icon: WellCostRigIcon,
         children: [
-          { to: "/well-cost", label: "Well Cost Dashboard", icon: Gauge, colorKey: "/well-cost/dashboard", end: true },
-          { to: "/well-cost/wells", label: "Well Registry", icon: Database, colorKey: "/well-cost/wells" },
-          { to: "/well-cost/structure", label: "Cost Structure", icon: ListTree, colorKey: "/well-cost/structure" },
+          { to: "/well-cost", label: "Well Cost Dashboard", icon: WellCostDashboardIcon, colorKey: "/well-cost/dashboard", end: true },
+          { to: "/well-cost/wells", label: "Well Registry", icon: WellRegistryIcon, colorKey: "/well-cost/wells" },
+          { to: "/well-cost/structure", label: "Cost Structure", icon: CostStructureIcon, colorKey: "/well-cost/structure" },
         ],
       },
       { to: "/reports", label: "Financial Reports", icon: BarChart3 },
@@ -193,7 +199,7 @@ export function AppSidebar() {
           if (visibleItems.length === 0) return null
           return (
             <SidebarGroup key={group.label}>
-              <SidebarGroupLabel className="app-sidebar-group-label uppercase tracking-[0.12em]">{group.label}</SidebarGroupLabel>
+              <SidebarGroupLabel className="app-sidebar-group-label uppercase tracking-[0.09em]">{group.label}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {visibleItems.map((item) => {
@@ -316,8 +322,8 @@ export function AppSidebar() {
                   <AvatarFallback className="text-[10px]">{user?.initials || "?"}</AvatarFallback>
                 </Avatar>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-semibold">{user?.name || "Account"}</span>
-                  <span className="block truncate text-[10px] font-medium uppercase tracking-[0.08em] opacity-55">
+                  <span className="block truncate text-xs font-semibold tracking-tight">{user?.name || "Account"}</span>
+                  <span className="block truncate text-[10px] font-medium uppercase tracking-[0.07em] opacity-60">
                     {isAdmin ? "Administrator" : "User"}
                   </span>
                 </span>

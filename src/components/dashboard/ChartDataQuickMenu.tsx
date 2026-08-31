@@ -18,7 +18,7 @@ export function ChartDataQuickMenu({ id, hasDimension }: { id: ChartSlotId; hasD
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-6" title="Change what this chart shows">
+        <Button variant="ghost" size="icon" className="chart-toolbar-btn size-6" title="Change what this chart shows">
           <SlidersHorizontal className="size-3.5" />
         </Button>
       </PopoverTrigger>
