@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Reports — Consumption Cost Extractor (DRFD01 vs DRFD01/01)</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --ink:#101828; --muted:#667085; --line:#e4e7ec;
+  --brand:#0b5d3b; --brand-soft:#e7f2ed; --accent:#1d4ed8; --accent-soft:#e8eeff;
+  --warn:#b54708; --warn-soft:#fef0c7; --err:#b42318; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0e1116; --panel:#161a21; --ink:#e6e9ef; --muted:#9aa4b2; --line:#262c36;
+    --brand:#4ade80; --brand-soft:#12241b; --accent:#93b4ff; --accent-soft:#131c30;
+    --warn:#fdb022; --warn-soft:#2a2113; --err:#f97066; --shadow:none; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Segoe UI",Inter,system-ui,-apple-system,Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 18px 64px}
+header h1{font-size:20px;margin:0 0 4px}
+header p{margin:0;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:18px;box-shadow:var(--shadow)}
+.card h2{font-size:15px;margin:0 0 12px;letter-spacing:.01em}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:28px;text-align:center;transition:.15s;cursor:pointer}
+.drop.over{border-color:var(--brand);background:var(--brand-soft)}
+.drop b{display:block;font-size:15px;margin-bottom:6px}
+.drop span{color:var(--muted)}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+button{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:9px 14px;cursor:pointer}
+button:hover{border-color:var(--brand)}
+button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+button.primary:disabled{opacity:.45;cursor:not-allowed}
+button.primary:hover{filter:brightness(1.06)}
+.opts{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-top:14px;color:var(--muted)}
+.opts label{display:flex;align-items:center;gap:7px;color:var(--ink)}
+.opts input[type=text]{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:150px}
+.stats{display:flex;flex-wrap:wrap;gap:12px;margin-top:4px}
+.stat{flex:1 1 150px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--bg)}
+.stat .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.stat .v{font-size:19px;font-weight:700;margin-top:3px}
+.bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:12px;display:none}
+.bar.on{display:block}
+.bar i{display:block;height:100%;background:var(--brand);width:0;transition:width .1s}
+.tablewrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:820px}
+th,td{padding:8px 11px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:var(--bg);position:sticky;top:0;font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+tfoot td{font-weight:700;background:var(--bg)}
+.tag{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;background:var(--accent-soft);color:var(--accent)}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.note{color:var(--muted);white-space:normal;max-width:340px;font-size:12px}
+.hint{color:var(--muted);font-size:12.5px;margin-top:10px}
+details{margin-top:12px}
+summary{cursor:pointer;color:var(--accent)}
+.empty{color:var(--muted);padding:22px;text-align:center}
+ul.plain{margin:8px 0 0;padding-left:18px;color:var(--muted);font-size:13px}
+code{background:var(--bg);padding:1px 5px;border-radius:5px;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Daily Reports — Consumption Cost Extractor</h1>
+  <p>Reads every daily report in a folder and builds one date-wise sheet with <b>DRFD01 (OGDCL)</b> and <b>DRFD01/01 (Contractor-01 M/s Schlumberger SAECO Pakistan)</b> as separate cost columns.</p>
+</header>
+
+<div class="card">
+  <h2>1 · Choose the reports</h2>
+  <div class="drop" id="drop">
+    <b>Drop the “Kal-04 Daily Reports” folder here</b>
+    <span>or use the buttons below — nothing is uploaded, everything runs inside this browser tab</span>
+  </div>
+  <div class="btns">
+    <button id="pickFolder">Choose folder…</button>
+    <button id="pickFiles">Choose files…</button>
+    <button id="clear">Clear</button>
+    <button class="primary" id="run" disabled>Extract costs</button>
+  </div>
+  <div class="opts">
+    <label>Sheet name contains <input type="text" id="sheetFilter" value="consum" placeholder="consum"></label>
+    <label><input type="checkbox" id="dayFirst" checked> Dates are day-first (15-01-2025 = 15 Jan)</label>
+    <label><input type="checkbox" id="groupDates" checked> One row per date</label>
+  </div>
+  <div class="bar" id="bar"><i></i></div>
+  <div class="hint" id="fileHint">No files selected yet.</div>
+  <input type="file" id="fInput" multiple accept=".xls,.xlsx,.xlsm,.xlsb,.csv,.xml,.htm,.html" hidden>
+  <input type="file" id="dInput" webkitdirectory directory multiple hidden>
+</div>
+
+<div class="card" id="resultCard" style="display:none">
+  <h2>2 · Result</h2>
+  <div class="stats" id="stats"></div>
+  <div class="btns">
+    <button class="primary" id="download">Download Excel (.xlsx)</button>
+    <button id="downloadCsv">Download CSV</button>
+  </div>
+  <div class="tablewrap" id="tableWrap"></div>
+  <details id="evidenceBox"><summary>Show where each figure came from (cell-by-cell evidence)</summary><div class="tablewrap" id="evidenceWrap"></div></details>
+  <details id="skippedBox"><summary>Files with nothing extracted</summary><div id="skippedWrap"></div></details>
+</div>
+
+<div class="card">
+  <h2>How the costs are picked up</h2>
+  <ul class="plain">
+    <li><code>DRFD01/01</code> is always read as the contractor line — it is never counted again as <code>DRFD01</code>. Variants like <code>DRFD-01 / 01</code> are matched too.</li>
+    <li>Any other sub-contract (<code>DRFD01/02</code>, <code>/03</code> …) is listed in the notes but kept out of both columns.</li>
+    <li>Three sheet layouts are handled: a code per row (value taken from the Cost/Amount column), codes as column headers (column TOTAL row, else the column sum), and a code as a section heading (the section's TOTAL row).</li>
+    <li>Columns headed cumulative / to-date / quantity / rate are ignored, so "today" costs are not mixed with running totals.</li>
+    <li>The date comes from the sheet's own Date cell, else the file name, else the folder name, else the file's modified date — the source is shown for every row.</li>
+  </ul>
+</div>
+</div>
+
+<script>
+<!--INJECT:XLSX-->
+</script>
+<script>
+<!--INJECT:PARSER-->
+</script>
+<script>
+<!--INJECT:UI-->
+</script>
+</body>
+</html>
