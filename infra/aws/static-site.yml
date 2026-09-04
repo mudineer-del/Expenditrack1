@@ -14,6 +14,23 @@ Parameters:
     Default: mudineer-del/Expenditrack1
     Description: owner/repo allowed to assume the deploy role.
 
+  GitHubOwnerId:
+    Type: String
+    Default: "297843026"
+    Description: >
+      Numeric GitHub account ID for the repo owner. Required because this repo
+      has "include enterprise/organization and repository IDs in the subject
+      claim" enabled, which makes GitHub issue the OIDC subject as
+      repo:OWNER@OWNER_ID/REPO@REPO_ID:... instead of repo:OWNER/REPO:...
+      Read the true value off a failed AssumeRoleWithWebIdentity event in
+      CloudTrail rather than guessing. Set both IDs to empty to fall back to
+      the plain name-only form.
+
+  GitHubRepoId:
+    Type: String
+    Default: "1314963648"
+    Description: Numeric GitHub repository ID. See GitHubOwnerId.
+
   GitHubEnvironment:
     Type: String
     Default: aws-production
@@ -46,6 +63,7 @@ Parameters:
 
 Conditions:
   ShouldCreateOidcProvider: !Equals [!Ref CreateOidcProvider, "true"]
+  HasImmutableIds: !Not [!Equals [!Ref GitHubOwnerId, ""]]
   HasCustomDomain: !Not [!Equals [!Ref DomainName, ""]]
 
 Resources:
@@ -200,8 +218,20 @@ Resources:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               # Pinned to one repo and one environment. Without the sub
               # condition, any repository on GitHub could assume this role.
+              # The ID-qualified form is strictly stronger than the name-only
+              # one: numeric IDs survive a rename and cannot be claimed by
+              # someone who later registers a freed-up repo name.
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubRepo}:environment:${GitHubEnvironment}"
+                token.actions.githubusercontent.com:sub: !If
+                  - HasImmutableIds
+                  - !Sub
+                    - "repo:${Owner}@${OwnerId}/${Name}@${RepoId}:environment:${Env}"
+                    - Owner: !Select [0, !Split ["/", !Ref GitHubRepo]]
+                      Name: !Select [1, !Split ["/", !Ref GitHubRepo]]
+                      OwnerId: !Ref GitHubOwnerId
+                      RepoId: !Ref GitHubRepoId
+                      Env: !Ref GitHubEnvironment
+                  - !Sub "repo:${GitHubRepo}:environment:${GitHubEnvironment}"
       Policies:
         - PolicyName: PublishSite
           PolicyDocument:
