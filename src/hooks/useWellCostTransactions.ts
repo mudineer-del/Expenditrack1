@@ -90,6 +90,39 @@ export function useBulkUpsertWellCostTransactions() {
   })
 }
 
+/** Bulk-delete path for the daily log page's multi-select — one undo snapshot and one
+ *  "Delete" activity-log entry for the whole batch, mirroring useBulkUpsertWellCostTransactions
+ *  rather than looping the single-record useDeleteWellCostTransaction (which would spam the
+ *  activity log with one entry per row). */
+export function useBulkDeleteWellCostTransactions() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+  return useMutation({
+    mutationFn: async (entries: WellCostTransaction[]) => {
+      const supabase = getSupabaseClient()
+      const current = (queryClient.getQueryData(WELL_COST_TRANSACTIONS_QUERY_KEY) as WellCostTransaction[] | undefined) ?? []
+      const undoId = useActivityStore
+        .getState()
+        .pushUndo(`Delete of ${entries.length} cost entr${entries.length !== 1 ? "ies" : "y"}`, { wellCostTransactions: current })
+
+      const ids = entries.map((e) => e.id)
+      for (let i = 0; i < ids.length; i += 100) {
+        const { error } = await supabase.from("well_cost_transactions").delete().in("id", ids.slice(i, i + 100))
+        if (error) throw error
+      }
+
+      await logActivity(
+        queryClient,
+        { name: user?.name || "Unknown", role: user?.role || "" },
+        "Delete",
+        `Deleted ${entries.length} cost entr${entries.length !== 1 ? "ies" : "y"}`,
+        { count: entries.length, undoId }
+      )
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: WELL_COST_TRANSACTIONS_QUERY_KEY }),
+  })
+}
+
 export function useDeleteWellCostTransaction() {
   const queryClient = useQueryClient()
   const { user } = useAuth()

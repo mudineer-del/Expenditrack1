@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -23,6 +24,7 @@ import { cn, errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
 import {
+  useBulkDeleteWellCostTransactions,
   useDeleteWellCostTransaction,
   useUpsertWellCostTransaction,
   useWellCostTransactionsQuery,
@@ -55,11 +57,14 @@ export default function WellCostDailyLogPage() {
   const transactionsQuery = useWellCostTransactionsQuery()
   const upsertTransaction = useUpsertWellCostTransaction()
   const deleteTransaction = useDeleteWellCostTransaction()
+  const bulkDeleteTransactions = useBulkDeleteWellCostTransactions()
 
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<(typeof TYPE_FILTERS)[number]>("All")
   const [drawer, setDrawer] = useState<DrawerState>(BLANK_DRAWER)
   const [deleteTarget, setDeleteTarget] = useState<WellCostTransaction | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
 
   const costCentres = costCentresQuery.data ?? []
   const wells = wellsQuery.data ?? []
@@ -108,11 +113,46 @@ export default function WellCostDailyLogPage() {
 
   function handleDeleteConfirm() {
     if (!deleteTarget) return
+    const targetId = deleteTarget.id
     deleteTransaction.mutate(deleteTarget, {
-      onSuccess: () => toast.success("Entry deleted."),
+      onSuccess: () => {
+        toast.success("Entry deleted.")
+        setSelected((prev) => {
+          if (!prev.has(targetId)) return prev
+          const next = new Set(prev)
+          next.delete(targetId)
+          return next
+        })
+      },
       onError: (e) => toast.error(errorMessage(e, "Could not delete entry.")),
     })
     setDeleteTarget(null)
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    setSelected((prev) => (prev.size === filtered.length ? new Set() : new Set(filtered.map((e) => e.id))))
+  }
+
+  function handleBulkDeleteConfirm() {
+    const toDelete = entries.filter((e) => selected.has(e.id))
+    if (!toDelete.length) return
+    bulkDeleteTransactions.mutate(toDelete, {
+      onSuccess: () => {
+        toast.success(`${toDelete.length} entr${toDelete.length !== 1 ? "ies" : "y"} deleted.`)
+        setSelected(new Set())
+      },
+      onError: (e) => toast.error(errorMessage(e, "Could not delete entries.")),
+    })
+    setBulkDeleteConfirm(false)
   }
 
   const anyLoading = wellsQuery.isLoading || costCentresQuery.isLoading || transactionsQuery.isLoading
@@ -220,12 +260,30 @@ export default function WellCostDailyLogPage() {
               ))}
             </SelectContent>
           </Select>
+          {selected.size > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={!canDelete}
+              title={canDelete ? "Delete selected entries" : "Only Admins can delete"}
+              onClick={() => setBulkDeleteConfirm(true)}
+            >
+              <Trash2 /> Delete {selected.size} selected
+            </Button>
+          )}
         </div>
 
         {filtered.length ? (
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-8">
+                  <Checkbox
+                    checked={filtered.length > 0 && selected.size === filtered.length}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
@@ -237,7 +295,14 @@ export default function WellCostDailyLogPage() {
             </TableHeader>
             <TableBody>
               {filtered.map((entry) => (
-                <TableRow key={entry.id}>
+                <TableRow key={entry.id} className={cn(selected.has(entry.id) && "bg-muted/50")}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selected.has(entry.id)}
+                      onCheckedChange={() => toggleSelect(entry.id)}
+                      aria-label={`Select entry ${entry.entryDate}`}
+                    />
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">{entry.entryDate}</TableCell>
                   <TableCell>
                     <span
@@ -328,6 +393,21 @@ export default function WellCostDailyLogPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteConfirm} onOpenChange={setBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selected.size} entr{selected.size !== 1 ? "ies" : "y"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes the {selected.size} selected entr{selected.size !== 1 ? "ies" : "y"} from this cost centre's log.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDeleteConfirm}>Delete {selected.size}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

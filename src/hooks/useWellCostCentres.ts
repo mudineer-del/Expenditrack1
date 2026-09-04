@@ -47,22 +47,34 @@ export function useUpsertWellCostCentre() {
   })
 }
 
-/** Clones every Cost/Fund Centre row from one well onto another — the "Copy from
- *  existing well" action on the Structure page's Well Cost Summary card, for starting a
- *  new well's cost structure from a similar one instead of re-typing every centre by
- *  hand. Departments themselves don't need copying: every well already gets a
- *  well_departments row for every global department at creation time (see
- *  provisionWellDepartments in useWells.ts) — only the per-well centre definitions
- *  (code, budget, vendor, ...) are actually well-specific. Transaction history is
- *  deliberately left behind; only the structure/budget template comes across. */
+/** Clones Cost/Fund Centre rows from one well onto another — the "Copy from Well" action
+ *  on each service-category section (Drilling Fluids, Cementation, ...) on the Structure
+ *  page, for starting a new well's cost structure from a similar one instead of re-typing
+ *  every centre by hand. Pass `serviceCategoryId` to scope the copy to just that section's
+ *  centres; omit it to copy the source well's entire structure. Departments themselves
+ *  don't need copying: every well already gets a well_departments row for every global
+ *  department at creation time (see provisionWellDepartments in useWells.ts) — only the
+ *  per-well centre definitions (code, budget, vendor, ...) are actually well-specific.
+ *  Transaction history is deliberately left behind; only the structure/budget template
+ *  comes across. */
 export function useCopyWellCostStructure() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   return useMutation({
-    mutationFn: async ({ sourceWellId, targetWellId }: { sourceWellId: string; targetWellId: string }) => {
+    mutationFn: async ({
+      sourceWellId,
+      targetWellId,
+      serviceCategoryId,
+    }: {
+      sourceWellId: string
+      targetWellId: string
+      serviceCategoryId?: string
+    }) => {
       const supabase = getSupabaseClient()
       const current = (queryClient.getQueryData(WELL_COST_CENTRES_QUERY_KEY) as WellCostCentre[] | undefined) ?? []
-      const sourceItems = current.filter((c) => c.wellId === sourceWellId)
+      const sourceItems = current.filter(
+        (c) => c.wellId === sourceWellId && (!serviceCategoryId || c.serviceCategoryId === serviceCategoryId)
+      )
       if (!sourceItems.length) return { count: 0 }
 
       const undoId = useActivityStore

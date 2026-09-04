@@ -26,7 +26,7 @@ const CONTRACTOR_LABELS: Record<DmrContractor, string> = {
 const CONTRACTORS: DmrContractor[] = ["OGDCL", "MUD_CONTRACTOR", "SECOND_CONTRACTOR"]
 const SKIP = "__skip__"
 
-type RowStatus = "new" | "duplicate-in-batch" | "already-logged" | "unmapped"
+type RowStatus = "new" | "duplicate-in-batch" | "already-logged" | "remarks-update" | "unmapped"
 type PlanRow = DmrImportRow & { status: RowStatus }
 
 const STOP_WORDS = new Set(["cost", "the", "and"])
@@ -118,10 +118,16 @@ export function DmrImportDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsedRows])
 
-  const existingKeys = useMemo(
-    () => new Set(existingEntries.filter((e) => e.kind === "actual").map((e) => `${e.costCentreId}|${e.entryDate}`)),
-    [existingEntries]
-  )
+  // Keyed by "costCentreId|entryDate" -> the existing entry, so a re-import can tell a
+  // true duplicate (same day already logged, skip it) apart from a day that's already
+  // logged but is missing the remarks a newer parse now carries — the source reports don't
+  // change their own cost figures between passes, so this never touches amount/notes,
+  // only backfills remarks that weren't captured the first time.
+  const existingByKey = useMemo(() => {
+    const m = new Map<string, WellCostTransaction>()
+    for (const e of existingEntries) if (e.kind === "actual") m.set(`${e.costCentreId}|${e.entryDate}`, e)
+    return m
+  }, [existingEntries])
 
   const nonZeroRows = useMemo(() => parsedRows.filter((r) => r.amount > 0), [parsedRows])
 
@@ -134,14 +140,17 @@ export function DmrImportDialog({
       let status: RowStatus
       if (seen.has(batchKey)) status = "duplicate-in-batch"
       else if (!targetId) status = "unmapped"
-      else if (existingKeys.has(`${targetId}|${r.entryDate}`)) status = "already-logged"
-      else status = "new"
+      else {
+        const existing = existingByKey.get(`${targetId}|${r.entryDate}`)
+        if (!existing) status = "new"
+        else status = !existing.remarks && r.remarks ? "remarks-update" : "already-logged"
+      }
       if (status !== "duplicate-in-batch") seen.add(batchKey)
       return { ...r, status }
     })
-  }, [nonZeroRows, mapping, existingKeys])
+  }, [nonZeroRows, mapping, existingByKey])
 
-  const importable = plan.filter((r) => r.status === "new")
+  const importable = plan.filter((r) => r.status === "new" || r.status === "remarks-update")
 
   function reset() {
     setParsedRows([])
@@ -167,16 +176,24 @@ export function DmrImportDialog({
   }
 
   function handleConfirm() {
-    const toImport: WellCostTransaction[] = importable.map((r) => ({
-      id: crypto.randomUUID(),
-      costCentreId: mapping[r.contractor],
-      entryDate: r.entryDate,
-      kind: "actual",
-      amount: r.amount,
-      notes: `Imported from ${r.fileName} (${CONTRACTOR_LABELS[r.contractor]}${r.sourceLabel ? `: ${r.sourceLabel}` : ""})`,
-      remarks: r.remarks,
-      createdByName,
-    }))
+    const toImport: WellCostTransaction[] = importable.map((r) => {
+      if (r.status === "remarks-update") {
+        // Same id/amount/notes/creator as the entry already on file — only remarks changes,
+        // via the same upsert-by-id path useBulkUpsertWellCostTransactions already uses.
+        const existing = existingByKey.get(`${mapping[r.contractor]}|${r.entryDate}`)!
+        return { ...existing, remarks: r.remarks }
+      }
+      return {
+        id: crypto.randomUUID(),
+        costCentreId: mapping[r.contractor],
+        entryDate: r.entryDate,
+        kind: "actual",
+        amount: r.amount,
+        notes: `Imported from ${r.fileName} (${CONTRACTOR_LABELS[r.contractor]}${r.sourceLabel ? `: ${r.sourceLabel}` : ""})`,
+        remarks: r.remarks,
+        createdByName,
+      }
+    })
     onImport(toImport)
     reset()
   }
@@ -189,6 +206,8 @@ export function DmrImportDialog({
     return true
   })
   const mappedCount = CONTRACTORS.filter((c) => mapping[c]).length
+  const newCount = plan.filter((r) => r.status === "new").length
+  const remarksUpdateCount = plan.filter((r) => r.status === "remarks-update").length
 
   return (
     <Dialog
@@ -273,8 +292,9 @@ export function DmrImportDialog({
 
             <div className="rounded-lg border bg-muted/40 p-3">
               <p>
-                {fileCount} file{fileCount !== 1 ? "s" : ""} read — {importable.length} new entr
-                {importable.length !== 1 ? "ies" : "y"} will be logged.
+                {fileCount} file{fileCount !== 1 ? "s" : ""} read — {newCount} new entr{newCount !== 1 ? "ies" : "y"}
+                {remarksUpdateCount > 0 && <> and {remarksUpdateCount} remarks-only update{remarksUpdateCount !== 1 ? "s" : ""}</>}{" "}
+                will be logged.
               </p>
               {mismatchedFiles.length > 0 && (
                 <p className="mt-1.5 flex items-center gap-1.5 text-status-under">
@@ -343,6 +363,7 @@ export function DmrImportDialog({
                           <TableCell className="text-right tabular-nums">{fmtCurrency(r.amount, target?.currency || "USD")}</TableCell>
                           <TableCell>
                             {r.status === "new" && <Badge variant="secondary">New</Badge>}
+                            {r.status === "remarks-update" && <Badge variant="secondary">Remarks will be added</Badge>}
                             {r.status === "duplicate-in-batch" && <Badge variant="outline">Duplicate report — skipped</Badge>}
                             {r.status === "already-logged" && <Badge variant="outline">Already logged — skipped</Badge>}
                             {r.status === "unmapped" && <Badge variant="outline">Not mapped — skipped</Badge>}

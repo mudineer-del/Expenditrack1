@@ -83,7 +83,7 @@ export default function WellCostStructurePage() {
   const [centreDrawer, setCentreDrawer] = useState<CostCentreDrawerState>(BLANK_DRAWER_STATE)
   const [deleteTarget, setDeleteTarget] = useState<WellCostCentre | null>(null)
   const [importServiceCategoryId, setImportServiceCategoryId] = useState<string | null>(null)
-  const [copyDialogOpen, setCopyDialogOpen] = useState(false)
+  const [copyServiceCategoryId, setCopyServiceCategoryId] = useState<string | null>(null)
 
   const wells = wellsQuery.data ?? []
   const costCentres = costCentresQuery.data ?? []
@@ -115,16 +115,19 @@ export default function WellCostStructurePage() {
   )
   const wellRollup = useMemo(() => rollup(wellCostCentres, costCentreTotals), [wellCostCentres, costCentreTotals])
 
-  const copyCandidates = useMemo(() => {
+  /** Candidate wells to copy FROM, scoped to one service category's own cost centres —
+   *  each section's own "Copy from Well" button only offers wells that actually have
+   *  something in that same section, and only counts that section's centres. */
+  function copyCandidatesFor(serviceCategoryId: string) {
     if (!selectedWell) return []
     return wells
       .filter((w) => w.id !== selectedWell.id)
-      .map((well) => {
-        const items = costCentres.filter((c) => c.wellId === well.id)
-        return { well, costCentreCount: items.length, departmentCount: new Set(items.map((c) => c.departmentId)).size }
-      })
+      .map((well) => ({
+        well,
+        costCentreCount: costCentres.filter((c) => c.wellId === well.id && c.serviceCategoryId === serviceCategoryId).length,
+      }))
       .filter((c) => c.costCentreCount > 0)
-  }, [wells, selectedWell, costCentres])
+  }
 
   function openAddWell() {
     setWellDrawerOpen(true)
@@ -198,13 +201,13 @@ export default function WellCostStructurePage() {
   }
 
   function handleCopyWellCost(sourceWellId: string) {
-    if (!selectedWell) return
+    if (!selectedWell || !copyServiceCategoryId) return
     copyWellCostStructure.mutate(
-      { sourceWellId, targetWellId: selectedWell.id },
+      { sourceWellId, targetWellId: selectedWell.id, serviceCategoryId: copyServiceCategoryId },
       {
         onSuccess: ({ count }) => {
           toast.success(`Copied ${count} cost / fund centre${count === 1 ? "" : "s"} into ${selectedWell.name}.`)
-          setCopyDialogOpen(false)
+          setCopyServiceCategoryId(null)
         },
         onError: (e) => toast.error(errorMessage(e, "Could not copy cost structure.")),
       }
@@ -296,21 +299,6 @@ export default function WellCostStructurePage() {
           <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <span className="text-sm font-semibold">Well Cost Summary</span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!canAdd || !copyCandidates.length}
-                title={
-                  !canAdd
-                    ? "Only Admins can copy a cost structure"
-                    : copyCandidates.length
-                      ? "Copy Cost / Fund Centres from another well"
-                      : "No other wells have a cost structure to copy yet"
-                }
-                onClick={() => setCopyDialogOpen(true)}
-              >
-                <Copy /> Copy from Well
-              </Button>
             </div>
             <CostSummaryCards rollup={wellRollup} />
             <div className="mt-3">
@@ -356,11 +344,27 @@ export default function WellCostStructurePage() {
                         const items = allItems.filter(
                           (i) => !q || [i.costCentre, i.fundCentre, i.description].some((v) => (v || "").toLowerCase().includes(q))
                         )
+                        const svcCopyCandidates = copyCandidatesFor(svc.id)
                         return (
                           <div key={svc.id} className="overflow-hidden rounded-2xl border bg-card shadow-sm md:rounded-lg md:shadow-none">
                             <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3.5">
                               <span className="text-sm font-semibold">{svc.name}</span>
                               <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!canAdd || !svcCopyCandidates.length}
+                                  title={
+                                    !canAdd
+                                      ? "Only Admins can copy a cost structure"
+                                      : svcCopyCandidates.length
+                                        ? `Copy Cost / Fund Centres from another well's ${svc.name}`
+                                        : `No other wells have ${svc.name} centres to copy yet`
+                                  }
+                                  onClick={() => setCopyServiceCategoryId(svc.id)}
+                                >
+                                  <Copy /> Copy from Well
+                                </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -387,6 +391,17 @@ export default function WellCostStructurePage() {
                                 </Button>
                               </div>
                             </div>
+                            {copyServiceCategoryId === svc.id && (
+                              <CopyWellCostDialog
+                                open={copyServiceCategoryId === svc.id}
+                                onOpenChange={(v) => !v && setCopyServiceCategoryId(null)}
+                                targetWell={selectedWell}
+                                scopeLabel={svc.name}
+                                candidates={svcCopyCandidates}
+                                submitting={copyWellCostStructure.isPending}
+                                onConfirm={handleCopyWellCost}
+                              />
+                            )}
                             {importServiceCategoryId === svc.id && (
                               <DmrImportDialog
                                 open={importServiceCategoryId === svc.id}
@@ -522,15 +537,6 @@ export default function WellCostStructurePage() {
         submitting={addServiceCategory.isPending}
         onOpenChange={setServiceDialogOpen}
         onSubmit={handleAddServiceCategory}
-      />
-
-      <CopyWellCostDialog
-        open={copyDialogOpen}
-        onOpenChange={setCopyDialogOpen}
-        targetWell={selectedWell}
-        candidates={copyCandidates}
-        submitting={copyWellCostStructure.isPending}
-        onConfirm={handleCopyWellCost}
       />
 
       {centreDrawer.open && selectedWell && (

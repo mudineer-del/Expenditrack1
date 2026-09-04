@@ -10,17 +10,19 @@ import type { Well } from "@/types/well"
 interface CandidateWell {
   well: Well
   costCentreCount: number
-  departmentCount: number
 }
 
-/** Lets an Admin clone another well's whole Cost/Fund Centre setup (codes, budgets,
- *  vendors, notes) onto the currently selected well — for starting a new well from a
+/** Lets an Admin clone another well's Cost/Fund Centre setup (codes, budgets, vendors,
+ *  notes) onto the currently selected well — for starting a new well's section from a
  *  similar one instead of re-typing every centre by hand. Opened from the "Copy from
- *  Well" button on the Structure page's Well Cost Summary card. */
+ *  Well" button on each service-category section (Drilling Fluids, Cementation, ...) on
+ *  the Structure page — `scopeLabel` names which section is being copied into, and
+ *  `candidates` should already be scoped to that section's counts by the caller. */
 export function CopyWellCostDialog({
   open,
   onOpenChange,
   targetWell,
+  scopeLabel,
   candidates,
   submitting,
   onConfirm,
@@ -28,6 +30,9 @@ export function CopyWellCostDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   targetWell: Well | null
+  /** e.g. "Drilling Fluids" — shown in the dialog copy so it's clear this only copies that
+   *  one section, not the well's whole structure. */
+  scopeLabel: string
   candidates: CandidateWell[]
   submitting?: boolean
   onConfirm: (sourceWellId: string) => void
@@ -57,9 +62,10 @@ export function CopyWellCostDialog({
         <DialogHeader>
           <DialogTitle>Copy Cost / Fund Centres</DialogTitle>
           <DialogDescription>
-            Pick a well to copy its Cost / Fund Centre setup — codes, budgets, vendors, and notes — into{" "}
-            <span className="font-medium text-foreground">{targetWell?.name || "this well"}</span>. Existing entries here
-            are left alone; this only adds new ones.
+            Pick a well to copy its <span className="font-medium text-foreground">{scopeLabel}</span> Cost / Fund
+            Centres — codes, budgets, vendors, and notes — into{" "}
+            <span className="font-medium text-foreground">{targetWell?.name || "this well"}</span>'s own {scopeLabel}{" "}
+            section. Existing entries here are left alone; this only adds new ones.
           </DialogDescription>
         </DialogHeader>
 
@@ -76,7 +82,7 @@ export function CopyWellCostDialog({
 
         <div className="max-h-64 overflow-y-auto rounded-md border">
           {filtered.length ? (
-            filtered.map(({ well, costCentreCount, departmentCount }) => {
+            filtered.map(({ well, costCentreCount }) => {
               const tone = wellStatusTone(well.status)
               return (
                 <button
@@ -97,14 +103,14 @@ export function CopyWellCostDialog({
                     {well.status || "—"}
                   </span>
                   <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                    {costCentreCount} centre{costCentreCount === 1 ? "" : "s"} · {departmentCount} dept{departmentCount === 1 ? "" : "s"}
+                    {costCentreCount} centre{costCentreCount === 1 ? "" : "s"}
                   </span>
                 </button>
               )
             })
           ) : (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              {candidates.length ? `No wells match "${query}".` : "No other wells have a cost structure to copy yet."}
+              {candidates.length ? `No wells match "${query}".` : `No other wells have ${scopeLabel} centres to copy yet.`}
             </div>
           )}
         </div>
