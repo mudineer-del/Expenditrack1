@@ -37,8 +37,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { OgdclMark } from "@/components/shared/OgdclMark"
 import { DepartmentSwitcher } from "@/components/shell/DepartmentSwitcher"
-import { SidebarIcon } from "@/components/shell/NavIcon"
+import { imgIcon, SidebarIcon } from "@/components/shell/NavIcon"
 import { SidebarContractsWidget } from "@/components/shell/SidebarContractsWidget"
+import { resolveIcon } from "@/lib/iconOverrides"
 import { activeNavStyle, NAV_ITEM_COLORS } from "@/lib/navColors"
 import { useAuth } from "@/hooks/useAuth"
 import { useActivityLogQuery } from "@/hooks/useActivityLog"
@@ -52,11 +53,6 @@ import { useSidebarPrefsStore } from "@/store/useSidebarPrefsStore"
 /** Wraps a static icons8 3D glyph so it drops into NavIconChip's/NavIcon's `icon`
  *  slot alongside the lucide components — both just need something that accepts
  *  className (and, for NavIcon, an ignorable style pass-through). */
-function imgIcon(src: string) {
-  return function ImgIcon({ className, style }: { className?: string; style?: CSSProperties }) {
-    return <img src={src} alt="" className={className} style={style} />
-  }
-}
 const WellCostRigIcon = imgIcon(wellCostNavIcon)
 const WellCostDashboardIcon = imgIcon(wellCostDashboardIcon)
 const WellRegistryIcon = imgIcon(wellRegistryIcon)
@@ -148,6 +144,7 @@ export function AppSidebar() {
   const activeColorMode = useSidebarPrefsStore((s) => s.activeColorMode)
   const density = useSidebarPrefsStore((s) => s.density)
   const hiddenItems = useSidebarPrefsStore((s) => s.hiddenItems)
+  const iconOverrides = useSidebarPrefsStore((s) => s.iconOverrides)
   const flatIcons = iconStyle === "flat"
   const compactDensity = density === "compact"
   const topLevelSize = compactDensity ? "default" : "lg"
@@ -240,7 +237,7 @@ export function AppSidebar() {
                                       {({ isActive }) => (
                                         <>
                                           <SidebarIcon
-                                            icon={child.icon}
+                                            icon={resolveIcon(child.to, child.icon, iconOverrides)}
                                             color={NAV_ITEM_COLORS[child.colorKey]}
                                             compact
                                             active={isActive}
@@ -270,7 +267,7 @@ export function AppSidebar() {
                         >
                           {restricted ? (
                             <>
-                              <SidebarIcon icon={item.icon} color={color} flat={flatIcons} />
+                              <SidebarIcon icon={resolveIcon(item.to, item.icon, iconOverrides)} color={color} flat={flatIcons} />
                               <span>{item.label}</span>
                             </>
                           ) : (
@@ -285,7 +282,7 @@ export function AppSidebar() {
                                   {isActive && (
                                     <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-white/85" />
                                   )}
-                                  <SidebarIcon icon={item.icon} color={color} active={isActive} flat={flatIcons} />
+                                  <SidebarIcon icon={resolveIcon(item.to, item.icon, iconOverrides)} color={color} active={isActive} flat={flatIcons} />
                                   <span>{item.label}</span>
                                 </>
                               )}

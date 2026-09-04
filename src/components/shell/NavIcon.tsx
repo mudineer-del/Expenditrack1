@@ -2,6 +2,16 @@ import type { CSSProperties, ComponentType } from "react"
 import { NavIconChip } from "@/components/shell/NavIconChip"
 import type { ChipColor } from "@/lib/navColors"
 
+/** Wraps a static image (the 3D icon PNGs in src/assets) into the same
+ *  `ComponentType<{ className?, style? }>` shape every lucide icon already has, so it
+ *  drops straight into NavIconChip/NavIcon/SidebarIcon — and anywhere else in the app
+ *  that expects an "icon" component — with no changes to any of them. */
+export function imgIcon(src: string) {
+  return function ImgIcon({ className, style }: { className?: string; style?: CSSProperties }) {
+    return <img src={src} alt="" className={className} style={style} />
+  }
+}
+
 /** Flat sidebar nav glyph — the alternative to NavIconChip's gradient badge, picked
  *  via Settings > Labels > Sidebar Customization > Icon style. Plain icon tinted in
  *  its item's accent color; leaves color unset when `active` so it inherits the

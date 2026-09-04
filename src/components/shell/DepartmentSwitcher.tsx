@@ -1,6 +1,8 @@
 import { Building2, Check, ChevronsUpDown, Layers, Pencil, Trash2, X } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
+import allDepartmentsIcon3d from "@/assets/all-departments-icon-3d.png"
+import departmentIcon3d from "@/assets/department-icon-3d.png"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +15,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
-import { SidebarIcon } from "@/components/shell/NavIcon"
+import { imgIcon, SidebarIcon } from "@/components/shell/NavIcon"
+import { resolveIcon } from "@/lib/iconOverrides"
 import { activeNavStyle, ALL_DEPARTMENTS_COLOR, departmentChipColor } from "@/lib/navColors"
 import { errorMessage } from "@/lib/utils"
 import { cn } from "@/lib/utils"
@@ -24,6 +27,12 @@ import { useAppStore } from "@/store/useAppStore"
 import { useSidebarPrefsStore } from "@/store/useSidebarPrefsStore"
 
 export const ALL_DEPARTMENTS = "ALL"
+
+// 3D icons (MIT-licensed, from microsoft/fluentui-emoji) shown in "chip" icon-style mode
+// in place of the flat Building2/Layers glyphs — "flat" mode keeps the plain lucide icons,
+// since a raster PNG can't take NavIcon's CSS color-tint treatment the way an SVG icon can.
+const AllDepartmentsIcon3D = imgIcon(allDepartmentsIcon3d)
+const DepartmentIcon3D = imgIcon(departmentIcon3d)
 
 /**
  * Sidebar-level department switcher — the one piece of state (useAppStore's activeDept)
@@ -46,6 +55,7 @@ export function DepartmentSwitcher() {
   const renameDepartment = useRenameDepartment()
   const flatIcons = useSidebarPrefsStore((s) => s.iconStyle) === "flat"
   const perItemActiveColor = useSidebarPrefsStore((s) => s.activeColorMode) === "perItem"
+  const iconOverrides = useSidebarPrefsStore((s) => s.iconOverrides)
   const activeDept = useAppStore((s) => s.activeDept)
   const setActiveDept = useAppStore((s) => s.setActiveDept)
   const [removeTarget, setRemoveTarget] = useState<string | null>(null)
@@ -127,7 +137,15 @@ export function DepartmentSwitcher() {
             aria-expanded={departmentListOpen}
           >
             <SidebarIcon
-              icon={activeDept === ALL_DEPARTMENTS ? Layers : Building2}
+              icon={
+                flatIcons
+                  ? activeDept === ALL_DEPARTMENTS
+                    ? Layers
+                    : Building2
+                  : activeDept === ALL_DEPARTMENTS
+                    ? resolveIcon("__allDepartments", AllDepartmentsIcon3D, iconOverrides)
+                    : resolveIcon("__department", DepartmentIcon3D, iconOverrides)
+              }
               color={activeDept === ALL_DEPARTMENTS ? ALL_DEPARTMENTS_COLOR : departmentChipColor(activeDept)}
               compact
               flat={flatIcons}
@@ -152,7 +170,12 @@ export function DepartmentSwitcher() {
                 {activeDept === ALL_DEPARTMENTS && (
                   <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-white/85" />
                 )}
-                <SidebarIcon icon={Layers} color={ALL_DEPARTMENTS_COLOR} active={activeDept === ALL_DEPARTMENTS} flat={flatIcons} />
+                <SidebarIcon
+                  icon={flatIcons ? Layers : resolveIcon("__allDepartments", AllDepartmentsIcon3D, iconOverrides)}
+                  color={ALL_DEPARTMENTS_COLOR}
+                  active={activeDept === ALL_DEPARTMENTS}
+                  flat={flatIcons}
+                />
                 <span>All Departments</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -205,7 +228,12 @@ export function DepartmentSwitcher() {
                   {activeDept === d && (
                     <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-white/85" />
                   )}
-                  <SidebarIcon icon={Building2} color={departmentChipColor(d)} active={activeDept === d} flat={flatIcons} />
+                  <SidebarIcon
+                    icon={flatIcons ? Building2 : resolveIcon("__department", DepartmentIcon3D, iconOverrides)}
+                    color={departmentChipColor(d)}
+                    active={activeDept === d}
+                    flat={flatIcons}
+                  />
                   <span>{d}</span>
                 </SidebarMenuButton>
                 {isAdmin && (

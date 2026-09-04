@@ -74,7 +74,7 @@ export default function WellCostDailyLogPage() {
     const q = search.trim().toLowerCase()
     return entries
       .filter((e) => typeFilter === "All" || e.kind === typeFilter.toLowerCase())
-      .filter((e) => !q || [e.notes, e.createdByName, e.entryDate].some((v) => (v || "").toLowerCase().includes(q)))
+      .filter((e) => !q || [e.notes, e.remarks, e.createdByName, e.entryDate].some((v) => (v || "").toLowerCase().includes(q)))
       .sort((a, b) => b.entryDate.localeCompare(a.entryDate))
   }, [entries, search, typeFilter])
 
@@ -203,7 +203,7 @@ export default function WellCostDailyLogPage() {
             <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-8"
-              placeholder="Search notes, logged by, date…"
+              placeholder="Search notes, remarks, logged by, date…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -230,6 +230,7 @@ export default function WellCostDailyLogPage() {
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Notes</TableHead>
+                <TableHead>Remarks</TableHead>
                 <TableHead>Logged by</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -250,6 +251,9 @@ export default function WellCostDailyLogPage() {
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtCurrency(entry.amount, currency)}</TableCell>
                   <TableCell className="max-w-64 truncate text-muted-foreground">{entry.notes || "—"}</TableCell>
+                  <TableCell className="max-w-64 truncate text-muted-foreground" title={entry.remarks || undefined}>
+                    {entry.remarks ? entry.remarks.split("\n")[0] : "—"}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{entry.createdByName || "—"}</TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">

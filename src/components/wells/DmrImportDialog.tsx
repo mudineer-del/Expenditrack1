@@ -31,6 +31,16 @@ type PlanRow = DmrImportRow & { status: RowStatus }
 
 const STOP_WORDS = new Set(["cost", "the", "and"])
 
+/** Source labels and cost centre Vendor fields spell the same names inconsistently across
+ *  reports ("Shlumberger" missing the first C, "SWACO" vs. "SAECO" for the same Schlumberger
+ *  business unit) — normalized to one spelling on both sides before matching so those
+ *  variants don't silently defeat the auto-suggestion below. */
+function normalizeVendorWord(w: string): string {
+  if (/^sc?hlumberger$/.test(w)) return "schlumberger"
+  if (/^swaco$|^saeco$/.test(w)) return "saeco"
+  return w
+}
+
 /** Turns a batch of parsed rows' free-text source labels (e.g. "HARIS IMTIAZ 03305349738
  *  MIDGARD COST") into keywords a cost centre's Vendor field might match, so the mapping
  *  can be pre-filled — always just a suggestion, never trusted silently (the picker below
@@ -40,7 +50,7 @@ function keywordsFrom(rows: DmrImportRow[], contractor: DmrContractor): string[]
   for (const r of rows) {
     if (r.contractor !== contractor) continue
     for (const w of r.sourceLabel.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/)) {
-      if (w.length >= 3 && !STOP_WORDS.has(w)) words.add(w)
+      if (w.length >= 3 && !STOP_WORDS.has(w)) words.add(normalizeVendorWord(w))
     }
   }
   return Array.from(words)
@@ -48,7 +58,14 @@ function keywordsFrom(rows: DmrImportRow[], contractor: DmrContractor): string[]
 
 function guessCostCentreId(costCentres: WellCostCentre[], keywords: string[]): string {
   if (!keywords.length) return ""
-  const match = costCentres.find((c) => keywords.some((k) => (c.vendor || "").toLowerCase().includes(k)))
+  const match = costCentres.find((c) => {
+    const vendor = (c.vendor || "")
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .map(normalizeVendorWord)
+      .join(" ")
+    return keywords.some((k) => vendor.includes(k))
+  })
   return match?.id ?? ""
 }
 
@@ -57,6 +74,7 @@ export function DmrImportDialog({
   onOpenChange,
   costCentres,
   wellName,
+  wellCode,
   existingEntries,
   createdByName,
   onImport,
@@ -67,6 +85,10 @@ export function DmrImportDialog({
    *  category this import was launched from. */
   costCentres: WellCostCentre[]
   wellName: string
+  /** The "DATE WISE CONSUMPTION" format's title only carries a short well code/label (e.g.
+   *  "KAL-04"), not the well's full display name — checked as an alternative match so that
+   *  format doesn't flag every file as a well mismatch. */
+  wellCode?: string
   /** Entries already logged for any of `costCentres` (so a re-import doesn't double-post a
    *  day already logged). */
   existingEntries: WellCostTransaction[]
@@ -152,15 +174,20 @@ export function DmrImportDialog({
       kind: "actual",
       amount: r.amount,
       notes: `Imported from ${r.fileName} (${CONTRACTOR_LABELS[r.contractor]}${r.sourceLabel ? `: ${r.sourceLabel}` : ""})`,
+      remarks: r.remarks,
       createdByName,
     }))
     onImport(toImport)
     reset()
   }
 
-  const mismatchedFiles = parsedRows.filter(
-    (r) => r.wellName && r.wellName.trim().toLowerCase() !== wellName.trim().toLowerCase()
-  )
+  const mismatchedFiles = parsedRows.filter((r) => {
+    if (!r.wellName) return false
+    const label = r.wellName.trim().toLowerCase()
+    if (label === wellName.trim().toLowerCase()) return false
+    if (wellCode && label === wellCode.trim().toLowerCase()) return false
+    return true
+  })
   const mappedCount = CONTRACTORS.filter((c) => mapping[c]).length
 
   return (
@@ -175,9 +202,10 @@ export function DmrImportDialog({
         <DialogHeader>
           <DialogTitle>Import Daily Costs from Excel</DialogTitle>
           <DialogDescription>
-            Select every daily report workbook (.xlsx/.xlsm) at once. Each report's WBM sheet carries three cost
-            figures per day — the mud contractor's own line, OGDCL's, and a second contractor's — logged as three
-            separate Actual entries against whichever cost centre you map each one to below.
+            Select daily report workbook(s) (.xlsx/.xlsm) — either a "WBM" per-day report (three cost figures per
+            day: the mud contractor's own line, OGDCL's, and a second contractor's) or a "DATE WISE CONSUMPTION"
+            monthly chemical sheet (two figures per day: OGDCL and the mud contractor). Logged as separate Actual
+            entries against whichever cost centre you map each one to below.
           </DialogDescription>
         </DialogHeader>
 

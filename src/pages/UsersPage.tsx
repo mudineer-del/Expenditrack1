@@ -1,16 +1,28 @@
-import { Camera, KeyRound, Send, ShieldCheck, ShieldOff, SlidersHorizontal } from "lucide-react"
+import { Camera, KeyRound, Send, ShieldCheck, ShieldOff, SlidersHorizontal, Trash2, UserPlus } from "lucide-react"
 import { Fragment, useRef, useState } from "react"
 import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AccessGrantPanel } from "@/components/users/AccessGrantPanel"
+import { AddAccountDialog } from "@/components/users/AddAccountDialog"
 import { SetPasswordDialog } from "@/components/users/SetPasswordDialog"
 import { AVATAR_ACCEPT, uploadAvatarFile } from "@/lib/avatars"
 import { cn, errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
+import { useDeleteAccount } from "@/hooks/useAdminAccounts"
 import { useProfilesQuery, useUpdateProfileAvatar, useUpdateProfileRole, useUpdateProfileStatus } from "@/hooks/useProfiles"
 import type { AppUser, ProfileStatus, Role } from "@/types/user"
 
@@ -34,7 +46,10 @@ export default function UsersPage() {
   const updateRole = useUpdateProfileRole()
   const updateAvatar = useUpdateProfileAvatar()
   const updateStatus = useUpdateProfileStatus()
+  const deleteAccount = useDeleteAccount()
   const [passwordTarget, setPasswordTarget] = useState<AppUser | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null)
+  const [addAccountOpen, setAddAccountOpen] = useState(false)
   const [sendingResetFor, setSendingResetFor] = useState<string | null>(null)
   const [pendingAvatarFor, setPendingAvatarFor] = useState<string | null>(null)
   // Which profile has its department/area checklist expanded, and whether that's
@@ -67,6 +82,16 @@ export default function UsersPage() {
         onError: (e) => toast.error(errorMessage(e, "Could not update role.")),
       }
     )
+  }
+
+  function handleDeleteConfirm() {
+    if (!deleteTarget) return
+    const name = deleteTarget.name
+    deleteAccount.mutate(deleteTarget.id, {
+      onSuccess: () => toast.success(`${name}'s account deleted.`),
+      onError: (e) => toast.error(errorMessage(e, "Could not delete account.")),
+    })
+    setDeleteTarget(null)
   }
 
   async function handleSendReset(p: AppUser) {
@@ -174,11 +199,18 @@ export default function UsersPage() {
       )}
 
       <div className="rounded-lg border bg-card">
-        <div className="border-b p-4">
-          <h3 className="text-sm font-semibold">All Users</h3>
-          <p className="text-xs text-muted-foreground">
-            Imported from Supabase Auth. {isAdmin ? "Change a role below to save it back." : "Only Admins can change roles."}
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+          <div>
+            <h3 className="text-sm font-semibold">All Users</h3>
+            <p className="text-xs text-muted-foreground">
+              Imported from Supabase Auth. {isAdmin ? "Change a role below to save it back." : "Only Admins can change roles."}
+            </p>
+          </div>
+          {isAdmin && (
+            <Button size="sm" onClick={() => setAddAccountOpen(true)}>
+              <UserPlus /> Add Account
+            </Button>
+          )}
         </div>
 
         {profilesQuery.isLoading ? (
@@ -310,6 +342,15 @@ export default function UsersPage() {
                             >
                               {p.status === "disabled" ? <ShieldCheck /> : <ShieldOff />}
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 text-destructive"
+                              title={`Permanently delete ${p.name}'s account`}
+                              onClick={() => setDeleteTarget(p)}
+                            >
+                              <Trash2 />
+                            </Button>
                           </div>
                         )}
                       </TableCell>
@@ -339,9 +380,9 @@ export default function UsersPage() {
         <h3 className="mb-3 text-sm font-semibold">Adding Teammates</h3>
         <p>
           New teammates create their own account from the <b>Create an account</b> link on the sign-in screen
-          (email + password), but can't sign in until an Admin approves them — approving picks their role plus
-          which departments and sidebar areas they can access. Pending accounts show up above, in{" "}
-          <b>Pending Approval</b>.
+          (email + password), or an Admin can use <b>Add Account</b> above to create it for them. Either way, they
+          can't sign in until an Admin approves them — approving picks their role plus which departments and
+          sidebar areas they can access. Pending accounts show up above, in <b>Pending Approval</b>.
         </p>
         <p className="mt-2 text-muted-foreground">
           Roles used by this app: <b>Admin</b> (full access), <b>Editor</b> (add/edit/export), <b>Viewer</b>{" "}
@@ -349,7 +390,10 @@ export default function UsersPage() {
         </p>
         {isAdmin && (
           <p className="mt-2 text-muted-foreground">
-            Use <SlidersHorizontal className="inline size-3.5" /> to change an approved user's departments/areas,{" "}
+            <UserPlus className="inline size-3.5" /> Add Account and <Trash2 className="inline size-3.5" /> Delete
+            (irreversible) require the <code>admin-create-user</code>/<code>admin-delete-user</code> Edge Functions
+            — see their README.md files next to <code>supabase/functions/admin-set-password/</code>. Use{" "}
+            <SlidersHorizontal className="inline size-3.5" /> to change an approved user's departments/areas,{" "}
             <Send className="inline size-3.5" /> to email a teammate a password reset link,{" "}
             <KeyRound className="inline size-3.5" /> to set a password for them directly (requires the{" "}
             <code>admin-set-password</code> Edge Function — see{" "}
@@ -361,6 +405,24 @@ export default function UsersPage() {
       </div>
 
       <SetPasswordDialog user={passwordTarget} open={!!passwordTarget} onOpenChange={(v) => !v && setPasswordTarget(null)} />
+
+      <AddAccountDialog open={addAccountOpen} onOpenChange={setAddAccountOpen} />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget &&
+                `${deleteTarget.name} (${deleteTarget.email}) will be permanently deleted — this can't be undone. They won't be able to sign in again, and would need a brand new account.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

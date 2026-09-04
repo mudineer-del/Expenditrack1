@@ -1,5 +1,5 @@
 import { ArrowLeftRight, Building2, Check, LockKeyhole, PanelLeft, Pencil, Pin, PinOff, RotateCcw, ShieldAlert, Star, Trash2, X } from "lucide-react"
-import { useState } from "react"
+import { lazy, Suspense, useState } from "react"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -15,17 +15,26 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { HIDEABLE_NAV_ITEMS } from "@/components/shell/AppSidebar"
+import { imgIcon } from "@/components/shell/NavIcon"
+import allDepartmentsIcon3d from "@/assets/all-departments-icon-3d.png"
+import departmentIcon3d from "@/assets/department-icon-3d.png"
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
 import { useRenameDepartment } from "@/hooks/useDepartments"
 import { useAuth } from "@/hooks/useAuth"
 import { vendorColor } from "@/lib/dashboard"
+import { resolveIcon } from "@/lib/iconOverrides"
 import { useReferenceLists } from "@/lib/referenceLists"
 import { cn } from "@/lib/utils"
 import { useLabelsStore, type AppLabels } from "@/store/useLabelsStore"
 import { useProminentContractsStore } from "@/store/useProminentContractsStore"
 import { useSidebarPrefsStore, type SidebarActiveColorMode, type SidebarDensity, type SidebarIconStyle } from "@/store/useSidebarPrefsStore"
 import { useTickerStore, type TickerStyle } from "@/store/useTickerStore"
+
+const IconPickerDialog = lazy(() => import("@/components/settings/IconPickerDialog").then((m) => ({ default: m.IconPickerDialog })))
+
+const DefaultDepartmentIcon = imgIcon(departmentIcon3d)
+const DefaultAllDepartmentsIcon = imgIcon(allDepartmentsIcon3d)
 
 const TICKER_STYLES: { key: TickerStyle; label: string; hint: string }[] = [
   { key: "scroll", label: "Scroll", hint: "All active contracts scroll past continuously, like a stock ticker." },
@@ -129,7 +138,16 @@ function SidebarCustomizationSection() {
   const setDensity = useSidebarPrefsStore((s) => s.setDensity)
   const hiddenItems = useSidebarPrefsStore((s) => s.hiddenItems)
   const toggleItem = useSidebarPrefsStore((s) => s.toggleItem)
+  const iconOverrides = useSidebarPrefsStore((s) => s.iconOverrides)
+  const setIconOverride = useSidebarPrefsStore((s) => s.setIconOverride)
   const resetSidebarPrefs = useSidebarPrefsStore((s) => s.resetSidebarPrefs)
+  const [pickerKey, setPickerKey] = useState<string | null>(null)
+  const [pickerLabel, setPickerLabel] = useState("")
+
+  const DEPARTMENT_ICON_SLOTS = [
+    { key: "__department", label: "Department", fallback: DefaultDepartmentIcon },
+    { key: "__allDepartments", label: "All Departments", fallback: DefaultAllDepartmentsIcon },
+  ]
 
   return (
     <div className="rounded-lg border bg-card p-4">
@@ -189,20 +207,30 @@ function SidebarCustomizationSection() {
               <div className="grid gap-0.5">
                 {items.map((item) => {
                   const hidden = hiddenItems.includes(item.to)
+                  const ResolvedIcon = resolveIcon(item.to, item.icon, iconOverrides)
                   return (
-                    <label
-                      key={item.to}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!hidden}
-                        onChange={() => toggleItem(item.to)}
-                        className="size-3.5 accent-primary"
-                      />
-                      <item.icon className="size-3.5 shrink-0 text-muted-foreground" />
-                      <span className={cn("truncate", hidden && "text-muted-foreground line-through")}>{item.label}</span>
-                    </label>
+                    <div key={item.to} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+                      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={!hidden}
+                          onChange={() => toggleItem(item.to)}
+                          className="size-3.5 accent-primary"
+                        />
+                        <ResolvedIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className={cn("truncate", hidden && "text-muted-foreground line-through")}>{item.label}</span>
+                      </label>
+                      <button
+                        type="button"
+                        className="shrink-0 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                        onClick={() => {
+                          setPickerKey(item.to)
+                          setPickerLabel(item.label)
+                        }}
+                      >
+                        Change
+                      </button>
+                    </div>
                   )
                 })}
               </div>
@@ -210,6 +238,45 @@ function SidebarCustomizationSection() {
           ))}
         </div>
       </div>
+
+      <div className="mt-5 border-t pt-4">
+        <h4 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Department Icons</h4>
+        <div className="grid gap-0.5 sm:grid-cols-2">
+          {DEPARTMENT_ICON_SLOTS.map((slot) => {
+            const ResolvedIcon = resolveIcon(slot.key, slot.fallback, iconOverrides)
+            return (
+              <div key={slot.key} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <ResolvedIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{slot.label}</span>
+                </div>
+                <button
+                  type="button"
+                  className="shrink-0 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  onClick={() => {
+                    setPickerKey(slot.key)
+                    setPickerLabel(slot.label)
+                  }}
+                >
+                  Change
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {pickerKey && (
+        <Suspense fallback={null}>
+          <IconPickerDialog
+            open={!!pickerKey}
+            onOpenChange={(open) => !open && setPickerKey(null)}
+            label={pickerLabel}
+            value={iconOverrides[pickerKey] ?? null}
+            onPick={(ref) => setIconOverride(pickerKey, ref)}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

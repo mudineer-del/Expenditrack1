@@ -1,4 +1,4 @@
-import { Drill, Eye, History, Pencil, Plus, Search, Trash2, Upload } from "lucide-react"
+import { Copy, Drill, Eye, History, Pencil, Plus, Search, Trash2, Upload } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CopyWellCostDialog } from "@/components/wells/CopyWellCostDialog"
 import { CostSummaryCards, UtilizationBar } from "@/components/wells/CostSummary"
 import { DmrImportDialog } from "@/components/wells/DmrImportDialog"
 import { NameDialog } from "@/components/wells/NameDialog"
@@ -33,7 +34,7 @@ import {
   useWellCostServiceCategoriesQuery,
   useWellDepartmentsQuery,
 } from "@/hooks/useWellCostCatalog"
-import { useDeleteWellCostCentre, useUpsertWellCostCentre, useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
+import { useCopyWellCostStructure, useDeleteWellCostCentre, useUpsertWellCostCentre, useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
 import { useBulkUpsertWellCostTransactions, useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
 import { useUpsertWell, useWellsQuery } from "@/hooks/useWells"
 import type { Well } from "@/types/well"
@@ -69,6 +70,7 @@ export default function WellCostStructurePage() {
   const addDepartment = useAddWellCostDepartment()
   const addServiceCategory = useAddServiceCategory()
   const bulkImportTransactions = useBulkUpsertWellCostTransactions()
+  const copyWellCostStructure = useCopyWellCostStructure()
 
   const [selectedWellId, setSelectedWellId] = useState<string | null>(
     () => (location.state as { wellId?: string } | null)?.wellId ?? null
@@ -81,6 +83,7 @@ export default function WellCostStructurePage() {
   const [centreDrawer, setCentreDrawer] = useState<CostCentreDrawerState>(BLANK_DRAWER_STATE)
   const [deleteTarget, setDeleteTarget] = useState<WellCostCentre | null>(null)
   const [importServiceCategoryId, setImportServiceCategoryId] = useState<string | null>(null)
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false)
 
   const wells = wellsQuery.data ?? []
   const costCentres = costCentresQuery.data ?? []
@@ -111,6 +114,17 @@ export default function WellCostStructurePage() {
     [costCentres, selectedWell]
   )
   const wellRollup = useMemo(() => rollup(wellCostCentres, costCentreTotals), [wellCostCentres, costCentreTotals])
+
+  const copyCandidates = useMemo(() => {
+    if (!selectedWell) return []
+    return wells
+      .filter((w) => w.id !== selectedWell.id)
+      .map((well) => {
+        const items = costCentres.filter((c) => c.wellId === well.id)
+        return { well, costCentreCount: items.length, departmentCount: new Set(items.map((c) => c.departmentId)).size }
+      })
+      .filter((c) => c.costCentreCount > 0)
+  }, [wells, selectedWell, costCentres])
 
   function openAddWell() {
     setWellDrawerOpen(true)
@@ -181,6 +195,20 @@ export default function WellCostStructurePage() {
       onError: (e) => toast.error(errorMessage(e, "Could not delete cost / fund centre.")),
     })
     setDeleteTarget(null)
+  }
+
+  function handleCopyWellCost(sourceWellId: string) {
+    if (!selectedWell) return
+    copyWellCostStructure.mutate(
+      { sourceWellId, targetWellId: selectedWell.id },
+      {
+        onSuccess: ({ count }) => {
+          toast.success(`Copied ${count} cost / fund centre${count === 1 ? "" : "s"} into ${selectedWell.name}.`)
+          setCopyDialogOpen(false)
+        },
+        onError: (e) => toast.error(errorMessage(e, "Could not copy cost structure.")),
+      }
+    )
   }
 
   function handleImportTransactions(rows: WellCostTransaction[]) {
@@ -266,7 +294,24 @@ export default function WellCostStructurePage() {
       ) : selectedWell ? (
         <>
           <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none">
-            <div className="mb-3 text-sm font-semibold">Well Cost Summary</div>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-semibold">Well Cost Summary</span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!canAdd || !copyCandidates.length}
+                title={
+                  !canAdd
+                    ? "Only Admins can copy a cost structure"
+                    : copyCandidates.length
+                      ? "Copy Cost / Fund Centres from another well"
+                      : "No other wells have a cost structure to copy yet"
+                }
+                onClick={() => setCopyDialogOpen(true)}
+              >
+                <Copy /> Copy from Well
+              </Button>
+            </div>
             <CostSummaryCards rollup={wellRollup} />
             <div className="mt-3">
               <UtilizationBar pct={wellRollup.utilizationPct} />
@@ -348,6 +393,7 @@ export default function WellCostStructurePage() {
                                 onOpenChange={(v) => !v && setImportServiceCategoryId(null)}
                                 costCentres={allItems}
                                 wellName={selectedWell?.name || ""}
+                                wellCode={selectedWell?.code || ""}
                                 existingEntries={transactions.filter((t) => allItems.some((c) => c.id === t.costCentreId))}
                                 createdByName={user?.name || ""}
                                 onImport={handleImportTransactions}
@@ -476,6 +522,15 @@ export default function WellCostStructurePage() {
         submitting={addServiceCategory.isPending}
         onOpenChange={setServiceDialogOpen}
         onSubmit={handleAddServiceCategory}
+      />
+
+      <CopyWellCostDialog
+        open={copyDialogOpen}
+        onOpenChange={setCopyDialogOpen}
+        targetWell={selectedWell}
+        candidates={copyCandidates}
+        submitting={copyWellCostStructure.isPending}
+        onConfirm={handleCopyWellCost}
       />
 
       {centreDrawer.open && selectedWell && (

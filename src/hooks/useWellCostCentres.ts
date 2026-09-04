@@ -47,6 +47,45 @@ export function useUpsertWellCostCentre() {
   })
 }
 
+/** Clones every Cost/Fund Centre row from one well onto another — the "Copy from
+ *  existing well" action on the Structure page's Well Cost Summary card, for starting a
+ *  new well's cost structure from a similar one instead of re-typing every centre by
+ *  hand. Departments themselves don't need copying: every well already gets a
+ *  well_departments row for every global department at creation time (see
+ *  provisionWellDepartments in useWells.ts) — only the per-well centre definitions
+ *  (code, budget, vendor, ...) are actually well-specific. Transaction history is
+ *  deliberately left behind; only the structure/budget template comes across. */
+export function useCopyWellCostStructure() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+  return useMutation({
+    mutationFn: async ({ sourceWellId, targetWellId }: { sourceWellId: string; targetWellId: string }) => {
+      const supabase = getSupabaseClient()
+      const current = (queryClient.getQueryData(WELL_COST_CENTRES_QUERY_KEY) as WellCostCentre[] | undefined) ?? []
+      const sourceItems = current.filter((c) => c.wellId === sourceWellId)
+      if (!sourceItems.length) return { count: 0 }
+
+      const undoId = useActivityStore
+        .getState()
+        .pushUndo(`Copy of ${sourceItems.length} cost centre(s) into well`, { wellCostCentres: current })
+
+      const newItems: WellCostCentre[] = sourceItems.map((c) => ({ ...c, id: crypto.randomUUID(), wellId: targetWellId }))
+      const { error } = await supabase.from("well_cost_centres").insert(newItems.map(toWellCostCentreRow))
+      if (error) throw error
+
+      await logActivity(
+        queryClient,
+        { name: user?.name || "Unknown", role: user?.role || "" },
+        "Add",
+        `Copied ${newItems.length} cost / fund centre(s) from another well`,
+        { wellId: targetWellId, undoId }
+      )
+      return { count: newItems.length }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: WELL_COST_CENTRES_QUERY_KEY }),
+  })
+}
+
 export function useDeleteWellCostCentre() {
   const queryClient = useQueryClient()
   const { user } = useAuth()

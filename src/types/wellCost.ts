@@ -126,6 +126,12 @@ export interface WellCostTransaction {
   kind: WellCostTransactionKind
   amount: number | ""
   notes: string
+  /** The drilling/operations narrative behind that day's cost (e.g. "stuck pipe — spotted
+   *  lube pill") — auto-filled on import from the source report's own remarks (see
+   *  dmrImport.ts's extractRemarks()), editable by hand otherwise. Kept separate from
+   *  `notes` (which carries entry-provenance/manual notes) since it's operational context,
+   *  not a note about the entry itself. */
+  remarks: string
   createdByName: string
 }
 
@@ -139,6 +145,7 @@ export function toWellCostTransactionRow(t: WellCostTransaction): WellCostTransa
     kind: t.kind,
     amount: t.amount === "" ? 0 : Number(t.amount) || 0,
     notes: t.notes || null,
+    remarks: t.remarks || null,
     created_by_name: t.createdByName || null,
   }
 }
@@ -151,6 +158,7 @@ export function fromWellCostTransactionRow(row: WellCostTransactionRow): WellCos
     kind: (row.kind as WellCostTransactionKind) || "actual",
     amount: row.amount === null || row.amount === undefined ? "" : Number(row.amount),
     notes: (row.notes as string) || "",
+    remarks: (row.remarks as string) || "",
     createdByName: (row.created_by_name as string) || "",
   }
 }
@@ -163,6 +171,7 @@ export function blankWellCostTransaction(costCentreId: string, kind: WellCostTra
     kind,
     amount: "",
     notes: "",
+    remarks: "",
     createdByName,
   }
 }

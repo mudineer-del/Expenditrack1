@@ -23,6 +23,7 @@ const schema = z.object({
   kind: z.enum(["actual", "commitment"]),
   amount: z.coerce.number().min(0),
   notes: z.string().optional(),
+  remarks: z.string().optional(),
 })
 
 type FormInput = z.input<typeof schema>
@@ -34,6 +35,7 @@ function toValues(t: WellCostTransaction): FormInput {
     kind: t.kind,
     amount: t.amount === "" ? undefined : Number(t.amount),
     notes: t.notes,
+    remarks: t.remarks,
   }
 }
 
@@ -78,6 +80,7 @@ export function WellCostTransactionDrawer({
       kind: values.kind,
       amount: values.amount,
       notes: values.notes || "",
+      remarks: values.remarks || "",
       createdByName: entry?.createdByName || createdByName,
     }
     onSubmit(record)
@@ -155,6 +158,18 @@ export function WellCostTransactionDrawer({
                   <FormLabel>Notes (optional)</FormLabel>
                   <FormControl>
                     <Textarea {...field} rows={2} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="remarks"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Drilling Remarks (optional)</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={4} placeholder="What was happening on site this day — auto-filled on import when the source report carries it." />
                   </FormControl>
                 </FormItem>
               )}

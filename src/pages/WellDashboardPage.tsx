@@ -1,11 +1,13 @@
-import { TrendingUp, Wallet, Wallet2 } from "lucide-react"
-import { useMemo } from "react"
+import { Scale, TrendingUp, Wallet, Wallet2 } from "lucide-react"
+import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import wellCostIllustration from "@/assets/well-cost-illustration.webp"
 import wellIconPumpjack from "@/assets/well-icon-pumpjack.webp"
 import { KpiTile } from "@/components/dashboard/KpiTile"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { WellCostCompareDialog } from "@/components/wells/WellCostCompareDialog"
 import { cn, errorMessage } from "@/lib/utils"
 import { utilizationColor } from "@/lib/contracts"
 import { buildCostCentreTotals, fmtCurrency, rollup, wellStatusTone, WELL_STATUS_TONE_CLASSES } from "@/lib/wellCost"
@@ -19,6 +21,7 @@ import type { Well } from "@/types/well"
  *  lib/wellCost.ts, the same helper each department tab on the Structure page uses. */
 export default function WellDashboardPage() {
   const navigate = useNavigate()
+  const [compareOpen, setCompareOpen] = useState(false)
   const wellsQuery = useWellsQuery()
   const costCentresQuery = useWellCostCentresQuery()
   const transactionsQuery = useWellCostTransactionsQuery()
@@ -84,8 +87,11 @@ export default function WellDashboardPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm md:rounded-lg md:shadow-none">
-        <div className="border-b p-4">
+        <div className="flex items-center justify-between gap-2 border-b p-4">
           <h3 className="text-base font-bold md:text-sm md:font-semibold">Wells</h3>
+          <Button size="sm" variant="outline" disabled={!rows.length} onClick={() => setCompareOpen(true)}>
+            <Scale /> Compare Cost
+          </Button>
         </div>
         {rows.length ? (
           <Table>
@@ -142,6 +148,8 @@ export default function WellDashboardPage() {
           </div>
         )}
       </div>
+
+      <WellCostCompareDialog open={compareOpen} onOpenChange={setCompareOpen} rows={rows} />
     </div>
   )
 }
