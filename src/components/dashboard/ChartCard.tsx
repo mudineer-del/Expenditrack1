@@ -46,7 +46,15 @@ export function ChartCard({
         // hover/tap popup — depth is conveyed with shadow alone instead, which never
         // moves anything. Only :active gets a (tiny, safe) scale, and only after the
         // click has already been resolved against the pre-press geometry.
-        "dashboard-chart-card group relative overflow-hidden rounded-[1.35rem] border bg-card shadow-[0_12px_35px_-24px_rgba(15,23,42,0.48)] transition-[box-shadow,border-color] duration-300 ease-out",
+        //
+        // min-w-0 matters as much as overflow-hidden here: a grid/flex item's default
+        // min-width is `auto` (its content's own min-content size), so without this a
+        // donut chart's outer labels (raw SVG coordinates with no clamp against the
+        // available width — see donut3d.tsx's DonutOuterLabel) can force this card, and
+        // the whole row/dialog around it, wider than its own column instead of just
+        // getting clipped — the actual bug behind charts visibly bleeding past a dialog's
+        // edge in InvoiceDetailSheet/VendorDetailSheet/ContractDetailSheet.
+        "dashboard-chart-card group relative min-w-0 overflow-hidden rounded-[1.35rem] border bg-card shadow-[0_12px_35px_-24px_rgba(15,23,42,0.48)] transition-[box-shadow,border-color] duration-300 ease-out",
         "hover:shadow-[0_20px_45px_-26px_var(--accent-glow)]",
         "transition-transform active:scale-[0.99] active:duration-100 active:ease-in md:active:scale-[0.995]"
       )}

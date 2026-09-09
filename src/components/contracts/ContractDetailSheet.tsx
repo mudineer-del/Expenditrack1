@@ -106,7 +106,7 @@ export function ContractDetailSheet({
     <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="max-h-[88vh] w-full overflow-y-auto sm:max-w-2xl"
+        className="max-h-[88vh] w-full overflow-x-hidden overflow-y-auto sm:max-w-2xl"
         maximizable
         maximized={maximized}
         onMaximizedChange={setMaximized}

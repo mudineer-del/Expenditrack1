@@ -119,7 +119,7 @@ export function InvoiceDetailSheet({
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="max-h-[88vh] w-full overflow-y-auto sm:max-w-3xl"
+          className="max-h-[88vh] w-full overflow-x-hidden overflow-y-auto sm:max-w-3xl"
           maximizable
           maximized={maximized}
           onMaximizedChange={setMaximized}
