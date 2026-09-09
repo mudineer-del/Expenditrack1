@@ -30,6 +30,7 @@ import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
 import { ContractorInvoicesChart } from "@/components/dashboard/ContractorInvoicesChart"
 import { InvoiceListDialog } from "@/components/dashboard/InvoiceListDialog"
 import { KpiTile } from "@/components/dashboard/KpiTile"
+import { SaveLayoutButton } from "@/components/dashboard/SaveLayoutButton"
 import { ServiceChart } from "@/components/dashboard/ServiceChart"
 import { Sparkline } from "@/components/dashboard/Sparkline"
 import { SpendingTicker } from "@/components/dashboard/SpendingTicker"
@@ -605,7 +606,10 @@ export default function DashboardPage() {
             <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
             Expenditure Analysis
           </h3>
-          <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
+            <SaveLayoutButton />
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
           {!chartSlots.dashTrend.hidden && (

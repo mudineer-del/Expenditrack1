@@ -49,6 +49,13 @@ export interface DmrImportRow {
    *  one (WBM sheet only — see extractRemarks()) — same text attached to all of that day's
    *  contractor rows, since it describes the day/activity, not one contractor's billing. */
   remarks: string
+  /** This report's own Cumulative Cost figure for this contractor, when the source format
+   *  carries one (WBM sheet only) — kept alongside the daily amount (not just for gap rows)
+   *  so a run of missing report files can be bracketed by two real cumulative readings and
+   *  reconciled with one lump-sum delta — see computeReconciliations(). Never used to
+   *  reconstruct a single day's own figure (that's the unreliable use of this column the
+   *  DmrGap warning exists to avoid). */
+  cumulative: number | null
 }
 
 export interface DmrImportError {
@@ -69,6 +76,37 @@ export interface DmrGap {
   contractor: DmrContractor
   /** Whatever the Cumulative cell showed that day, for context — not used as the amount. */
   cumulativeOnFile: string
+}
+
+/** A run of missing report files (the source folder simply has no file for those dates)
+ *  bracketed by two reports that DO exist — proposes ONE lump-sum entry, dated the last
+ *  day of the gap, equal to (next report's Cumulative) − (last known report's Cumulative)
+ *  − (next report's own daily amount, already counted separately so it isn't double-
+ *  posted). Always a suggestion the import dialog shows unchecked for explicit review,
+ *  never auto-applied — bracketing two real Cumulative readings is safer than trusting a
+ *  single one (the thing DmrGap explicitly avoids), but not risk-free if either endpoint
+ *  reading is itself off, so a human still confirms it before anything is posted. */
+export interface DmrReconciliation {
+  contractor: DmrContractor
+  gapStartDate: string
+  /** Also the date this entry would be posted under, per the user's own choice: reads as
+   *  "catching up the shortfall" right before the next real report resumes. */
+  gapEndDate: string
+  lastKnownDate: string
+  lastKnownCumulative: number
+  nextKnownDate: string
+  nextKnownCumulative: number
+  nextKnownDaily: number
+  amount: number
+  missingDays: number
+  /** False when this amount, spread across missingDays, implies a per-day rate wildly
+   *  above anything this contractor's own real daily figures in this batch ever showed —
+   *  caught for real on Sujawal South X-1's Second Contractor: one report's Cumulative
+   *  briefly spiked from ~$80K to ~$611K then back down to ~$90K three reports later (an
+   *  impossible shape for a genuine running total, clearly a typo in that one file), which
+   *  a plain "is the delta positive" check doesn't catch — only a negative delta does. The
+   *  UI should never let an implausible suggestion be pre-checked. */
+  plausible: boolean
 }
 
 function findLabelValue(rows: unknown[][], labelRegex: RegExp): string | null {
@@ -123,6 +161,7 @@ interface ExtractedRow {
   contractor: DmrContractor
   sourceLabel: string
   amount: number
+  cumulative: number | null
 }
 interface ExtractedGap {
   contractor: DmrContractor
@@ -159,6 +198,7 @@ function extractThreeWayCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: E
   if (!mudDailyCell && mudCumCell) gaps.push({ contractor: "MUD_CONTRACTOR", cumulativeOnFile: mudCumCell })
   const mudAmount = mudDailyCell ? parseAmount(mudDailyCell) : 0
   if (mudAmount === null) return { error: "Could not read the mud contractor's daily cost figure." }
+  const mudCumulative = mudCumCell ? parseAmount(mudCumCell) : null
   // The cell immediately to the left of the amount (not just "first non-empty cell in
   // the row") — that row also carries the on-duty engineer's name/phone further left,
   // which isn't the contractor label.
@@ -180,7 +220,9 @@ function extractThreeWayCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: E
   // character in an otherwise-empty row (seen in real samples) would otherwise read as a
   // spurious $0 "contractor" row and silently overwrite the real match found earlier.
   let ogdclAmount: number | null = null
+  let ogdclCumulative: number | null = null
   let secondAmount: number | null = null
+  let secondCumulative: number | null = null
   let secondLabel = ""
   for (let r = headerRow + 2; r < Math.min(rows.length, headerRow + 12); r++) {
     const row = rows[r]
@@ -201,16 +243,20 @@ function extractThreeWayCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: E
     }
     const amt = parseAmount(amountCell)
     if (amt === null) continue
-    if (contractor === "OGDCL") ogdclAmount = amt
-    else {
+    const cum = cumCell ? parseAmount(cumCell) : null
+    if (contractor === "OGDCL") {
+      ogdclAmount = amt
+      ogdclCumulative = cum
+    } else {
       secondAmount = amt
+      secondCumulative = cum
       secondLabel = rawLabel
     }
   }
 
-  const result: ExtractedRow[] = [{ contractor: "MUD_CONTRACTOR", sourceLabel: mudLabel, amount: mudAmount }]
-  if (ogdclAmount !== null) result.push({ contractor: "OGDCL", sourceLabel: "OGDCL", amount: ogdclAmount })
-  if (secondAmount !== null) result.push({ contractor: "SECOND_CONTRACTOR", sourceLabel: secondLabel, amount: secondAmount })
+  const result: ExtractedRow[] = [{ contractor: "MUD_CONTRACTOR", sourceLabel: mudLabel, amount: mudAmount, cumulative: mudCumulative }]
+  if (ogdclAmount !== null) result.push({ contractor: "OGDCL", sourceLabel: "OGDCL", amount: ogdclAmount, cumulative: ogdclCumulative })
+  if (secondAmount !== null) result.push({ contractor: "SECOND_CONTRACTOR", sourceLabel: secondLabel, amount: secondAmount, cumulative: secondCumulative })
   return { rows: result, gaps }
 }
 
@@ -348,6 +394,7 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
           amount: r.amount,
           wellName,
           remarks,
+          cumulative: r.cumulative,
         })),
         gaps: extracted.gaps.map((g) => ({
           fileName: file.name,
@@ -390,7 +437,16 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
       const outRows: DmrImportRow[] = []
       for (const d of extracted.days) {
         if (d.ogdcl !== null) {
-          outRows.push({ fileName: file.name, entryDate: d.entryDate, contractor: "OGDCL", sourceLabel: "OGDCL", amount: d.ogdcl, wellName: extracted.wellLabel, remarks: "" })
+          outRows.push({
+            fileName: file.name,
+            entryDate: d.entryDate,
+            contractor: "OGDCL",
+            sourceLabel: "OGDCL",
+            amount: d.ogdcl,
+            wellName: extracted.wellLabel,
+            remarks: "",
+            cumulative: null,
+          })
         }
         if (d.contractor !== null) {
           outRows.push({
@@ -401,6 +457,7 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
             amount: d.contractor,
             wellName: extracted.wellLabel,
             remarks: "",
+            cumulative: null,
           })
         }
       }
@@ -413,7 +470,98 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
   }
 }
 
-export async function parseDmrFiles(files: File[]): Promise<{ rows: DmrImportRow[]; gaps: DmrGap[]; errors: DmrImportError[] }> {
+function addDays(dateStr: string, delta: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + delta)
+  return d.toISOString().slice(0, 10)
+}
+
+function daysBetween(a: string, b: string): number {
+  return Math.round((new Date(`${b}T00:00:00Z`).getTime() - new Date(`${a}T00:00:00Z`).getTime()) / 86400000)
+}
+
+/** A reconciliation whose per-missing-day rate exceeds this multiple of the contractor's
+ *  own highest real single-day figure in the batch gets flagged implausible rather than
+ *  offered as a clean suggestion — see DmrReconciliation.plausible. */
+const PLAUSIBILITY_MULTIPLIER = 5
+
+/** Finds runs of missing report files per contractor (a gap of more than 1 calendar day
+ *  between two dates this batch actually has data for) and proposes a lump-sum
+ *  reconciliation for each — see DmrReconciliation's own doc comment for the math and why
+ *  it's a suggestion, never auto-applied. Only proposed when both bracketing dates have a
+ *  parsed Cumulative figure and the computed amount comes out positive — a non-positive
+ *  result means the Cumulative column itself is inconsistent across that gap (the same
+ *  unreliability DmrGap exists to avoid), so no suggestion is better than a wrong one. A
+ *  positive amount can still be implausible (see PLAUSIBILITY_MULTIPLIER) — flagged, not
+ *  dropped, so the human reviewing it can see it was considered and rejected on purpose. */
+function computeReconciliations(rows: DmrImportRow[]): DmrReconciliation[] {
+  const byContractor = new Map<DmrContractor, DmrImportRow[]>()
+  for (const r of rows) {
+    if (r.cumulative === null) continue
+    const list = byContractor.get(r.contractor) ?? []
+    list.push(r)
+    byContractor.set(r.contractor, list)
+  }
+
+  const results: DmrReconciliation[] = []
+  for (const [contractor, list] of byContractor) {
+    // One entry per date (last file wins if a date appears more than once in this batch —
+    // mirrors the dialog's own "first non-duplicate in sorted order" convention closely
+    // enough for this purpose, since reconciliation only ever looks at whichever cumulative
+    // figure a given date resolves to, not which file it came from).
+    const byDate = new Map<string, DmrImportRow>()
+    for (const r of list) byDate.set(r.entryDate, r)
+    const sorted = Array.from(byDate.values()).sort((a, b) => a.entryDate.localeCompare(b.entryDate))
+
+    // A reading that's followed by a LOWER cumulative is the untrustworthy one, not the
+    // one after it (which is what returns the series to its real trend) — caught for real
+    // on Sujawal's Second Contractor, where one report's cumulative spiked from ~$80K to
+    // ~$611K then back down to ~$90K three reports later; the $611K reading fails this
+    // check and gets excluded from being used as a bracket endpoint at all, rather than
+    // letting a magnitude check alone try to catch whatever delta it produces (a spike
+    // just large enough to clear that threshold would otherwise slip through).
+    const untrustworthy = new Set<string>()
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if ((sorted[i].cumulative as number) > (sorted[i + 1].cumulative as number)) untrustworthy.add(sorted[i].entryDate)
+    }
+
+    const maxObservedDaily = Math.max(0, ...sorted.map((r) => r.amount))
+
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1]
+      const next = sorted[i]
+      if (untrustworthy.has(prev.entryDate) || untrustworthy.has(next.entryDate)) continue
+      const gapDays = daysBetween(prev.entryDate, next.entryDate)
+      if (gapDays <= 1) continue // consecutive calendar days — no missing file between them
+
+      const amount = (next.cumulative as number) - (prev.cumulative as number) - next.amount
+      if (!(amount > 0)) continue // inconsistent Cumulative across this gap — don't guess
+
+      const missingDays = gapDays - 1
+      const impliedDailyRate = amount / missingDays
+      const plausible = maxObservedDaily === 0 || impliedDailyRate <= maxObservedDaily * PLAUSIBILITY_MULTIPLIER
+
+      results.push({
+        contractor,
+        gapStartDate: addDays(prev.entryDate, 1),
+        gapEndDate: addDays(next.entryDate, -1),
+        lastKnownDate: prev.entryDate,
+        lastKnownCumulative: prev.cumulative as number,
+        nextKnownDate: next.entryDate,
+        nextKnownCumulative: next.cumulative as number,
+        nextKnownDaily: next.amount,
+        amount,
+        missingDays,
+        plausible,
+      })
+    }
+  }
+  return results
+}
+
+export async function parseDmrFiles(
+  files: File[]
+): Promise<{ rows: DmrImportRow[]; gaps: DmrGap[]; errors: DmrImportError[]; reconciliations: DmrReconciliation[] }> {
   const results = await Promise.all(files.map(parseOneFile))
   const rows: DmrImportRow[] = []
   const gaps: DmrGap[] = []
@@ -425,5 +573,5 @@ export async function parseDmrFiles(files: File[]): Promise<{ rows: DmrImportRow
       gaps.push(...r.gaps)
     }
   }
-  return { rows, gaps, errors }
+  return { rows, gaps, errors, reconciliations: computeReconciliations(rows) }
 }

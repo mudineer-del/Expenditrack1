@@ -7,6 +7,7 @@ import { HIDEABLE_NAV_ITEMS } from "@/components/shell/AppSidebar"
 import { errorMessage } from "@/lib/utils"
 import { useReferenceLists } from "@/lib/referenceLists"
 import { useApproveProfile, useUpdateProfileAreas, useUpdateProfileDepartments } from "@/hooks/useProfiles"
+import { useSendEmail } from "@/hooks/useSendEmail"
 import type { AppUser, Role } from "@/types/user"
 
 const ROLES: Role[] = ["Admin", "Editor", "Viewer"]
@@ -35,6 +36,7 @@ export function AccessGrantPanel({
   const approve = useApproveProfile()
   const updateDepartments = useUpdateProfileDepartments()
   const updateAreas = useUpdateProfileAreas()
+  const sendEmail = useSendEmail()
   const [role, setRole] = useState<Role>(profile.role)
   const [departments, setDepartments] = useState<string[]>(profile.departments)
   const [areas, setAreas] = useState<string[]>(profile.areas)
@@ -56,6 +58,17 @@ export function AccessGrantPanel({
           onSuccess: () => {
             toast.success(`${profile.name} approved.`)
             onDone()
+            // Best-effort — approval itself already succeeded, so a mail failure
+            // (e.g. AWS SES not configured yet) surfaces as its own toast rather
+            // than blocking or rolling back the approval.
+            sendEmail.mutate(
+              {
+                to: profile.email,
+                subject: "Your account has been approved",
+                html: `<p>Hi ${profile.name},</p><p>Your account has been approved as <b>${role}</b>. You can now sign in.</p>`,
+              },
+              { onError: (e) => toast.error(errorMessage(e, `${profile.name} was approved, but the notification email could not be sent.`)) }
+            )
           },
           onError: (e) => toast.error(errorMessage(e, "Could not approve account.")),
         }

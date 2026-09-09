@@ -1,7 +1,10 @@
+import { Megaphone } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
+import { BroadcastAllDialog } from "@/components/messages/BroadcastAllDialog"
 import { ConversationSidebar, type DmSummary, type Selection } from "@/components/messages/ConversationSidebar"
 import { MessageThread } from "@/components/messages/MessageThread"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { errorMessage } from "@/lib/utils"
 import { useReferenceLists } from "@/lib/referenceLists"
@@ -39,6 +42,7 @@ export default function MessageCentrePage() {
   const meId = user?.id || ""
 
   const [selection, setSelection] = useState<Selection>({ type: "channel" })
+  const [broadcastOpen, setBroadcastOpen] = useState(false)
 
   const channelMessages = useMemo(
     () => messages.filter((m) => m.recipientId === null && (activeDept === ALL_DEPARTMENTS || m.department === activeDept)),
@@ -83,6 +87,19 @@ export default function MessageCentrePage() {
     })
   }
 
+  function handleBroadcast(body: string) {
+    sendMessage.mutate(
+      { body, recipientId: null, department: null },
+      {
+        onSuccess: () => {
+          toast.success("Sent to all departments.")
+          setBroadcastOpen(false)
+        },
+        onError: (e) => toast.error(errorMessage(e, "Could not send broadcast.")),
+      }
+    )
+  }
+
   function handleDelete(m: Message) {
     deleteMessage.mutate(m.id, {
       onError: (e) => toast.error(errorMessage(e, "Could not delete message.")),
@@ -114,43 +131,53 @@ export default function MessageCentrePage() {
   const otherPerson = selection.type === "dm" ? directory.find((u) => u.id === selection.userId) : undefined
 
   return (
-    <div className="flex h-[calc(100vh-5.5rem)] min-h-[28rem] overflow-hidden rounded-lg border bg-card">
-      <ConversationSidebar
-        activeDept={activeDept}
-        selection={selection}
-        onSelect={setSelection}
-        dmSummaries={dmSummaries}
-        directory={directory}
-        meId={meId}
-      />
-      {selection.type === "channel" ? (
-        <MessageThread
-          title={activeDept === ALL_DEPARTMENTS ? "All departments" : `${activeDept} channel`}
-          subtitle={
-            activeDept === ALL_DEPARTMENTS
-              ? "Every department's channel, merged — pick one department to post"
-              : "Visible to everyone on the team"
-          }
-          messages={channelMessages}
+    <div className="grid grid-cols-1 gap-3">
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" onClick={() => setBroadcastOpen(true)}>
+          <Megaphone /> Message All Departments
+        </Button>
+      </div>
+
+      <div className="flex h-[calc(100vh-8.5rem)] min-h-[26rem] overflow-hidden rounded-lg border bg-card">
+        <ConversationSidebar
+          activeDept={activeDept}
+          selection={selection}
+          onSelect={setSelection}
+          dmSummaries={dmSummaries}
+          directory={directory}
           meId={meId}
-          canModerate={canModerate}
-          onSend={handleSend}
-          onDelete={handleDelete}
-          composerDisabled={activeDept === ALL_DEPARTMENTS}
-          composerDisabledHint="Switch to a specific department (sidebar) to post in its channel."
         />
-      ) : (
-        <MessageThread
-          title={otherPerson?.name || "Unknown user"}
-          subtitle={otherPerson?.role ? `${otherPerson.role}${otherPerson.dept ? ` · ${otherPerson.dept}` : ""}` : undefined}
-          messages={dmThreadMessages}
-          meId={meId}
-          canModerate={canModerate}
-          onSend={handleSend}
-          onDelete={handleDelete}
-          composerDisabled={false}
-        />
-      )}
+        {selection.type === "channel" ? (
+          <MessageThread
+            title={activeDept === ALL_DEPARTMENTS ? "All departments" : `${activeDept} channel`}
+            subtitle={
+              activeDept === ALL_DEPARTMENTS
+                ? "Every department's channel, merged — pick one department to post, or use Message All Departments above to post once to everyone"
+                : "Visible to everyone on the team"
+            }
+            messages={channelMessages}
+            meId={meId}
+            canModerate={canModerate}
+            onSend={handleSend}
+            onDelete={handleDelete}
+            composerDisabled={activeDept === ALL_DEPARTMENTS}
+            composerDisabledHint='Switch to a specific department (sidebar) to post in its channel, or use "Message All Departments" above to post once to everyone.'
+          />
+        ) : (
+          <MessageThread
+            title={otherPerson?.name || "Unknown user"}
+            subtitle={otherPerson?.role ? `${otherPerson.role}${otherPerson.dept ? ` · ${otherPerson.dept}` : ""}` : undefined}
+            messages={dmThreadMessages}
+            meId={meId}
+            canModerate={canModerate}
+            onSend={handleSend}
+            onDelete={handleDelete}
+            composerDisabled={false}
+          />
+        )}
+      </div>
+
+      <BroadcastAllDialog open={broadcastOpen} onOpenChange={setBroadcastOpen} submitting={sendMessage.isPending} onSend={handleBroadcast} />
     </div>
   )
 }

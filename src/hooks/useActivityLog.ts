@@ -87,3 +87,20 @@ export function useClearActivityLog() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ACTIVITY_LOG_QUERY_KEY }),
   })
 }
+
+/** Admin-only (same "activity_log_delete" RLS policy as useClearActivityLog) — removes one
+ *  entry from the shared audit trail, from its own detail view. Independent of undo: this
+ *  only deletes the log ROW (the audit record of what happened), not the underlying data
+ *  change itself — that's still reverted via "Undo this change" while it's still on the
+ *  undo stack, whether or not its log entry has been deleted. */
+export function useDeleteActivityLogEntry() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase.from("activity_log").delete().eq("id", id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ACTIVITY_LOG_QUERY_KEY }),
+  })
+}

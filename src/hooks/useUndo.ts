@@ -5,6 +5,7 @@ import { toRow, type Invoice } from "@/types/invoice"
 import { toContractRow, type Contract } from "@/types/contract"
 import { toWellRow, type Well } from "@/types/well"
 import { toWellCostCentreRow, toWellCostTransactionRow, type WellCostCentre, type WellCostTransaction } from "@/types/wellCost"
+import { toWellMilestoneRow, type WellMilestone } from "@/types/wellMilestone"
 import { useActivityStore, type Snapshot, type UndoEntry } from "@/store/useActivityStore"
 import { logActivity, useActivityLogQuery } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
@@ -13,6 +14,7 @@ import { CONTRACTS_QUERY_KEY } from "@/hooks/useContracts"
 import { WELLS_QUERY_KEY } from "@/hooks/useWells"
 import { WELL_COST_CENTRES_QUERY_KEY } from "@/hooks/useWellCostCentres"
 import { WELL_COST_TRANSACTIONS_QUERY_KEY } from "@/hooks/useWellCostTransactions"
+import { WELL_MILESTONES_QUERY_KEY } from "@/hooks/useWellMilestones"
 import { REFERENCE_LISTS_QUERY_KEY, type ReferenceLists } from "@/lib/referenceLists"
 
 /**
@@ -107,6 +109,23 @@ export async function reconcileWellCostTransactionsTo(snapshot: WellCostTransact
   }
 }
 
+/** Same idea as reconcileInvoicesTo, for the `well_milestones` table. */
+export async function reconcileWellMilestonesTo(snapshot: WellMilestone[], current: WellMilestone[]) {
+  const supabase = getSupabaseClient()
+  const snapshotIds = new Set(snapshot.map((m) => m.id))
+  const toDelete = current.filter((m) => !snapshotIds.has(m.id)).map((m) => m.id)
+
+  const rows = snapshot.map(toWellMilestoneRow)
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await supabase.from("well_milestones").upsert(rows.slice(i, i + 200), { onConflict: "id" })
+    if (error) throw error
+  }
+  for (let i = 0; i < toDelete.length; i += 100) {
+    const { error } = await supabase.from("well_milestones").delete().in("id", toDelete.slice(i, i + 100))
+    if (error) throw error
+  }
+}
+
 /** `reference_lists` rows are one per list key, never deleted — reverting just overwrites values. */
 export async function reconcileRefListsTo(snapshot: ReferenceLists) {
   const supabase = getSupabaseClient()
@@ -123,7 +142,8 @@ async function reconcileSnapshot(
   currentContracts: Contract[],
   currentWells: Well[],
   currentWellCostCentres: WellCostCentre[],
-  currentWellCostTransactions: WellCostTransaction[]
+  currentWellCostTransactions: WellCostTransaction[],
+  currentWellMilestones: WellMilestone[]
 ) {
   if (snapshot.invoices) {
     await reconcileInvoicesTo(snapshot.invoices, currentInvoices)
@@ -144,6 +164,10 @@ async function reconcileSnapshot(
   if (snapshot.wellCostTransactions) {
     await reconcileWellCostTransactionsTo(snapshot.wellCostTransactions, currentWellCostTransactions)
     await queryClient.invalidateQueries({ queryKey: WELL_COST_TRANSACTIONS_QUERY_KEY })
+  }
+  if (snapshot.wellMilestones) {
+    await reconcileWellMilestonesTo(snapshot.wellMilestones, currentWellMilestones)
+    await queryClient.invalidateQueries({ queryKey: WELL_MILESTONES_QUERY_KEY })
   }
   if (snapshot.refLists) {
     await reconcileRefListsTo(snapshot.refLists)
@@ -171,6 +195,7 @@ export function useUndo() {
     const currentWellCostCentres = (queryClient.getQueryData(WELL_COST_CENTRES_QUERY_KEY) as WellCostCentre[] | undefined) ?? []
     const currentWellCostTransactions =
       (queryClient.getQueryData(WELL_COST_TRANSACTIONS_QUERY_KEY) as WellCostTransaction[] | undefined) ?? []
+    const currentWellMilestones = (queryClient.getQueryData(WELL_MILESTONES_QUERY_KEY) as WellMilestone[] | undefined) ?? []
 
     await reconcileSnapshot(
       target.snapshot,
@@ -179,7 +204,8 @@ export function useUndo() {
       currentContracts,
       currentWells,
       currentWellCostCentres,
-      currentWellCostTransactions
+      currentWellCostTransactions,
+      currentWellMilestones
     )
     useActivityStore.setState({ undoStack: undoStack.slice(0, idx) })
     return { target, discardedCount }

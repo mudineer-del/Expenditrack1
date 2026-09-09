@@ -1,5 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom"
 import { ALWAYS_VISIBLE_PATHS } from "@/components/shell/AppSidebar"
+import { DashboardLayoutHydrator } from "@/components/shell/DashboardLayoutHydrator"
+import { MessageNotifier } from "@/components/shell/MessageNotifier"
 import AccountPendingPage from "@/pages/AccountPendingPage"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -17,7 +19,13 @@ export function RequireAuth() {
   if (status === "pending" || status === "disabled") {
     return <AccountPendingPage status={status} />
   }
-  return <Outlet />
+  return (
+    <>
+      <DashboardLayoutHydrator />
+      <MessageNotifier />
+      <Outlet />
+    </>
+  )
 }
 
 export function RequireAdmin() {

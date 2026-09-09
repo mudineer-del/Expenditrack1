@@ -1,4 +1,4 @@
-import { Camera, KeyRound, Send, ShieldCheck, ShieldOff, SlidersHorizontal, Trash2, UserPlus } from "lucide-react"
+import { Camera, KeyRound, Mail, Send, ShieldCheck, ShieldOff, SlidersHorizontal, Trash2, UserPlus } from "lucide-react"
 import { Fragment, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AccessGrantPanel } from "@/components/users/AccessGrantPanel"
 import { AddAccountDialog } from "@/components/users/AddAccountDialog"
+import { SendEmailDialog } from "@/components/users/SendEmailDialog"
 import { SetPasswordDialog } from "@/components/users/SetPasswordDialog"
 import { AVATAR_ACCEPT, uploadAvatarFile } from "@/lib/avatars"
 import { cn, errorMessage } from "@/lib/utils"
@@ -56,6 +57,7 @@ export default function UsersPage() {
   // a first-time approval (also sets role + status) or editing an already-active
   // account's grants — see AccessGrantPanel.
   const [accessPanel, setAccessPanel] = useState<{ id: string; mode: "approve" | "edit" } | null>(null)
+  const [emailDialog, setEmailDialog] = useState<{ mode: "single"; user: AppUser } | { mode: "compose" } | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
   if (!user) return null
@@ -207,9 +209,14 @@ export default function UsersPage() {
             </p>
           </div>
           {isAdmin && (
-            <Button size="sm" onClick={() => setAddAccountOpen(true)}>
-              <UserPlus /> Add Account
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setEmailDialog({ mode: "compose" })}>
+                <Mail /> Compose Email
+              </Button>
+              <Button size="sm" onClick={() => setAddAccountOpen(true)}>
+                <UserPlus /> Add Account
+              </Button>
+            </div>
           )}
         </div>
 
@@ -317,6 +324,15 @@ export default function UsersPage() {
                               variant="ghost"
                               size="icon"
                               className="size-8"
+                              title={`Send ${p.name} an email`}
+                              onClick={() => setEmailDialog({ mode: "single", user: p })}
+                            >
+                              <Mail />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
                               title={`Email ${p.name} a password reset link`}
                               disabled={sendingResetFor === p.id}
                               onClick={() => handleSendReset(p)}
@@ -394,11 +410,15 @@ export default function UsersPage() {
             (irreversible) require the <code>admin-create-user</code>/<code>admin-delete-user</code> Edge Functions
             — see their README.md files next to <code>supabase/functions/admin-set-password/</code>. Use{" "}
             <SlidersHorizontal className="inline size-3.5" /> to change an approved user's departments/areas,{" "}
-            <Send className="inline size-3.5" /> to email a teammate a password reset link,{" "}
-            <KeyRound className="inline size-3.5" /> to set a password for them directly (requires the{" "}
+            <Mail className="inline size-3.5" /> or <b>Compose Email</b> above to send a teammate (or several) a
+            custom email, approving a pending sign-up also emails them automatically — both require the{" "}
+            <code>send-email</code> Edge Function (AWS SES) — see{" "}
+            <code>supabase/functions/send-email/README.md</code>. <Send className="inline size-3.5" /> emails a
+            teammate a password reset link (Supabase's own auth email, no extra setup needed),{" "}
+            <KeyRound className="inline size-3.5" /> sets a password for them directly (requires the{" "}
             <code>admin-set-password</code> Edge Function — see{" "}
             <code>supabase/functions/admin-set-password/README.md</code>), or{" "}
-            <ShieldOff className="inline size-3.5" /> to disable an account (and re-enable it later with the same
+            <ShieldOff className="inline size-3.5" /> disables an account (and re-enables it later with the same
             button).
           </p>
         )}
@@ -407,6 +427,13 @@ export default function UsersPage() {
       <SetPasswordDialog user={passwordTarget} open={!!passwordTarget} onOpenChange={(v) => !v && setPasswordTarget(null)} />
 
       <AddAccountDialog open={addAccountOpen} onOpenChange={setAddAccountOpen} />
+
+      <SendEmailDialog
+        open={!!emailDialog}
+        onOpenChange={(v) => !v && setEmailDialog(null)}
+        fixedRecipient={emailDialog?.mode === "single" ? emailDialog.user : undefined}
+        allUsers={emailDialog?.mode === "compose" ? profiles : undefined}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent>

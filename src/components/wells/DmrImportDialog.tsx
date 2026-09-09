@@ -2,6 +2,7 @@ import { AlertTriangle, Upload } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,14 @@ import {
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { parseDmrFiles, type DmrContractor, type DmrGap, type DmrImportError, type DmrImportRow } from "@/lib/dmrImport"
+import {
+  parseDmrFiles,
+  type DmrContractor,
+  type DmrGap,
+  type DmrImportError,
+  type DmrImportRow,
+  type DmrReconciliation,
+} from "@/lib/dmrImport"
 import { fmtCurrency } from "@/lib/wellCost"
 import { errorMessage } from "@/lib/utils"
 import type { WellCostCentre, WellCostTransaction } from "@/types/wellCost"
@@ -98,6 +106,8 @@ export function DmrImportDialog({
   const [parsedRows, setParsedRows] = useState<DmrImportRow[]>([])
   const [gaps, setGaps] = useState<DmrGap[]>([])
   const [errors, setErrors] = useState<DmrImportError[]>([])
+  const [reconciliations, setReconciliations] = useState<DmrReconciliation[]>([])
+  const [acceptedReconciliations, setAcceptedReconciliations] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [fileCount, setFileCount] = useState(0)
   const [mapping, setMapping] = useState<Record<DmrContractor, string>>({ OGDCL: "", MUD_CONTRACTOR: "", SECOND_CONTRACTOR: "" })
@@ -152,10 +162,34 @@ export function DmrImportDialog({
 
   const importable = plan.filter((r) => r.status === "new" || r.status === "remarks-update")
 
+  function reconciliationKey(r: DmrReconciliation): string {
+    return `${r.contractor}|${r.gapEndDate}`
+  }
+
+  // Same already-logged check as the main plan, keyed by the lump-sum's own posting date
+  // (gapEndDate) — re-opening this dialog after a reconciliation was already accepted
+  // shouldn't offer to post it a second time.
+  const reconciliationRows = useMemo(
+    () =>
+      reconciliations
+        .filter((r) => mapping[r.contractor])
+        .map((r) => ({
+          ...r,
+          alreadyLogged: existingByKey.has(`${mapping[r.contractor]}|${r.gapEndDate}`),
+        }))
+        .sort((a, b) => a.gapEndDate.localeCompare(b.gapEndDate)),
+    [reconciliations, mapping, existingByKey]
+  )
+  const acceptedReconciliationRows = reconciliationRows.filter(
+    (r) => !r.alreadyLogged && acceptedReconciliations.has(reconciliationKey(r))
+  )
+
   function reset() {
     setParsedRows([])
     setGaps([])
     setErrors([])
+    setReconciliations([])
+    setAcceptedReconciliations(new Set())
     setFileCount(0)
     setMapping({ OGDCL: "", MUD_CONTRACTOR: "", SECOND_CONTRACTOR: "" })
   }
@@ -164,15 +198,25 @@ export function DmrImportDialog({
     setBusy(true)
     setFileCount(files.length)
     try {
-      const { rows, gaps: parsedGaps, errors: parseErrors } = await parseDmrFiles(files)
+      const { rows, gaps: parsedGaps, errors: parseErrors, reconciliations: parsedReconciliations } = await parseDmrFiles(files)
       setParsedRows(rows)
       setGaps(parsedGaps)
       setErrors(parseErrors)
+      setReconciliations(parsedReconciliations)
     } catch (e) {
       setErrors([{ fileName: "", error: errorMessage(e, "Could not read the selected files.") }])
     } finally {
       setBusy(false)
     }
+  }
+
+  function toggleReconciliation(key: string) {
+    setAcceptedReconciliations((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
   }
 
   function handleConfirm() {
@@ -194,6 +238,18 @@ export function DmrImportDialog({
         createdByName,
       }
     })
+    for (const r of acceptedReconciliationRows) {
+      toImport.push({
+        id: crypto.randomUUID(),
+        costCentreId: mapping[r.contractor],
+        entryDate: r.gapEndDate,
+        kind: "actual",
+        amount: r.amount,
+        notes: `Reconciliation for ${r.missingDays} missing report(s), ${r.gapStartDate} to ${r.gapEndDate} — computed as (Cumulative Cost on ${r.nextKnownDate}: ${fmtCurrency(r.nextKnownCumulative, "USD")}) minus (Cumulative Cost on ${r.lastKnownDate}: ${fmtCurrency(r.lastKnownCumulative, "USD")}) minus (${r.nextKnownDate}'s own daily figure: ${fmtCurrency(r.nextKnownDaily, "USD")}), from ${CONTRACTOR_LABELS[r.contractor]}'s reports. Not a per-day figure — the true day-by-day split within this range is unknown.`,
+        remarks: "",
+        createdByName,
+      })
+    }
     onImport(toImport)
     reset()
   }
@@ -293,7 +349,12 @@ export function DmrImportDialog({
             <div className="rounded-lg border bg-muted/40 p-3">
               <p>
                 {fileCount} file{fileCount !== 1 ? "s" : ""} read — {newCount} new entr{newCount !== 1 ? "ies" : "y"}
-                {remarksUpdateCount > 0 && <> and {remarksUpdateCount} remarks-only update{remarksUpdateCount !== 1 ? "s" : ""}</>}{" "}
+                {remarksUpdateCount > 0 && <> and {remarksUpdateCount} remarks-only update{remarksUpdateCount !== 1 ? "s" : ""}</>}
+                {acceptedReconciliationRows.length > 0 && (
+                  <>
+                    {" "}and {acceptedReconciliationRows.length} reconciliation entr{acceptedReconciliationRows.length !== 1 ? "ies" : "y"}
+                  </>
+                )}{" "}
                 will be logged.
               </p>
               {mismatchedFiles.length > 0 && (
@@ -322,6 +383,56 @@ export function DmrImportDialog({
                         </li>
                       ))}
                   </ul>
+                </div>
+              </div>
+            )}
+
+            {reconciliationRows.length > 0 && (
+              <div className="rounded-lg border p-3">
+                <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Reconciliation for missing reports — unchecked by default, review before including
+                </p>
+                <div className="grid gap-2">
+                  {reconciliationRows.map((r) => {
+                    const key = reconciliationKey(r)
+                    const target = costCentres.find((c) => c.id === mapping[r.contractor])
+                    return (
+                      <label
+                        key={key}
+                        className={`flex items-start gap-2.5 rounded-lg border p-2.5 text-xs ${
+                          r.alreadyLogged ? "opacity-50" : "cursor-pointer hover:bg-muted"
+                        }`}
+                      >
+                        <Checkbox
+                          className="mt-0.5"
+                          checked={r.alreadyLogged || acceptedReconciliations.has(key)}
+                          disabled={r.alreadyLogged}
+                          onCheckedChange={() => toggleReconciliation(key)}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-medium text-foreground">{CONTRACTOR_LABELS[r.contractor]}</span>
+                            {target && <span className="text-muted-foreground">→ {target.costCentre}</span>}
+                            <span className="tabular-nums font-semibold text-foreground">
+                              {fmtCurrency(r.amount, target?.currency || "USD")}
+                            </span>
+                            {r.alreadyLogged && <Badge variant="outline">Already logged</Badge>}
+                            {!r.plausible && !r.alreadyLogged && (
+                              <Badge variant="outline" className="border-destructive/40 text-destructive">
+                                <AlertTriangle className="size-3" /> Implausibly large — likely a bad Cumulative reading
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="mt-0.5 text-muted-foreground">
+                            {r.missingDays} missing report{r.missingDays !== 1 ? "s" : ""} ({r.gapStartDate} to {r.gapEndDate}), posted as
+                            one entry dated {r.gapEndDate}. Computed as {fmtCurrency(r.nextKnownCumulative, "USD")} (cumulative on{" "}
+                            {r.nextKnownDate}) − {fmtCurrency(r.lastKnownCumulative, "USD")} (cumulative on {r.lastKnownDate}) −{" "}
+                            {fmtCurrency(r.nextKnownDaily, "USD")} ({r.nextKnownDate}'s own daily figure).
+                          </p>
+                        </div>
+                      </label>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -386,8 +497,13 @@ export function DmrImportDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!importable.length}>
-            <Upload /> {importable.length ? `Import ${importable.length} entr${importable.length !== 1 ? "ies" : "y"}` : "Nothing to import"}
+          <Button onClick={handleConfirm} disabled={!importable.length && !acceptedReconciliationRows.length}>
+            <Upload />{" "}
+            {importable.length + acceptedReconciliationRows.length
+              ? `Import ${importable.length + acceptedReconciliationRows.length} entr${
+                  importable.length + acceptedReconciliationRows.length !== 1 ? "ies" : "y"
+                }`
+              : "Nothing to import"}
           </Button>
         </DialogFooter>
       </DialogContent>

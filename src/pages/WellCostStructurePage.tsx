@@ -1,4 +1,4 @@
-import { Copy, Drill, Eye, History, Pencil, Plus, Search, Trash2, Upload } from "lucide-react"
+import { Copy, Drill, Eye, History, Pencil, Plus, Search, Trash2, Upload, LayoutList } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -22,6 +22,7 @@ import { CostSummaryCards, UtilizationBar } from "@/components/wells/CostSummary
 import { DmrImportDialog } from "@/components/wells/DmrImportDialog"
 import { NameDialog } from "@/components/wells/NameDialog"
 import { WellCostCentreDrawer } from "@/components/wells/WellCostCentreDrawer"
+import { WellDataDialog } from "@/components/wells/WellDataDialog"
 import { WellDrawer } from "@/components/wells/WellDrawer"
 import { WellSelector } from "@/components/wells/WellSelector"
 import { availableAmount, buildCostCentreTotals, fmtCurrency, groupByServiceCategory, rollup, ZERO_TOTALS } from "@/lib/wellCost"
@@ -36,9 +37,11 @@ import {
 } from "@/hooks/useWellCostCatalog"
 import { useCopyWellCostStructure, useDeleteWellCostCentre, useUpsertWellCostCentre, useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
 import { useBulkUpsertWellCostTransactions, useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
+import { useDeleteWellMilestone, useUpsertWellMilestone, useWellMilestonesQuery } from "@/hooks/useWellMilestones"
 import { useUpsertWell, useWellsQuery } from "@/hooks/useWells"
 import type { Well } from "@/types/well"
 import type { WellCostCentre, WellCostTransaction } from "@/types/wellCost"
+import type { WellMilestone } from "@/types/wellMilestone"
 
 interface CostCentreDrawerState {
   open: boolean
@@ -63,6 +66,7 @@ export default function WellCostStructurePage() {
   const serviceCategoriesQuery = useWellCostServiceCategoriesQuery()
   const wellDepartmentsQuery = useWellDepartmentsQuery()
   const transactionsQuery = useWellCostTransactionsQuery()
+  const milestonesQuery = useWellMilestonesQuery()
 
   const upsertWell = useUpsertWell()
   const upsertCostCentre = useUpsertWellCostCentre()
@@ -71,6 +75,8 @@ export default function WellCostStructurePage() {
   const addServiceCategory = useAddServiceCategory()
   const bulkImportTransactions = useBulkUpsertWellCostTransactions()
   const copyWellCostStructure = useCopyWellCostStructure()
+  const upsertMilestone = useUpsertWellMilestone()
+  const deleteMilestone = useDeleteWellMilestone()
 
   const [selectedWellId, setSelectedWellId] = useState<string | null>(
     () => (location.state as { wellId?: string } | null)?.wellId ?? null
@@ -84,6 +90,7 @@ export default function WellCostStructurePage() {
   const [deleteTarget, setDeleteTarget] = useState<WellCostCentre | null>(null)
   const [importServiceCategoryId, setImportServiceCategoryId] = useState<string | null>(null)
   const [copyServiceCategoryId, setCopyServiceCategoryId] = useState<string | null>(null)
+  const [wellDataDialogOpen, setWellDataDialogOpen] = useState(false)
 
   const wells = wellsQuery.data ?? []
   const costCentres = costCentresQuery.data ?? []
@@ -91,6 +98,7 @@ export default function WellCostStructurePage() {
   const serviceCategories = serviceCategoriesQuery.data ?? []
   const wellDepartments = wellDepartmentsQuery.data ?? []
   const transactions = transactionsQuery.data ?? []
+  const milestones = milestonesQuery.data ?? []
   const costCentreTotals = useMemo(() => buildCostCentreTotals(transactions), [transactions])
 
   useEffect(() => {
@@ -224,6 +232,20 @@ export default function WellCostStructurePage() {
     })
   }
 
+  function handleSaveMilestone(record: WellMilestone) {
+    upsertMilestone.mutate(record, {
+      onSuccess: () => toast.success("Well data saved."),
+      onError: (e) => toast.error(errorMessage(e, "Could not save well data.")),
+    })
+  }
+
+  function handleDeleteMilestone(record: WellMilestone) {
+    deleteMilestone.mutate(record, {
+      onSuccess: () => toast.success("Well data row deleted."),
+      onError: (e) => toast.error(errorMessage(e, "Could not delete well data row.")),
+    })
+  }
+
   const anyLoading =
     wellsQuery.isLoading ||
     costCentresQuery.isLoading ||
@@ -299,6 +321,9 @@ export default function WellCostStructurePage() {
           <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <span className="text-sm font-semibold">Well Cost Summary</span>
+              <Button size="sm" variant="outline" onClick={() => setWellDataDialogOpen(true)}>
+                <LayoutList /> Well Data
+              </Button>
             </div>
             <CostSummaryCards rollup={wellRollup} />
             <div className="mt-3">
@@ -518,6 +543,20 @@ export default function WellCostStructurePage() {
       ) : null}
 
       <WellDrawer open={wellDrawerOpen} well={null} onOpenChange={setWellDrawerOpen} onSubmit={handleSaveWell} />
+
+      {wellDataDialogOpen && selectedWell && (
+        <WellDataDialog
+          open={wellDataDialogOpen}
+          onOpenChange={setWellDataDialogOpen}
+          wellId={selectedWell.id}
+          wellName={selectedWell.name}
+          milestones={milestones.filter((m) => m.wellId === selectedWell.id)}
+          canEdit={canLogEntry}
+          canDelete={canDelete}
+          onSave={handleSaveMilestone}
+          onDelete={handleDeleteMilestone}
+        />
+      )}
 
       <NameDialog
         open={deptDialogOpen}

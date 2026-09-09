@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Building2, Check, LockKeyhole, PanelLeft, Pencil, Pin, PinOff, RotateCcw, ShieldAlert, Star, Trash2, X } from "lucide-react"
+import { ArrowLeftRight, Building2, Check, LockKeyhole, PanelLeft, Pencil, Pin, PinOff, Plus, RotateCcw, ShieldAlert, Star, Trash2, X } from "lucide-react"
 import { lazy, Suspense, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { HIDEABLE_NAV_ITEMS } from "@/components/shell/AppSidebar"
 import { imgIcon } from "@/components/shell/NavIcon"
+import { NameDialog } from "@/components/wells/NameDialog"
 import allDepartmentsIcon3d from "@/assets/all-departments-icon-3d.png"
 import departmentIcon3d from "@/assets/department-icon-3d.png"
 import { useContractsQuery } from "@/hooks/useContracts"
@@ -286,13 +287,28 @@ function SidebarCustomizationSection() {
  *  contract still references the department, preventing orphaned historical data. */
 function DepartmentManagementSection() {
   const { isAdmin } = useAuth()
-  const { ref, removeValue, isSaving } = useReferenceLists()
+  const { ref, addValue, removeValue, isSaving } = useReferenceLists()
   const invoices = useInvoicesQuery().data ?? []
   const contracts = useContractsQuery().data ?? []
   const renameDepartment = useRenameDepartment()
   const [editing, setEditing] = useState<string | null>(null)
   const [editValue, setEditValue] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+
+  function handleAddDepartment(name: string) {
+    if (ref.departments.some((d) => d.toLowerCase() === name.toLowerCase())) {
+      toast.error(`"${name}" already exists.`)
+      return
+    }
+    addValue("departments", name, {
+      onSuccess: () => {
+        toast.success(`Department "${name}" added.`)
+        setAddDialogOpen(false)
+      },
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Could not add department."),
+    })
+  }
 
   const usage = (department: string) => ({
     invoices: invoices.filter((row) => row.department === department).length,
@@ -334,10 +350,21 @@ function DepartmentManagementSection() {
           <h3 className="flex items-center gap-1.5 text-sm font-semibold"><Building2 className="size-4" /> Department Management</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">Correct department names safely. Renaming also updates linked invoices and contracts.</p>
         </div>
-        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide", isAdmin ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-muted text-muted-foreground")}>
-          {isAdmin ? <ShieldAlert className="size-3" /> : <LockKeyhole className="size-3" />}
-          {isAdmin ? "Admin controls" : "Admin required"}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!isAdmin || isSaving}
+            title={isAdmin ? "Add a department" : "Administrator access is required"}
+            onClick={() => setAddDialogOpen(true)}
+          >
+            <Plus /> Add Department
+          </Button>
+          <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide", isAdmin ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-muted text-muted-foreground")}>
+            {isAdmin ? <ShieldAlert className="size-3" /> : <LockKeyhole className="size-3" />}
+            {isAdmin ? "Admin controls" : "Admin required"}
+          </span>
+        </div>
       </div>
 
       <div className="grid gap-2">
@@ -414,6 +441,16 @@ function DepartmentManagementSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <NameDialog
+        open={addDialogOpen}
+        title="Add Department"
+        label="Department name"
+        placeholder="e.g. Geology"
+        submitting={isSaving}
+        onOpenChange={setAddDialogOpen}
+        onSubmit={handleAddDepartment}
+      />
     </div>
   )
 }

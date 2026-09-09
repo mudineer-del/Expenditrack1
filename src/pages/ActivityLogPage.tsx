@@ -13,7 +13,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ActivityLogEntryDialog } from "@/components/shared/ActivityLogEntryDialog"
 import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
+import { ACTION_COLOR, fmtDateTime } from "@/lib/activityLog"
 import { errorMessage } from "@/lib/utils"
 import { useActivityLogQuery, useClearActivityLog } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
@@ -31,21 +33,6 @@ function EntryKindIcon({ entry }: { entry: ActivityEntry }) {
 }
 
 const ACTIONS: ActivityAction[] = ["Import", "Add", "Edit", "Delete", "Undo", "Restore"]
-
-const ACTION_COLOR: Record<ActivityAction, string> = {
-  Import: "#6d5fd6",
-  Add: "var(--status-cleared)",
-  Edit: "var(--status-under)",
-  Delete: "var(--status-returned)",
-  Undo: "var(--dataviz-6)",
-  Restore: "var(--dataviz-5)",
-}
-
-function fmtDateTime(ts: number): string {
-  const d = new Date(ts)
-  const pad = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 
 /** Ported from renderActivity/bindActivityPage/renderUndoConfirm (index.html:5165-5216, 6406-6445). */
 export default function ActivityLogPage() {
@@ -83,6 +70,7 @@ export default function ActivityLogPage() {
 
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [actionFilter, setActionFilter] = useState<ActivityAction | null>(null)
+  const [detailEntry, setDetailEntry] = useState<ActivityEntry | null>(null)
   const visibleLog = useMemo(
     () => (actionFilter ? log.filter((e) => e.action === actionFilter) : log),
     [log, actionFilter]
@@ -126,6 +114,12 @@ export default function ActivityLogPage() {
   async function handleConfirmUndo() {
     await undoSelected(selectedLogIds)
     setConfirmOpen(false)
+  }
+
+  function handleUndoFromDetail(entry: ActivityEntry) {
+    setSelection(new Set([entry.id]))
+    setDetailEntry(null)
+    setConfirmOpen(true)
   }
 
   return (
@@ -227,9 +221,21 @@ export default function ActivityLogPage() {
                 {visibleLog.map((e) => {
                   const isUndoable = selectable && e.meta?.undoId && undoableIds.has(String(e.meta.undoId))
                   return (
-                    <div key={e.id} className="flex items-start gap-3 p-3">
+                    <div
+                      key={e.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setDetailEntry(e)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === "Enter" || ev.key === " ") {
+                          ev.preventDefault()
+                          setDetailEntry(e)
+                        }
+                      }}
+                      className="flex cursor-pointer items-start gap-3 p-3 text-left transition-colors hover:bg-muted/50"
+                    >
                       {selectable && (
-                        <div className="pt-0.5">
+                        <div className="pt-0.5" onClick={(ev) => ev.stopPropagation()}>
                           {isUndoable ? (
                             <Checkbox checked={selectedLogIds.has(e.id)} onCheckedChange={() => toggleSelect(e.id)} />
                           ) : (
@@ -308,6 +314,15 @@ export default function ActivityLogPage() {
           )}
         </AlertDialogContent>
       </AlertDialog>
+
+      <ActivityLogEntryDialog
+        entry={detailEntry}
+        onOpenChange={(v) => !v && setDetailEntry(null)}
+        canUndo={selectable}
+        isUndoable={!!(detailEntry?.meta?.undoId && undoableIds.has(String(detailEntry.meta.undoId)))}
+        canDelete={isAdmin}
+        onUndo={handleUndoFromDetail}
+      />
     </div>
   )
 }

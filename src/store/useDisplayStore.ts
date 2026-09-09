@@ -105,6 +105,16 @@ export interface CustomFont {
 const PREFS_KEY = "displayPrefs"
 const CHART_DESIGN_VERSION = 3
 
+/** Everything that's meaningful to save/sync as a "layout" — the whole DisplayPrefs minus
+ *  chartDesignVersion, which is a local migration marker for this browser's own old saved
+ *  data and has no meaning carried into another account/device. */
+export type SyncableDisplayPrefs = Omit<DisplayPrefs, "chartDesignVersion">
+
+export function getSyncablePrefs(state: DisplayPrefs): SyncableDisplayPrefs {
+  const { chartDesignVersion: _chartDesignVersion, ...rest } = state
+  return rest
+}
+
 interface DisplayPrefs {
   chartDesignVersion: number
   colorTheme: string
@@ -177,6 +187,10 @@ interface DisplayState extends DisplayPrefs {
   setTableBanded: (v: boolean) => void
   setTableHeaderShaded: (v: boolean) => void
   setTableGridLines: (v: boolean) => void
+  /** Replaces the whole live layout with a previously-saved one (see useDashboardLayout.ts)
+   *  — applied once per login, or explicitly via "Discard changes"/"Load saved layout".
+   *  Re-applies every CSS-affecting side effect, same as the module's own initial load. */
+  hydrateFromCloud: (prefs: SyncableDisplayPrefs) => void
 }
 
 const RADIUS_VALUES: Record<Radius, string> = { none: "0rem", sm: "0.25rem", md: "0.625rem", lg: "1rem" }
@@ -549,5 +563,22 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
     if (wasActive) applyFontFamily(fontFamily, customFonts)
     set({ customFonts, fontFamily })
     persist(get())
+  },
+
+  hydrateFromCloud: (prefs) => {
+    const next: DisplayPrefs = { ...prefs, chartDesignVersion: CHART_DESIGN_VERSION }
+    applyPalette(next.colorTheme, next.customColors ?? undefined)
+    applyScale(next.cardScale)
+    applyRadius(next.radius)
+    applyBorder(next.borderWidth, next.borderStyle)
+    applyShadow(next.shadow)
+    applyIconWeight(next.iconWeight)
+    applyAnimations(next.animationsEnabled)
+    applyFontSize(next.fontSize)
+    Promise.all(next.customFonts.map((f) => registerCustomFont(f).catch(() => {})))
+      .then(() => applyFontFamily(next.fontFamily, next.customFonts))
+      .catch(() => applyFontFamily("inter", []))
+    set(next)
+    persist(next)
   },
 }))
