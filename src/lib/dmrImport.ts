@@ -124,15 +124,36 @@ function findLabelValue(rows: unknown[][], labelRegex: RegExp): string | null {
   return null
 }
 
-/** The report filename's own leading YYYY-MM-DD (this folder's naming convention) is more
- *  reliable than the sheet's internal "Date :" cell, which is a locale-formatted M/D/YY
- *  string with no reliable way to tell "8/7" (Aug 7) apart from a DD/MM reading (Jul 8) —
- *  the filename is already unambiguous. */
 function dateFromFileName(fileName: string): string | null {
   const m = fileName.match(/(\d{4})-(\d{2})-(\d{2})/)
   return m ? `${m[1]}-${m[2]}-${m[3]}` : null
 }
 
+const MONTH_ABBR: Record<string, number> = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+}
+
+/** The sheet's own "Date :" cell on real Sujawal South X-1 reports is always written as
+ *  "D-Mon-YY" (e.g. "20-Aug-26", "1-Sep-26") — unambiguous, since the month is a name, not a
+ *  number. Checked across all 75 real report files in that well's folder: this parses every
+ *  one, and where a file's filename also carries its own leading YYYY-MM-DD, the two agree
+ *  in every case but one (a report saved under the following day's filename date by
+ *  mistake — the sheet's own Date cell is what's still right there). Tried first, before the
+ *  filename, for exactly that reason. */
+function parseDayMonthYear(s: string): string | null {
+  const m = s.trim().match(/^(\d{1,2})-([a-zA-Z]{3,})-(\d{2,4})$/)
+  if (!m) return null
+  const day = Number(m[1])
+  const month = MONTH_ABBR[m[2].slice(0, 3).toLowerCase()]
+  if (!month || day < 1 || day > 31) return null
+  const year = m[3].length === 2 ? `20${m[3]}` : m[3]
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+}
+
+/** Last-resort fallback for report templates whose "Date :" cell is a locale-formatted
+ *  numeric M/D/YY string instead — genuinely ambiguous (no reliable way to tell "8/7" (Aug
+ *  7) apart from a DD/MM reading of Jul 8), so only reached when neither the unambiguous
+ *  text-month cell format above nor the filename's own leading date parsed. */
 function parseMonthDayYear(s: string): string | null {
   const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/)
   if (!m) return null
@@ -378,8 +399,9 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wbmSheetName], { header: 1, raw: false, defval: "" }) as unknown[][]
       const wellName = findLabelValue(rows, /well name/i) ?? ""
 
-      const entryDate = dateFromFileName(file.name) ?? parseMonthDayYear(findLabelValue(rows, /^date\s*:?$/i) ?? "")
-      if (!entryDate) return { fileName: file.name, error: "Could not determine a report date from the filename or the sheet." }
+      const dateCell = findLabelValue(rows, /^date\s*:?$/i) ?? ""
+      const entryDate = parseDayMonthYear(dateCell) ?? dateFromFileName(file.name) ?? parseMonthDayYear(dateCell)
+      if (!entryDate) return { fileName: file.name, error: "Could not determine a report date from the sheet or the filename." }
 
       const extracted = extractThreeWayCost(rows)
       if ("error" in extracted) return { fileName: file.name, error: extracted.error }
