@@ -7,7 +7,6 @@ import {
   History,
   LayoutGrid,
   List,
-  MessagesSquare,
   Settings,
   Users,
 } from "lucide-react"
@@ -17,6 +16,7 @@ import wellCostNavIcon from "@/assets/well-cost-nav-icon-3d.png"
 import wellCostDashboardIcon from "@/assets/well-cost-dashboard-icon-3d.png"
 import wellRegistryIcon from "@/assets/well-registry-icon-3d.png"
 import costStructureIcon from "@/assets/cost-structure-icon-3d.png"
+import messageCentreIcon from "@/assets/icons-3d/speech_balloon_3d.png"
 import {
   Sidebar,
   SidebarContent,
@@ -57,6 +57,7 @@ const WellCostRigIcon = imgIcon(wellCostNavIcon)
 const WellCostDashboardIcon = imgIcon(wellCostDashboardIcon)
 const WellRegistryIcon = imgIcon(wellRegistryIcon)
 const CostStructureIcon = imgIcon(costStructureIcon)
+const MessageCentreIcon = imgIcon(messageCentreIcon)
 
 /** Routes that stay visible regardless of Settings > Labels > Sidebar Customization's
  *  hidden-items list — Dashboard as a guaranteed landing spot, Settings as the only
@@ -90,7 +91,7 @@ export const NAV_GROUPS = [
   {
     label: "Administration",
     items: [
-      { to: "/messages", label: "Message Centre", icon: MessagesSquare },
+      { to: "/messages", label: "Message Centre", icon: MessageCentreIcon },
       { to: "/activity", label: "Audit Trail", icon: History },
       { to: "/users", label: "User Management", icon: Users, adminOnly: true },
     ],
