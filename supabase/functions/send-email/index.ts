@@ -2,7 +2,9 @@
 // Admin's behalf — the "approved" notification auto-dispatched from
 // AccessGrantPanel when an Admin approves a pending sign-up, and the general
 // "Send Email" compose dialog on the Users page for emailing one or more
-// teammates directly.
+// teammates directly. Also verifies recipient identities in SES (see
+// `verifyEmails` below) — useful while the SES account is still in sandbox
+// mode, where SendEmail only delivers to individually verified addresses.
 //
 // This exists ONLY because sending mail requires AWS credentials with SES
 // permission, which must never be shipped to the browser. This function
@@ -126,6 +128,50 @@ Deno.serve(async (req: Request) => {
   }
 
   const body = await req.json().catch(() => null)
+
+  const region = Deno.env.get("AWS_REGION")
+  const accessKeyId = Deno.env.get("AWS_ACCESS_KEY_ID")
+  const secretAccessKey = Deno.env.get("AWS_SECRET_ACCESS_KEY")
+  const fromEmail = Deno.env.get("SES_FROM_EMAIL")
+  if (!region || !accessKeyId || !secretAccessKey || !fromEmail) {
+    return json(
+      { error: "Email sending isn't configured yet — AWS_REGION/AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/SES_FROM_EMAIL secrets are missing. See README.md." },
+      500
+    )
+  }
+  const host = `email.${region}.amazonaws.com`
+
+  // Second capability this function holds the same AWS credentials for: while the SES
+  // account is in sandbox mode, SendEmail (below) only delivers to individually verified
+  // recipients. Rather than each Admin clicking "Create identity" in the AWS Console once
+  // per teammate, `verifyEmails` calls SES's CreateEmailIdentity for a batch of addresses
+  // in one request — each one gets AWS's own verification-link email, no app involvement
+  // beyond that. Read-only towards this app's own data; nothing is written to Supabase.
+  const verifyEmailsRaw = body?.verifyEmails
+  if (Array.isArray(verifyEmailsRaw)) {
+    const addresses = verifyEmailsRaw.filter((a): a is string => typeof a === "string" && a.includes("@"))
+    if (!addresses.length) return json({ error: "At least one valid email address is required." }, 400)
+
+    const results: { email: string; ok: boolean; error?: string }[] = []
+    for (const email of addresses) {
+      const path = "/v2/email/identities"
+      const requestBody = JSON.stringify({ EmailIdentity: email })
+      try {
+        const { headers } = await signSesRequest({ region, accessKeyId, secretAccessKey, host, path, body: requestBody })
+        const res = await fetch(`https://${host}${path}`, { method: "POST", headers, body: requestBody })
+        if (res.ok) {
+          results.push({ email, ok: true })
+        } else {
+          const errBody = await res.text().catch(() => "")
+          results.push({ email, ok: false, error: `SES rejected the request (${res.status}): ${errBody || res.statusText}` })
+        }
+      } catch (e) {
+        results.push({ email, ok: false, error: e instanceof Error ? e.message : "Could not reach AWS SES." })
+      }
+    }
+    return json({ ok: true, results }, 200)
+  }
+
   const toRaw = body?.to
   const to: string[] = Array.isArray(toRaw) ? toRaw : typeof toRaw === "string" ? [toRaw] : []
   const subject = typeof body?.subject === "string" ? body.subject.trim() : ""
@@ -138,18 +184,6 @@ Deno.serve(async (req: Request) => {
   if (!subject) return json({ error: "A subject is required." }, 400)
   if (!html && !text) return json({ error: "An email body is required." }, 400)
 
-  const region = Deno.env.get("AWS_REGION")
-  const accessKeyId = Deno.env.get("AWS_ACCESS_KEY_ID")
-  const secretAccessKey = Deno.env.get("AWS_SECRET_ACCESS_KEY")
-  const fromEmail = Deno.env.get("SES_FROM_EMAIL")
-  if (!region || !accessKeyId || !secretAccessKey || !fromEmail) {
-    return json(
-      { error: "Email sending isn't configured yet — AWS_REGION/AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/SES_FROM_EMAIL secrets are missing. See README.md." },
-      500
-    )
-  }
-
-  const host = `email.${region}.amazonaws.com`
   const path = "/v2/email/outbound-emails"
   const requestBody = JSON.stringify({
     FromEmailAddress: fromEmail,

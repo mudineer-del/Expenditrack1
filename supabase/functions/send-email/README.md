@@ -8,6 +8,14 @@ Sends an email through Amazon SES, Admin-only. Two call sites use it:
 - **Send Email** — a compose dialog on the Users page for emailing one or
   more teammates directly, at any time.
 
+It also verifies recipient identities in SES — pass `{ verifyEmails:
+["a@x.com", "b@x.com"] }` instead of `{ to, subject, ... }` and it calls SES's
+CreateEmailIdentity for each address, which makes SES send that address its
+own verification-link email. Useful while the account is in sandbox mode
+(see step 2 below): verifying every real user's address this way unblocks
+sending to all of them immediately, without waiting on AWS's production-access
+review.
+
 Requires AWS credentials with SES permission, so it runs as a Supabase Edge
 Function (server-side) instead of client code — those credentials must never
 reach the browser.
@@ -29,10 +37,9 @@ Claude can do or verify for you without AWS access:
    access" (a short form, usually approved within a day). Until that's
    approved, `send-email` will fail for any recipient that isn't also
    verified in SES.
-3. **Create an IAM user/role with `ses:SendEmail` permission** (the AWS-managed
-   `AmazonSESFullAccess` policy works, or scope it down to just `ses:SendEmail`
-   + `ses:SendRawEmail` on your verified identity's ARN) and generate an
-   access key for it.
+3. **Create an IAM user/role with `ses:SendEmail` and `ses:CreateEmailIdentity`
+   permission** (the AWS-managed `AmazonSESFullAccess` policy works, or scope
+   it down to just those two actions) and generate an access key for it.
 
 ## One-time setup — Supabase side
 
