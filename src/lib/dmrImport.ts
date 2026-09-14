@@ -247,6 +247,43 @@ function extractThreeWayCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: E
   let secondLabel = ""
   for (let r = headerRow + 2; r < Math.min(rows.length, headerRow + 12); r++) {
     const row = rows[r]
+
+    // Some report templates (seen on Uch WDW-1's WBM sheet) don't put a contractor's row
+    // directly beneath the one shared header — they repeat their own "Daily cost OGDCL" /
+    // "Cumulative Cost OGDCL" sub-header in the SAME dailyCol/cumCol columns, with that
+    // contractor's actual figures on the row immediately below the sub-header rather than
+    // beside a text label. Detected by the dailyCol cell holding "daily cost" text instead
+    // of a number; the sheet's own "TOTAL Daily cost" cross-check row matches the same
+    // pattern and is explicitly excluded so it's never read as a contractor.
+    const dailyColText = String(row[dailyCol] ?? "").trim()
+    if (/daily\s*cost/i.test(dailyColText) && parseAmount(dailyColText) === null) {
+      if (/total/i.test(dailyColText)) continue
+      const valueRow = rows[r + 1]
+      const amt = parseAmount(String(valueRow?.[dailyCol] ?? "").trim())
+      const cumCellText = String(valueRow?.[cumCol] ?? "").trim()
+      const subLabel = row
+        .slice(0, dailyCol)
+        .map((c) => String(c ?? ""))
+        .join(" ")
+        .trim()
+      const isOgdcl = /ogdcl/i.test(dailyColText) || /ogdcl/i.test(subLabel)
+      const contractor: DmrContractor = isOgdcl ? "OGDCL" : "SECOND_CONTRACTOR"
+      if (amt === null) {
+        if (cumCellText) gaps.push({ contractor, cumulativeOnFile: cumCellText })
+        continue
+      }
+      const cum = cumCellText ? parseAmount(cumCellText) : null
+      if (isOgdcl) {
+        ogdclAmount = amt
+        ogdclCumulative = cum
+      } else {
+        secondAmount = amt
+        secondCumulative = cum
+        secondLabel = subLabel || dailyColText
+      }
+      continue
+    }
+
     const rawLabel = row
       .slice(0, dailyCol)
       .map((c) => String(c ?? ""))
