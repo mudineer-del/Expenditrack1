@@ -1,5 +1,6 @@
 export interface PaletteVars {
   primary: string
+  foreground: string
   chart1: string
   chart2: string
   chart3: string
@@ -9,7 +10,6 @@ export interface PaletteVars {
 
 export interface ThemeVars extends PaletteVars {
   background: string
-  foreground: string
   card: string
   cardForeground: string
   popover: string

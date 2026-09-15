@@ -311,6 +311,7 @@ const FONT_SIZES: { key: FontSize; label: string }[] = [
 ]
 
 const COLOR_FIELDS: { key: keyof PaletteVars; label: string }[] = [
+  { key: "foreground", label: "Text" },
   { key: "primary", label: "Accent" },
   { key: "chart1", label: "Chart 1" },
   { key: "chart2", label: "Chart 2" },
