@@ -1,4 +1,4 @@
-import { CheckCircle2, Download, List, Plus, Trash2, Upload, Wallet } from "lucide-react"
+import { CheckCircle2, Copy, Download, List, Plus, Trash2, Upload, Wallet } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { DuplicateFinderDialog } from "@/components/invoices/DuplicateFinderDialog"
 import { ImportDialog } from "@/components/invoices/ImportDialog"
 import { InvoiceDetailSheet } from "@/components/invoices/InvoiceDetailSheet"
 import { InvoiceDrawer } from "@/components/invoices/InvoiceDrawer"
@@ -30,7 +31,7 @@ import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
 import { buildContractLabels } from "@/lib/contracts"
 import { fmtMoney } from "@/lib/dashboard"
 import { BLANK_FILTERS, filterAndSortInvoices, type SortState } from "@/lib/invoiceFilters"
-import { exportInvoicesCsv, exportInvoicesXlsx } from "@/lib/invoiceIO"
+import { exportInvoicesCsv, exportInvoicesXlsx, invoiceDupKey } from "@/lib/invoiceIO"
 import { useContractorLogosQuery } from "@/lib/contractorLogos"
 import { useReferenceLists } from "@/lib/referenceLists"
 import { errorMessage } from "@/lib/utils"
@@ -77,6 +78,8 @@ export default function InvoicesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null)
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [dupFinderOpen, setDupFinderOpen] = useState(false)
+  const [dupWarning, setDupWarning] = useState<{ record: Invoice; existing: Invoice } | null>(null)
 
   const activeDept = useAppStore((s) => s.activeDept)
   const allInvoices = invoicesQuery.data ?? []
@@ -165,7 +168,7 @@ export default function InvoicesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, invoices])
 
-  function handleSave(record: Invoice) {
+  function saveInvoice(record: Invoice) {
     upsertInvoice.mutate(record, {
       onSuccess: () => {
         toast.success(editingInvoice ? "Invoice updated." : "Invoice added.")
@@ -174,6 +177,24 @@ export default function InvoicesPage() {
       },
       onError: (e) => toast.error(errorMessage(e, "Could not save invoice.")),
     })
+  }
+
+  function handleSave(record: Invoice) {
+    // Same vendor + invoice no. + amount as an invoice already on file (excluding the
+    // record being edited itself) — surface it instead of silently writing another row.
+    const key = invoiceDupKey(record)
+    const existing = allInvoices.find((r) => r.id !== record.id && invoiceDupKey(r) === key)
+    if (existing) {
+      setDupWarning({ record, existing })
+      return
+    }
+    saveInvoice(record)
+  }
+
+  function handleDuplicateConfirm() {
+    if (!dupWarning) return
+    saveInvoice(dupWarning.record)
+    setDupWarning(null)
   }
 
   function handleDeleteConfirm() {
@@ -324,6 +345,14 @@ export default function InvoicesPage() {
               <Upload /> Import / Update
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              title="Find invoices with the same vendor & invoice no."
+              onClick={() => setDupFinderOpen(true)}
+            >
+              <Copy /> Find Duplicates
+            </Button>
+            <Button
               size="sm"
               disabled={!can("add")}
               title={can("add") ? "Add invoice" : "Only Editors and Admins can add invoices"}
@@ -435,6 +464,15 @@ export default function InvoicesPage() {
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} existingInvoices={allInvoices} onImport={handleImport} />
 
+      <DuplicateFinderDialog
+        open={dupFinderOpen}
+        onOpenChange={setDupFinderOpen}
+        invoices={allInvoices}
+        canDelete={can("delete")}
+        onView={openView}
+        onDelete={setDeleteTarget}
+      />
+
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -459,6 +497,24 @@ export default function InvoicesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleBulkDeleteConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!dupWarning} onOpenChange={(v) => !v && setDupWarning(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Possible duplicate invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              {dupWarning &&
+                `Invoice ${dupWarning.existing.invoiceNo || `#${dupWarning.existing.srNo}`} from ${dupWarning.existing.vendor} for ${fmtMoney(Number(dupWarning.existing.amountExclTax) || 0)} is already on file${
+                  dupWarning.existing.createdByName ? ` (entered by ${dupWarning.existing.createdByName})` : ""
+                }. Add this one anyway?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDupWarning(null)}>Ignore</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDuplicateConfirm}>Add Anyway</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

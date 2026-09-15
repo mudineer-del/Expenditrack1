@@ -1,3 +1,4 @@
+import { storeGet, storeSet } from "@/lib/localCache"
 import type { Invoice } from "@/types/invoice"
 
 /** Ported from EXPORT_COLS (index.html:2457-2463). */
@@ -240,6 +241,50 @@ export function invoiceDupKey(r: { vendor?: unknown; invoiceNo?: unknown; amount
   const invNo = String(r.invoiceNo || "").trim().toLowerCase()
   const amt = Math.round((Number(r.amountExclTax) || 0) * 100)
   return `${vendor}::${invNo}::${amt}`
+}
+
+export interface DuplicateGroup {
+  rows: Invoice[]
+  /** true when every row in the group also shares the same amount, not just vendor + invoice no. */
+  exact: boolean
+}
+
+/** Groups of invoices that share the same vendor + invoice no. (case/whitespace-insensitive).
+ *  Groups flagged `exact` also share the same amount; the rest share the invoice no./vendor but
+ *  differ in amount — still worth a human look (typo, re-entry, or a genuine second charge).
+ *  Ported from findDuplicateGroups (index.html:2637-2658). */
+export function findDuplicateGroups(invoices: Invoice[]): DuplicateGroup[] {
+  const groups = new Map<string, Invoice[]>()
+  for (const r of invoices) {
+    const vendor = String(r.vendor || "").trim().toLowerCase()
+    const invNo = String(r.invoiceNo || "").trim().toLowerCase()
+    if (!vendor || !invNo) continue
+    const key = `${vendor}::${invNo}`
+    const list = groups.get(key)
+    if (list) list.push(r)
+    else groups.set(key, [r])
+  }
+  return Array.from(groups.values())
+    .filter((g) => g.length > 1)
+    .map((g) => {
+      const rows = g.slice().sort((a, b) => (Number(a.srNo) || 0) - (Number(b.srNo) || 0))
+      const amounts = new Set(rows.map((r) => Math.round((Number(r.amountExclTax) || 0) * 100)))
+      return { rows, exact: amounts.size === 1 }
+    })
+    .sort((a, b) => Number(b.exact) - Number(a.exact) || b.rows.length - a.rows.length)
+}
+
+const IGNORED_DUPLICATES_KEY = "ignoredDuplicateInvoiceIds"
+
+/** Invoice ids a user has marked "not actually a duplicate" from the Duplicate Finder —
+ *  persisted locally (per browser) via the same storeGet/storeSet layer as every other
+ *  saved preference, so they stay excluded from the finder's groups across reloads. */
+export function loadIgnoredDuplicateIds(): Set<string> {
+  return new Set(storeGet<string[]>(IGNORED_DUPLICATES_KEY) ?? [])
+}
+
+export function saveIgnoredDuplicateIds(ids: Set<string>): void {
+  storeSet(IGNORED_DUPLICATES_KEY, Array.from(ids))
 }
 
 /** Fields eligible to be backfilled onto an existing invoice during an
