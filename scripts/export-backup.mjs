@@ -56,6 +56,8 @@ async function main() {
     wellDepartments,
     wellCostCentres,
     wellCostTransactions,
+    wellMilestones,
+    dashboardLayouts,
   ] = await Promise.all([
     fetchAllRows("invoices", "sr_no"),
     fetchAllRows("contracts", "id"),
@@ -67,6 +69,8 @@ async function main() {
     fetchAllRows("well_departments", "id"),
     fetchAllRows("well_cost_centres", "id"),
     fetchAllRows("well_cost_transactions", "id"),
+    fetchAllRows("well_milestones", "id"),
+    fetchAllRows("dashboard_layouts", "user_id"),
   ])
 
   const exportedAt = new Date().toISOString()
@@ -81,6 +85,8 @@ async function main() {
     wellDepartments,
     wellCostCentres,
     wellCostTransactions,
+    wellMilestones,
+    dashboardLayouts,
   }
   const backup = {
     app: "OGDCL Expenditure & Invoice Tracker",

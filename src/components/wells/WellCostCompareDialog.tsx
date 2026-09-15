@@ -14,11 +14,11 @@ const config = {
 
 /** Short axis-tick form ($2.7M) — the table/tooltip below still show full fmtCurrency
  *  precision; the axis only needs enough to read the scale at a glance. */
-function fmtCompact(v: number): string {
+function fmtCompact(v: number, currency: string): string {
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 }).format(v)
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, notation: "compact", maximumFractionDigits: 1 }).format(v)
   } catch {
-    return fmtCurrency(v, "USD")
+    return fmtCurrency(v, currency)
   }
 }
 
@@ -26,10 +26,12 @@ function fmtCompact(v: number): string {
  *  "Compare Cost" button on the Well Cost Dashboard. Reuses the same well/rollup pairs
  *  the Wells table below it already computed; no separate data fetch. */
 export function WellCostCompareDialog({
+  currency = "USD",
   open,
   onOpenChange,
   rows,
 }: {
+  currency?: string
   open: boolean
   onOpenChange: (open: boolean) => void
   rows: { well: Well; r: CostRollup }[]
@@ -42,12 +44,12 @@ export function WellCostCompareDialog({
       spent: r.actual + r.commitments,
       variance: r.budget - r.actual - r.commitments,
       utilizationPct: r.utilizationPct,
-      overBudget: r.budget > 0 && r.actual + r.commitments > r.budget,
+      overBudget: r.actual + r.commitments > r.budget,
     }))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto overflow-x-hidden sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Compare Cost — Budget (AFE) vs Actual</DialogTitle>
           <DialogDescription>
@@ -62,8 +64,8 @@ export function WellCostCompareDialog({
               <BarChart data={chartRows} margin={{ left: 4, right: 4 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={11} interval={0} angle={-20} textAnchor="end" height={54} />
-                <YAxis tickLine={false} axisLine={false} fontSize={11} width={52} tickFormatter={(v) => fmtCompact(Number(v))} />
-                <ChartTooltip content={<ChartTooltipContent formatter={(value) => fmtCurrency(Number(value), "USD")} />} />
+                <YAxis tickLine={false} axisLine={false} fontSize={11} width={52} tickFormatter={(v) => fmtCompact(Number(v), currency)} />
+                <ChartTooltip content={<ChartTooltipContent formatter={(value) => fmtCurrency(Number(value), currency)} />} />
                 <Bar dataKey="budget" fill="var(--color-budget)" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="spent" fill="var(--color-spent)" radius={[6, 6, 0, 0]} />
               </BarChart>
@@ -89,11 +91,11 @@ export function WellCostCompareDialog({
                           {row.name}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtCurrency(row.budget, "USD")}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtCurrency(row.spent, "USD")}</TableCell>
+                      <TableCell className="text-right tabular-nums">{fmtCurrency(row.budget, currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{fmtCurrency(row.spent, currency)}</TableCell>
                       <TableCell className={cn("text-right tabular-nums", row.overBudget && "font-medium text-destructive")}>
                         {row.variance < 0 ? "−" : ""}
-                        {fmtCurrency(Math.abs(row.variance), "USD")}
+                        {fmtCurrency(Math.abs(row.variance), currency)}
                       </TableCell>
                       <TableCell className={cn("text-right tabular-nums", row.overBudget && "font-medium text-destructive")}>
                         {row.budget > 0 ? `${row.utilizationPct.toFixed(0)}%` : "—"}

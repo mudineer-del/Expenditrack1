@@ -611,7 +611,7 @@ export default function DashboardPage() {
             <SaveLayoutButton />
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
+        <div className="dashboard-chart-grid gap-4 md:gap-6">
           {!chartSlots.dashTrend.hidden && (
           <ChartCard
             accent="var(--dataviz-1)"

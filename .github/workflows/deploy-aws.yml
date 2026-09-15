@@ -29,6 +29,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm test
+
       - run: npm run build
         env:
           # GITHUB_PAGES is deliberately NOT set here. CloudFront serves the app

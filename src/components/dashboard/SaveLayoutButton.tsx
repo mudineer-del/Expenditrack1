@@ -1,4 +1,4 @@
-import { Check, Save } from "lucide-react"
+import { Save } from "lucide-react"
 import { useMemo } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -30,16 +30,14 @@ export function SaveLayoutButton() {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {!isDirty && layoutQuery.data && (
-        <span className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
-          <Check className="size-3.5 text-status-cleared" /> Saved
-        </span>
-      )}
+    <div className="flex flex-wrap items-center gap-2">
+      <span role="status" className="text-xs text-muted-foreground">
+        {layoutQuery.isError ? "Account layout unavailable" : layoutQuery.isLoading ? "Checking saved layout…" : isDirty ? "Changes not saved to account" : "Saved to account"}
+      </span>
       <Button
         size="sm"
         variant={isDirty ? "default" : "outline"}
-        disabled={!isDirty || saveLayout.isPending}
+        disabled={!isDirty || saveLayout.isPending || layoutQuery.isLoading}
         title={isDirty ? "Save this layout to your account" : "No changes since your last save"}
         onClick={handleSave}
       >

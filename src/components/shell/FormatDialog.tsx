@@ -166,6 +166,10 @@ interface ChartSlotMeta {
   hasDimension: boolean
   /** Only the three trend-chart slots have a Brush/zoom control to toggle. */
   hasZoom?: boolean
+  /** False for the Well Cost slots — that data has no invoice-style measure to pick
+   *  (there's just one dollar amount), so the Measure select would be meaningless there.
+   *  Every other slot keeps today's behavior (undefined defaults to shown). */
+  hasMeasure?: boolean
 }
 
 const DASHBOARD_SLOTS: ChartSlotMeta[] = [
@@ -187,6 +191,11 @@ const REPORTS_SLOTS: ChartSlotMeta[] = [
   { id: "contractBuckets", title: "Contract Report — Turnaround Buckets chart", hasDimension: false },
   { id: "contractMonthly", title: "Contract Report — Monthly Expenditure chart", hasDimension: false },
 ]
+const WELL_COST_SLOTS: ChartSlotMeta[] = [
+  { id: "wellCostTrend", title: "Monthly Spend Trend", hasDimension: false, hasMeasure: false, hasZoom: true },
+  { id: "wellCostDept", title: "Cost by Department", hasDimension: false, hasMeasure: false },
+  { id: "wellCostService", title: "Spend by Service", hasDimension: false, hasMeasure: false },
+]
 
 const AUTO_DIMENSION = "__auto__"
 
@@ -194,7 +203,7 @@ const AUTO_DIMENSION = "__auto__"
  *  off the store so each row only re-renders when its own slot changes. `dashBreakdown` is the one
  *  slot whose dimension defaults to "unset" (an automatic Contractor/Type swap driven by the
  *  Dashboard's contractor filter) — its picker gets an extra "Automatic" option for that state. */
-function ChartSlotRow({ id, title, hasDimension, hasZoom }: ChartSlotMeta) {
+function ChartSlotRow({ id, title, hasDimension, hasZoom, hasMeasure = true }: ChartSlotMeta) {
   const cfg = useDisplayStore((s) => s.chartSlots[id])
   const setChartSlot = useDisplayStore((s) => s.setChartSlot)
   const canBeAuto = id === "dashBreakdown"
@@ -213,6 +222,7 @@ function ChartSlotRow({ id, title, hasDimension, hasZoom }: ChartSlotMeta) {
           title={cfg.hidden ? "Show this chart" : "Hide this chart"}
         />
       </div>
+      {(hasDimension || hasMeasure) && (
       <div className="flex flex-col gap-2 sm:flex-row">
         {hasDimension && (
           <Select
@@ -232,19 +242,22 @@ function ChartSlotRow({ id, title, hasDimension, hasZoom }: ChartSlotMeta) {
             </SelectContent>
           </Select>
         )}
-        <Select value={cfg.measure} onValueChange={(v) => setChartSlot(id, { measure: v as ChartMeasure })}>
-          <SelectTrigger className="h-8 flex-1 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CHART_MEASURES.map((m) => (
-              <SelectItem key={m} value={m}>
-                {chartMeasureLabel(m)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {hasMeasure && (
+          <Select value={cfg.measure} onValueChange={(v) => setChartSlot(id, { measure: v as ChartMeasure })}>
+            <SelectTrigger className="h-8 flex-1 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CHART_MEASURES.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {chartMeasureLabel(m)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
+      )}
       {hasZoom && (
         <div className="mt-2 flex items-center justify-between gap-2 border-t pt-2">
           <Label htmlFor={`${id}-zoom`} className="text-xs font-normal text-muted-foreground">
@@ -532,6 +545,15 @@ export function FormatDialog() {
             <Section title="Contractor / Type Breakdown" hint="Shows contractor volume for 'All'; switches to that contractor's work-type mix once one is selected.">
               <SegmentedControl options={CHART_TYPES} value={store.breakdownChartType} onChange={(t) => store.setChartType("breakdownChartType", t)} />
             </Section>
+            <Section title="Well Cost — Monthly Spend Trend">
+              <SegmentedControl options={CHART_TYPES} value={store.wellCostTrendChartType} onChange={(t) => store.setChartType("wellCostTrendChartType", t)} />
+            </Section>
+            <Section title="Well Cost — Cost by Department">
+              <SegmentedControl options={CHART_TYPES} value={store.wellCostDeptChartType} onChange={(t) => store.setChartType("wellCostDeptChartType", t)} />
+            </Section>
+            <Section title="Well Cost — Spend by Service">
+              <SegmentedControl options={CHART_TYPES} value={store.wellCostServiceChartType} onChange={(t) => store.setChartType("wellCostServiceChartType", t)} />
+            </Section>
             <Section title="Value labels">
               <div className="flex items-center justify-between">
                 <div>
@@ -615,6 +637,14 @@ export function FormatDialog() {
                   <div className="mb-1.5 text-xs font-semibold text-muted-foreground uppercase">Financial Reports</div>
                   <div className="grid gap-2">
                     {REPORTS_SLOTS.map((s) => (
+                      <ChartSlotRow key={s.id} {...s} />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1.5 text-xs font-semibold text-muted-foreground uppercase">Well Cost Dashboard</div>
+                  <div className="grid gap-2">
+                    {WELL_COST_SLOTS.map((s) => (
                       <ChartSlotRow key={s.id} {...s} />
                     ))}
                   </div>

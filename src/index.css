@@ -166,6 +166,7 @@
     --tile-icon-svg: 1rem;
     --tile-value: 1.25rem;
     --chart-h: clamp(16rem, 31vw, 20rem);
+    --chart-card-min-w: 21rem;
 }
 :root[data-scale="compact"] {
     --tile-pad: 0.75rem;
@@ -173,6 +174,7 @@
     --tile-icon-svg: 0.875rem;
     --tile-value: 1.125rem;
     --chart-h: clamp(14rem, 27vw, 17rem);
+    --chart-card-min-w: 18rem;
 }
 :root[data-scale="spacious"] {
     --tile-pad: 1.5rem;
@@ -180,6 +182,24 @@
     --tile-icon-svg: 1.25rem;
     --tile-value: 1.5rem;
     --chart-h: clamp(19rem, 36vw, 24rem);
+    --chart-card-min-w: 24rem;
+}
+
+/* Fluid reflow for the dashboard's chart-card grid (DashboardPage's "Expenditure
+   Analysis" section) — column count follows available width via auto-fit instead of
+   fixed lg:/xl: breakpoints, so cards move between rows as the CSS viewport width
+   changes for ANY reason (browser zoom, window resize, sidebar collapse), not just
+   at a couple of hardcoded screen sizes. `minmax(min(100%, var(--chart-card-min-w)), 1fr)`
+   rather than a bare `minmax(var(--chart-card-min-w), 1fr)` matters on narrow phones:
+   without the `min(100%, ...)` clamp, a track's minimum never shrinks below
+   --chart-card-min-w even when the container itself is narrower, forcing a
+   horizontal scrollbar instead of the single full-width column this is meant to
+   collapse to. --chart-card-min-w itself already follows the Format dialog's card
+   "scale" setting (see the :root[data-scale] blocks above), so a denser/spacious
+   preference also shifts how many charts fit per row, not just their height. */
+.dashboard-chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--chart-card-min-w)), 1fr));
 }
 
 /* Responsive professional chart treatment shared by dashboard and reports. */

@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   parseDmrFiles,
+  buildDmrImportPlan,
   type DmrContractor,
   type DmrGap,
   type DmrImportError,
@@ -34,8 +35,6 @@ const CONTRACTOR_LABELS: Record<DmrContractor, string> = {
 const CONTRACTORS: DmrContractor[] = ["OGDCL", "MUD_CONTRACTOR", "SECOND_CONTRACTOR"]
 const SKIP = "__skip__"
 
-type RowStatus = "new" | "duplicate-in-batch" | "already-logged" | "remarks-update" | "unmapped"
-type PlanRow = DmrImportRow & { status: RowStatus }
 
 const STOP_WORDS = new Set(["cost", "the", "and"])
 
@@ -141,24 +140,7 @@ export function DmrImportDialog({
 
   const nonZeroRows = useMemo(() => parsedRows.filter((r) => r.amount > 0), [parsedRows])
 
-  const plan = useMemo<PlanRow[]>(() => {
-    const sorted = nonZeroRows.slice().sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.contractor.localeCompare(b.contractor))
-    const seen = new Set<string>()
-    return sorted.map((r) => {
-      const batchKey = `${r.entryDate}|${r.contractor}`
-      const targetId = mapping[r.contractor]
-      let status: RowStatus
-      if (seen.has(batchKey)) status = "duplicate-in-batch"
-      else if (!targetId) status = "unmapped"
-      else {
-        const existing = existingByKey.get(`${targetId}|${r.entryDate}`)
-        if (!existing) status = "new"
-        else status = !existing.remarks && r.remarks ? "remarks-update" : "already-logged"
-      }
-      if (status !== "duplicate-in-batch") seen.add(batchKey)
-      return { ...r, status }
-    })
-  }, [nonZeroRows, mapping, existingByKey])
+  const plan = useMemo(() => buildDmrImportPlan(nonZeroRows, mapping, existingByKey), [nonZeroRows, mapping, existingByKey])
 
   const importable = plan.filter((r) => r.status === "new" || r.status === "remarks-update")
 
@@ -465,7 +447,7 @@ export function DmrImportDialog({
                     {plan.map((r) => {
                       const target = costCentres.find((c) => c.id === mapping[r.contractor])
                       return (
-                        <TableRow key={`${r.fileName}-${r.contractor}`}>
+                          <TableRow key={`${r.fileName}-${r.entryDate}-${r.contractor}`}>
                           <TableCell>{r.entryDate}</TableCell>
                           <TableCell>
                             {CONTRACTOR_LABELS[r.contractor]}

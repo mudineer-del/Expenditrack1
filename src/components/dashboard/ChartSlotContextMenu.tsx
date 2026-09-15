@@ -67,6 +67,7 @@ export function ChartSlotContextMenu({
   id,
   hasDimension,
   hasZoom,
+  hasMeasure = true,
   chartTypeOptions,
   chartTypeValue,
   onChartTypeChange,
@@ -75,6 +76,9 @@ export function ChartSlotContextMenu({
   id: ChartSlotId
   hasDimension: boolean
   hasZoom?: boolean
+  /** False for the Well Cost slots — there's no invoice-style measure to switch (just one
+   *  dollar amount), so the Measure submenu would be meaningless there. */
+  hasMeasure?: boolean
   chartTypeOptions?: ChartTypeOption[]
   chartTypeValue?: ChartType
   onChartTypeChange?: (t: ChartType) => void
@@ -124,18 +128,20 @@ export function ChartSlotContextMenu({
             </ContextMenuSubContent>
           </ContextMenuSub>
         )}
-        <ContextMenuSub>
-          <ContextMenuSubTrigger>Measure</ContextMenuSubTrigger>
-          <ContextMenuSubContent>
-            <ContextMenuRadioGroup value={cfg.measure} onValueChange={(v) => setChartSlot(id, { measure: v as ChartMeasure })}>
-              {CHART_MEASURES.map((m) => (
-                <ContextMenuRadioItem key={m} value={m}>
-                  {chartMeasureLabel(m)}
-                </ContextMenuRadioItem>
-              ))}
-            </ContextMenuRadioGroup>
-          </ContextMenuSubContent>
-        </ContextMenuSub>
+        {hasMeasure && (
+          <ContextMenuSub>
+            <ContextMenuSubTrigger>Measure</ContextMenuSubTrigger>
+            <ContextMenuSubContent>
+              <ContextMenuRadioGroup value={cfg.measure} onValueChange={(v) => setChartSlot(id, { measure: v as ChartMeasure })}>
+                {CHART_MEASURES.map((m) => (
+                  <ContextMenuRadioItem key={m} value={m}>
+                    {chartMeasureLabel(m)}
+                  </ContextMenuRadioItem>
+                ))}
+              </ContextMenuRadioGroup>
+            </ContextMenuSubContent>
+          </ContextMenuSub>
+        )}
 
         {chartTypeOptions && onChartTypeChange && (
           <ContextMenuSub>

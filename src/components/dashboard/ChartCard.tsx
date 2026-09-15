@@ -72,7 +72,7 @@ export function ChartCard({
           on the same flat surface as the chart. Buttons rendered into `action` (the
           zoom stepper, data/visibility/type menus) inherit --chart-accent from here
           for their own hover/press color via .chart-toolbar-btn in index.css. */}
-      <div className="chart-card-titlebar relative flex min-h-11 items-center justify-between gap-3 px-4 py-2.5 md:px-5">
+      <div className="chart-card-titlebar relative flex min-h-11 flex-wrap items-center justify-between gap-3 px-4 py-2.5 md:px-5">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="chart-card-accent-chip" />
           <span className="min-w-0 truncate text-[clamp(0.86rem,0.78rem+0.24vw,1.02rem)] font-bold leading-tight tracking-[-0.01em] text-foreground">

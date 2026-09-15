@@ -30,6 +30,7 @@ Ikram-Previous/
 
 # Vite / React build (react-rewrite)
 dist/
+.tmp/
 dist-ssr/
 *.local
 .vscode/*

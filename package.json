@@ -6,6 +6,7 @@
   "main": "electron/main.ts",
   "homepage": "./",
   "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "dev": "node node_modules/vite/bin/vite.js",
     "build": "node node_modules/typescript/bin/tsc -b && npm run build:singlefile && node node_modules/vite/bin/vite.js build",
     "build:singlefile": "node node_modules/vite/bin/vite.js build --config vite.config.singlefile.ts && node scripts/copy-singlefile.mjs",

@@ -56,6 +56,11 @@ export type ChartSlotId =
   | "dashTrend" | "dashService" | "dashVendor" | "dashBreakdown" | "dashStatus"
   | "vendorSheetTrend" | "vendorSheetService" | "contractSheetTrend" | "contractSheetService"
   | "periodValue" | "compareTa" | "contractBuckets" | "contractMonthly"
+  // Well Cost Dashboard's three chart cards — outside the invoice measure/dimension
+  // pivot the slots above share (well-cost data has no equivalent "group by" field), so
+  // `measure` on these is an inert placeholder never read by WellCostCharts.tsx. Still
+  // get the same hidden/sizePercent/zoomEnabled treatment as every other slot.
+  | "wellCostTrend" | "wellCostDept" | "wellCostService"
 
 export interface ChartSlotConfig {
   dimension?: ChartDimension
@@ -94,6 +99,9 @@ const DEFAULT_CHART_SLOTS: Record<ChartSlotId, ChartSlotConfig> = {
   compareTa: { measure: "taAvg" },
   contractBuckets: { measure: "count" },
   contractMonthly: { measure: "incl" },
+  wellCostTrend: { measure: "incl", zoomEnabled: true },
+  wellCostDept: { measure: "incl" },
+  wellCostService: { measure: "incl" },
 }
 
 export interface CustomFont {
@@ -135,6 +143,9 @@ interface DisplayPrefs {
   vendorChartType: ChartType
   breakdownChartType: ChartType
   statusChartType: ChartType
+  wellCostTrendChartType: ChartType
+  wellCostDeptChartType: ChartType
+  wellCostServiceChartType: ChartType
   /** App-wide — whether bars/lines/slices show their value directly on the chart. */
   chartLabelsEnabled: boolean
   chartLabelPosition: ChartLabelPosition
@@ -159,7 +170,9 @@ interface DisplayPrefs {
   tableGridLines: boolean
 }
 
-type ChartKey = "trendChartType" | "serviceChartType" | "vendorChartType" | "breakdownChartType" | "statusChartType"
+type ChartKey =
+  | "trendChartType" | "serviceChartType" | "vendorChartType" | "breakdownChartType" | "statusChartType"
+  | "wellCostTrendChartType" | "wellCostDeptChartType" | "wellCostServiceChartType"
 
 interface DisplayState extends DisplayPrefs {
   setColorTheme: (id: string) => void
@@ -299,6 +312,9 @@ function loadPrefs(): DisplayPrefs {
     vendorChartType: needsProfessionalChartMigration ? "pie" : (saved?.vendorChartType || "pie"),
     breakdownChartType: needsProfessionalChartMigration ? "bar" : (saved?.breakdownChartType || "bar"),
     statusChartType: needsProfessionalChartMigration ? "horizontalBar" : (saved?.statusChartType || "horizontalBar"),
+    wellCostTrendChartType: saved?.wellCostTrendChartType || "bar",
+    wellCostDeptChartType: saved?.wellCostDeptChartType || "bar",
+    wellCostServiceChartType: saved?.wellCostServiceChartType || "pie",
     chartLabelsEnabled: needsProfessionalChartMigration ? false : (saved?.chartLabelsEnabled ?? false),
     chartLabelPosition: saved?.chartLabelPosition || "outside",
     chartBackground: needsProfessionalChartMigration ? "flat" : (saved?.chartBackground || "flat"),
@@ -353,6 +369,9 @@ function persist(state: DisplayPrefs): void {
     vendorChartType,
     breakdownChartType,
     statusChartType,
+    wellCostTrendChartType,
+    wellCostDeptChartType,
+    wellCostServiceChartType,
     chartLabelsEnabled,
     chartLabelPosition,
     chartBackground,
@@ -384,6 +403,9 @@ function persist(state: DisplayPrefs): void {
     vendorChartType,
     breakdownChartType,
     statusChartType,
+    wellCostTrendChartType,
+    wellCostDeptChartType,
+    wellCostServiceChartType,
     chartLabelsEnabled,
     chartLabelPosition,
     chartBackground,
@@ -566,7 +588,18 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
   },
 
   hydrateFromCloud: (prefs) => {
-    const next: DisplayPrefs = { ...prefs, chartDesignVersion: CHART_DESIGN_VERSION }
+    // Merged against defaults the same way loadPrefs() merges local storage — a layout
+    // saved to the cloud before a new chart slot existed otherwise comes back missing
+    // that key entirely, and every reader of chartSlots[newId] assumes it's always
+    // present (see DEFAULT_CHART_SLOTS's own comment).
+    const next: DisplayPrefs = {
+      ...prefs,
+      wellCostTrendChartType: prefs.wellCostTrendChartType ?? "bar",
+      wellCostDeptChartType: prefs.wellCostDeptChartType ?? "bar",
+      wellCostServiceChartType: prefs.wellCostServiceChartType ?? "pie",
+      chartDesignVersion: CHART_DESIGN_VERSION,
+      chartSlots: { ...DEFAULT_CHART_SLOTS, ...prefs.chartSlots },
+    }
     applyPalette(next.colorTheme, next.customColors ?? undefined)
     applyScale(next.cardScale)
     applyRadius(next.radius)

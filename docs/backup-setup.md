@@ -72,6 +72,19 @@ Change `RETENTION_COUNT` in the workflow file to adjust.
 
 ## Restoring from a backup
 
+The exporter now also includes `wellMilestones` (database table `well_milestones`)
+and `dashboardLayouts` (`dashboard_layouts`). Backups created before this change
+do not contain those records. This export is not a complete Supabase project
+backup: authentication accounts, storage objects, messages, profiles, and access
+grants require their own recovery process.
+
+Before restoring to production, rehearse against a separate Supabase project:
+apply the schema, restore parent tables before child tables, and compare table
+counts and per-currency invoice/well-cost totals. Account-linked layouts require
+matching user IDs. Keep the rehearsal isolated; a successful export alone does
+not prove restoration works. No production restoration was performed during
+the polishing review.
+
 These files are raw table dumps (one JSON array per Supabase table:
 `invoices`, `contracts`, `referenceLists`, `activityLog`, `wells`, and the
 Well Cost tables) — a different, more literal shape than the app's own

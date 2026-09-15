@@ -65,6 +65,11 @@ export function KpiTile({
           : undefined
       }
       onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (event) => {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick() }
+      } : undefined}
     >
       {/* Desktop keeps KPI cards clean and typographic; trend visuals remain available
           in the mobile treatment where they do not compete with the value hierarchy. */}
@@ -119,7 +124,7 @@ export function KpiTile({
           </div>
           <div className="min-w-0 md:hidden">
             <div className={cn("truncate text-xl font-extrabold tabular-nums", valueClassName)}>{value}</div>
-            <div className="mt-0.5 truncate text-[13px] font-semibold text-foreground/80">{label}</div>
+            <div className="mt-0.5 text-[13px] font-semibold leading-snug text-foreground/80">{label}</div>
             {sub && <div className="mt-1 truncate text-xs text-muted-foreground">{sub}</div>}
           </div>
 

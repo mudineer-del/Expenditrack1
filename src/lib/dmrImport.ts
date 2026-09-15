@@ -35,6 +35,25 @@
 
 export type DmrContractor = "OGDCL" | "MUD_CONTRACTOR" | "SECOND_CONTRACTOR"
 
+import type { WellCostTransaction } from "@/types/wellCost"
+
+export type DmrRowStatus = "new" | "duplicate-in-batch" | "already-logged" | "remarks-update" | "unmapped"
+
+export function buildDmrImportPlan(rows: DmrImportRow[], mapping: Record<DmrContractor, string>, existingByKey: Map<string, WellCostTransaction>) {
+  const seen = new Set<string>()
+  return rows.filter((r) => r.amount > 0)
+    .slice().sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.contractor.localeCompare(b.contractor))
+    .map((r) => {
+      const key = `${r.entryDate}|${r.contractor}`
+      const target = mapping[r.contractor]
+      const existing = existingByKey.get(`${target}|${r.entryDate}`)
+      const status: DmrRowStatus = seen.has(key) ? "duplicate-in-batch" : !target ? "unmapped" :
+        !existing ? "new" : !existing.remarks && r.remarks ? "remarks-update" : "already-logged"
+      seen.add(key)
+      return { ...r, status }
+    })
+}
+
 export interface DmrImportRow {
   fileName: string
   entryDate: string
@@ -554,6 +573,8 @@ const PLAUSIBILITY_MULTIPLIER = 5
  *  positive amount can still be implausible (see PLAUSIBILITY_MULTIPLIER) — flagged, not
  *  dropped, so the human reviewing it can see it was considered and rejected on purpose. */
 function computeReconciliations(rows: DmrImportRow[]): DmrReconciliation[] {
+  // Never infer a gap from unrelated wells selected in the same file batch.
+  if (new Set(rows.map((r) => r.wellName.trim().toLowerCase())).size > 1) return []
   const byContractor = new Map<DmrContractor, DmrImportRow[]>()
   for (const r of rows) {
     if (r.cumulative === null) continue
@@ -564,12 +585,9 @@ function computeReconciliations(rows: DmrImportRow[]): DmrReconciliation[] {
 
   const results: DmrReconciliation[] = []
   for (const [contractor, list] of byContractor) {
-    // One entry per date (last file wins if a date appears more than once in this batch —
-    // mirrors the dialog's own "first non-duplicate in sorted order" convention closely
-    // enough for this purpose, since reconciliation only ever looks at whichever cumulative
-    // figure a given date resolves to, not which file it came from).
+    // Use the first report for a date, matching the import preview's duplicate policy.
     const byDate = new Map<string, DmrImportRow>()
-    for (const r of list) byDate.set(r.entryDate, r)
+    for (const r of list) if (!byDate.has(r.entryDate)) byDate.set(r.entryDate, r)
     const sorted = Array.from(byDate.values()).sort((a, b) => a.entryDate.localeCompare(b.entryDate))
 
     // A reading that's followed by a LOWER cumulative is the untrustworthy one, not the

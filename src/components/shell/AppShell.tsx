@@ -37,6 +37,11 @@ const TITLES: Record<string, string> = {
 }
 
 function pageTitle(pathname: string): string {
+  if (pathname.startsWith("/well-cost/log/")) return "Daily Cost Log"
+  if (pathname === "/well-cost/structure") return "Cost Structure"
+  if (pathname === "/well-cost/wells") return "Well Registry"
+  if (pathname === "/well-cost") return "Well Cost Dashboard"
+  if (pathname === "/messages") return "Message Centre"
   if (TITLES[pathname]) return TITLES[pathname]
   const match = Object.keys(TITLES).find((p) => p !== "/" && pathname.startsWith(p))
   return match ? TITLES[match] : "OGDCL Drilling Fluids Tracker"
@@ -59,6 +64,7 @@ export function AppShell() {
   return (
     <>
       <SidebarProvider>
+        <a href="#main-content" className="sr-only z-50 rounded-md bg-background p-3 text-foreground shadow-md focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to content</a>
         <AppSidebar />
         <SidebarInset>
           {/* Light, token-driven bar matching the sidebar surface — keeps the shell
@@ -149,7 +155,7 @@ export function AppShell() {
               </DropdownMenu>
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-4 pb-24 md:pb-4">
+          <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto p-4 pb-24 md:pb-4">
             {/* Keyed by pathname so each page swap remounts this wrapper and
                 replays the entrance animation — react-router doesn't animate
                 route transitions on its own, so without this, navigating felt
