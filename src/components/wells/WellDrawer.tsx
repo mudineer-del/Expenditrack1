@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
@@ -61,8 +61,17 @@ export function WellDrawer({
     defaultValues: toValues(well ?? blankWell()),
   })
 
+  // Re-initialize only when a *different* well is being opened — not on every open/close
+  // toggle, so an accidental close (Escape, click outside) while filling the form doesn't
+  // wipe it. A fresh "add" session (well === null) keeps whatever was last typed until this
+  // drawer is asked to edit a specific well instead.
+  const lastKeyRef = useRef<string | null>(null)
   useEffect(() => {
-    if (open) form.reset(toValues(well ?? blankWell()))
+    if (!open) return
+    const key = well ? `edit:${well.id}` : "add"
+    if (lastKeyRef.current === key) return
+    lastKeyRef.current = key
+    form.reset(toValues(well ?? blankWell()))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, well])
 

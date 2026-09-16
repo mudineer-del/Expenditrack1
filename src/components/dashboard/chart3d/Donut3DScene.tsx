@@ -174,24 +174,27 @@ export function Donut3DScene({ data, variant, otherColor, centerLabel, formatVal
   const camLookAt: [number, number, number] = [lookTarget[0], depth / 2 + lookTarget[1], lookTarget[2]]
   // Half-extent generous enough to include the outer per-slice labels (outerR + ~4).
 
-  // Several small-but-not-tiny slices sitting next to each other (their %-share filter
-  // above only drops truly negligible ones) still land at very similar angles — without
-  // this, their outer labels overlap into one unreadable smear right where they cluster.
-  // Sort by angle and hand out progressive extra radius to whichever ones are within
-  // `thresholdRad` of the previous one, same idea as the SVG radial-bar chart's own
-  // stagger (`computeRadialLabelStagger` in donut3d.tsx).
-  const labelRadiusExtra = useMemo(() => {
-    const thresholdRad = THREE.MathUtils.degToRad(20)
-    const sorted = slices.map((s, i) => ({ i, angle: s.midAngle })).sort((a, b) => a.angle - b.angle)
-    const extra: Record<number, number> = {}
-    let lastAngle: number | null = null
-    let stack = 0
-    for (const e of sorted) {
-      stack = lastAngle !== null && Math.abs(e.angle - lastAngle) < thresholdRad ? stack + 1 : 0
-      extra[e.i] = stack * 3.2
-      lastAngle = e.angle
+  // Placing each label at its own slice's raw polar position (the original approach)
+  // looked fine from directly overhead, but at the oblique tilt this scene actually uses,
+  // the camera foreshortens the ring into a flattened ellipse — world angles that are
+  // comfortably far apart (even the full ~51° spacing of 7 even slices) can still project
+  // to nearly the same screen position near the ellipse's "equator", so labels ended up
+  // overlapping the ring and each other regardless of how far out they were pushed
+  // radially (visible on real well-cost data as an unreadable text pile-up over the
+  // donut). Ported the SAME fix already proven out on the 2D SVG donut
+  // (makeDonutOuterLabel in donut3d.tsx): bucket every label into a left/right lane by
+  // which side of the ring its slice sits on, and stack each lane's labels along world Y
+  // (this scene's true vertical axis — same axis centerLabel already floats on above the
+  // ring) at even, guaranteed-non-overlapping steps, instead of trusting the raw
+  // (foreshortened) polar projection to keep them apart.
+  const sideLanes = useMemo(() => {
+    const withSide = slices.map((s, i) => ({ i, side: (Math.cos(s.midAngle) >= 0 ? "right" : "left") as "left" | "right" }))
+    const lanes = new Map<number, { rank: number; count: number; side: "left" | "right" }>()
+    for (const side of ["left", "right"] as const) {
+      const items = withSide.filter((item) => item.side === side)
+      items.forEach((item, rank) => lanes.set(item.i, { rank, count: items.length, side }))
     }
-    return extra
+    return lanes
   }, [slices])
 
   function toggleKey(key: string) {
@@ -211,7 +214,13 @@ export function Donut3DScene({ data, variant, otherColor, centerLabel, formatVal
     <div className="flex h-full w-full flex-col">
       <div className="relative min-h-0 flex-1">
         <Canvas shadows={shadows} dpr={[1, 1.75]} gl={{ antialias: true, alpha: true }}>
-          <FitCamera halfWidth={outerR + 9} halfHeight={outerR + 9} phi={phi} theta={theta} lookAt={camLookAt} fov={38} />
+          {/* halfWidth/halfHeight need to clear the per-slice labels' lane positions
+              (outerR + 8, further out now that labels sit in fixed side lanes rather than
+              tight against the ring), plus a margin — Html labels are screen-space
+              overlays, not world-clipped, so text can still run past the canvas edge in
+              CSS pixels even when its anchor point is technically inside the frustum if
+              that margin is too thin. */}
+          <FitCamera halfWidth={outerR + 20} halfHeight={outerR + 14} phi={phi} theta={theta} lookAt={camLookAt} fov={38} />
           <OrbitControls
             target={camLookAt}
             enablePan={false}
@@ -243,16 +252,18 @@ export function Donut3DScene({ data, variant, otherColor, centerLabel, formatVal
               .map((s, i) => ({ s, i }))
               .filter(({ s }) => s.pct >= 2)
               .map(({ s, i }) => {
-                const stack = (labelRadiusExtra[i] ?? 0) / 3.2
-                const r = outerR + 3.5 + stack * 3.2
-                const x = Math.cos(s.midAngle) * r
-                const z = -Math.sin(s.midAngle) * r
-                // A same-direction radial push barely separates labels whose angles were
-                // already nearly identical — stagger vertically too, so a cluster fans into
-                // an actual staircase instead of a slightly-longer smear.
-                const y = stack * 2.2
+                const lane = sideLanes.get(i)
+                const side = lane?.side ?? (Math.cos(s.midAngle) >= 0 ? "right" : "left")
+                const pushOut = outerR + 19
+                const laneGap = 5.2
+                const x = (side === "right" ? 1 : -1) * pushOut
+                // Wedges extrude DOWN from y=0 (their top face sits at y=0, see Wedge's
+                // -90°-about-X rotation) — y=0 is the ring's own surface, not clear of it,
+                // so labels centered there sat right on top of the donut instead of beside
+                // it. Float the whole lane above that surface first, then fan out from there.
+                const y = 4.5 + (lane ? (lane.rank - (lane.count - 1) / 2) * laneGap : 0)
                 return (
-                  <Html key={`lbl-${s.d.key}`} position={[x, y, z]} center distanceFactor={38} zIndexRange={[1, 0]}>
+                  <Html key={`lbl-${s.d.key}`} position={[x, y, 0]} center distanceFactor={38} zIndexRange={[1, 0]}>
                     <div
                       className="pointer-events-none whitespace-nowrap text-[11px] font-bold drop-shadow-sm"
                       style={{ color: resolveCssColor(s.d.color) }}

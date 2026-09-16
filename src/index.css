@@ -159,13 +159,24 @@
     }
 }
 
-/* KPI-card / chart sizing driven by the Format dialog's "scale" setting (see useDisplayStore). */
+/* KPI-card / chart sizing driven by the Format dialog's "scale" setting (see useDisplayStore).
+   --chart-h-base is the scale-driven default; --chart-h is what every chart actually reads
+   (`h-[var(--chart-h)]`) and simply points at the base by default. Per-chart zoom
+   (ChartZoomStepper's chartZoomStyle()) overrides `--chart-h` on one chart's own wrapper to
+   `calc(var(--chart-h-base) * pct)` — reading the BASE, not `--chart-h` itself. A custom
+   property can't reference itself to compute itself (`--chart-h: calc(var(--chart-h) * k)`
+   is an invalid cyclic dependency per spec — verified directly: it computes to nothing, so
+   the "zoomed" chart silently fell back to its default aspect ratio instead of resizing at
+   all), which is exactly why the per-chart zoom stepper visibly changed its own percentage
+   label but never actually resized the chart underneath it. Reading a differently-named,
+   never-overridden base property sidesteps the cycle entirely. */
 :root {
     --tile-pad: 1rem;
     --tile-icon: 2rem;
     --tile-icon-svg: 1rem;
     --tile-value: 1.25rem;
-    --chart-h: clamp(16rem, 31vw, 20rem);
+    --chart-h-base: clamp(16rem, 31vw, 20rem);
+    --chart-h: var(--chart-h-base);
     --chart-card-min-w: 21rem;
 }
 :root[data-scale="compact"] {
@@ -173,7 +184,8 @@
     --tile-icon: 1.75rem;
     --tile-icon-svg: 0.875rem;
     --tile-value: 1.125rem;
-    --chart-h: clamp(14rem, 27vw, 17rem);
+    --chart-h-base: clamp(14rem, 27vw, 17rem);
+    --chart-h: var(--chart-h-base);
     --chart-card-min-w: 18rem;
 }
 :root[data-scale="spacious"] {
@@ -181,7 +193,8 @@
     --tile-icon: 2.5rem;
     --tile-icon-svg: 1.25rem;
     --tile-value: 1.5rem;
-    --chart-h: clamp(19rem, 36vw, 24rem);
+    --chart-h-base: clamp(19rem, 36vw, 24rem);
+    --chart-h: var(--chart-h-base);
     --chart-card-min-w: 24rem;
 }
 
@@ -253,6 +266,13 @@
 }
 :root:not([data-theme="light"]) .chart-card-titlebar { box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
 :root[data-theme="dark"] .chart-card-titlebar { box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+
+/* Cursor hint for a maximizable DialogContent's drag-to-move header (see dialog.tsx's
+   useFloatingDialog) — data-draggable is only present while the dialog is neither
+   maximized nor plain (non-maximizable), matching exactly when a header pointerdown
+   actually starts a drag. */
+[data-slot="dialog-content"][data-draggable] [data-slot="dialog-header"] { cursor: grab; }
+[data-slot="dialog-content"][data-draggable] [data-slot="dialog-header"]:active { cursor: grabbing; }
 
 .chart-card-accent-chip {
     display: inline-flex;
@@ -970,3 +990,10 @@ body {
 .app-contract-label { color: color-mix(in oklch, var(--sidebar-foreground) 78%, transparent); }
 .app-contracts-view-all { color: var(--sidebar-foreground); border-color: var(--sidebar-border); background: color-mix(in oklch, var(--sidebar-accent) 45%, transparent); }
 .app-contracts-view-all:hover { border-color: color-mix(in oklch, var(--primary) 30%, var(--sidebar-border)); background: color-mix(in oklch, var(--primary) 12%, var(--sidebar-accent)); }
+/* Slot-local label preferences; radial labels use geometry-aware sizing inline. */
+.chart-label-scope .recharts-surface text:not(.radial-direct-label) {
+  font-size: var(--chart-label-size, 11px);
+}
+.chart-label-scope[style*="--chart-label-color:"] .recharts-surface text {
+  fill: var(--chart-label-color);
+}

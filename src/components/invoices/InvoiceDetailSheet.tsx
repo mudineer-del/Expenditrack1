@@ -181,8 +181,13 @@ export function InvoiceDetailSheet({
               </div>
             </div>
 
+            {/* dashboard-chart-grid (not a lg:/sm: breakpoint) reflows off this DIALOG's own
+                width, not the viewport's — a viewport breakpoint stays 2-column even when
+                this sheet is its normal ~48rem width on any reasonably wide monitor, which is
+                what let a chart's own content force it (and the dialog around it) wider than
+                the dialog's box instead of reflowing to one column. */}
             {rows.length > 1 && (!trendCfg.hidden || !serviceCfg.hidden) && (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="dashboard-chart-grid gap-4">
                 {!trendCfg.hidden && (
                 <ChartCard
                   accent="var(--dataviz-1)"

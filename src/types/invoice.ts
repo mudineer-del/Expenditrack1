@@ -125,6 +125,40 @@ export function fromRow(row: InvoiceRow): Invoice {
   return draft as unknown as Invoice
 }
 
+/** Calendar year for grouping/filtering — derived from invoiceDate first, since that's
+ *  the one field that's always a real, consistently-formatted date. `year` (plain
+ *  calendar year, e.g. "2023") is a fallback for the rare invoice missing a date
+ *  entirely; `yr` is deliberately NOT used as a calendar-year fallback even though it's
+ *  sometimes populated — it's a different field, OGDCL's fiscal year in "YYYY-YY" /
+ *  "YYYY-YYYY" form (July–June, see the dashboard's "Fiscal year 2026-2027" KPI tile and
+ *  dashboard.ts's fyKey()), not an alternate spelling of calendar year. Grouping by
+ *  invoiceDate-first fixes two bugs that showed up together in production: (1) any
+ *  invoice with `year`/`yr` left blank — seemingly everything entered since the legacy
+ *  bulk-imported data ends around 2022, since neither field is required on the
+ *  invoice-entry form and `yr` isn't even editable there (see InvoiceDrawer.tsx) —
+ *  silently dropped out of "by year"/"by quarter" views instead of appearing under its
+ *  real period; and (2) invoices that DO have `yr` set (e.g. "2022-23") showed up as a
+ *  separate bucket from same-year invoices using the plain `year` field (e.g. "2022"),
+ *  splitting one calendar year's invoices across two mismatched labels. */
+export function invoiceYear(inv: Invoice): string {
+  if (inv.invoiceDate && /^\d{4}/.test(inv.invoiceDate)) return inv.invoiceDate.slice(0, 4)
+  if (inv.year) return String(inv.year)
+  if (inv.yr) return String(inv.yr)
+  return ""
+}
+
+/** Same invoiceDate-first approach as invoiceYear(), and for the same reason: `qtr` is a
+ *  free-picked "Q1"–"Q4" value with no guarantee it means the same (calendar vs. fiscal)
+ *  quarter as `yr` does when both are set on an older row. */
+export function invoiceQuarter(inv: Invoice): string {
+  if (inv.invoiceDate && /^\d{4}-\d{2}/.test(inv.invoiceDate)) {
+    const month = Number(inv.invoiceDate.slice(5, 7))
+    if (month >= 1 && month <= 12) return `Q${Math.ceil(month / 3)}`
+  }
+  if (inv.qtr) return inv.qtr
+  return ""
+}
+
 export function blankInvoice(): Invoice {
   return {
     id: crypto.randomUUID(),

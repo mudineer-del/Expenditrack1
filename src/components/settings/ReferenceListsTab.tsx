@@ -14,9 +14,16 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
+import { SegmentedControl } from "@/components/shell/FormatDialog"
 import { getContractorLogo, useContractorLogos, type ContractorLogos } from "@/lib/contractorLogos"
 import { vendorColor } from "@/lib/dashboard"
 import { useReferenceLists, type ReferenceLists } from "@/lib/referenceLists"
+import { useDisplayStore, type ContractorLogoShape } from "@/store/useDisplayStore"
+
+const LOGO_SHAPES: { key: ContractorLogoShape; label: string }[] = [
+  { key: "round", label: "Round" },
+  { key: "square", label: "Square" },
+]
 
 const LISTS: { key: keyof ReferenceLists; title: string }[] = [
   { key: "departments", title: "Departments" },
@@ -140,6 +147,8 @@ function ContractorLogoCard({
 export function ReferenceListsTab() {
   const { ref, addValue, removeValue } = useReferenceLists()
   const { logos, setLogo, removeLogo, isSaving: logosSaving } = useContractorLogos()
+  const logoShape = useDisplayStore((s) => s.contractorLogoShape)
+  const setLogoShape = useDisplayStore((s) => s.setContractorLogoShape)
   const [removeTarget, setRemoveTarget] = useState<{ key: keyof ReferenceLists; title: string; value: string } | null>(null)
   const [logoRemoveTarget, setLogoRemoveTarget] = useState<string | null>(null)
 
@@ -183,6 +192,12 @@ export function ReferenceListsTab() {
           Add an optional PNG, JPEG, WebP, or GIF logo for each contractor. Logos are shared with the team and limited to 1 MB each;
           contractors without a logo keep the initials fallback.
         </p>
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border bg-muted/40 p-2.5">
+          <div className="text-xs font-medium text-muted-foreground">Logo shape</div>
+          <div className="w-40">
+            <SegmentedControl options={LOGO_SHAPES} value={logoShape} onChange={setLogoShape} />
+          </div>
+        </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {ref.vendors.map((vendor) => (
             <ContractorLogoCard

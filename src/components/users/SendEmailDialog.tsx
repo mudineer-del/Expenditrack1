@@ -1,5 +1,5 @@
 import { Mail } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -41,8 +41,15 @@ export function SendEmailDialog({
   const [subject, setSubject] = useState("")
   const [body, setBody] = useState("")
 
+  // Re-initialize only when a *different* recipient is being opened — not on every
+  // open/close toggle, so an accidental close (Escape, click outside) while composing
+  // doesn't wipe the draft. A successful send clears the fields explicitly instead (below).
+  const lastKeyRef = useRef<string | null>(null)
   useEffect(() => {
     if (!open) return
+    const key = fixedRecipient?.id ?? "compose"
+    if (lastKeyRef.current === key) return
+    lastKeyRef.current = key
     setSubject("")
     setBody("")
     setSelected(fixedRecipient ? new Set([fixedRecipient.id]) : new Set())
@@ -70,6 +77,9 @@ export function SendEmailDialog({
       {
         onSuccess: () => {
           toast.success(`Email sent to ${recipients.length} recipient${recipients.length !== 1 ? "s" : ""}.`)
+          setSubject("")
+          setBody("")
+          setSelected(fixedRecipient ? new Set([fixedRecipient.id]) : new Set())
           onOpenChange(false)
         },
         onError: (e) => toast.error(errorMessage(e, "Could not send email.")),

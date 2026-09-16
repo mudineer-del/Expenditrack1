@@ -189,7 +189,7 @@ export function ContractDetailSheet({
           </p>
 
           {rows.length > 0 && (!trendCfg.hidden || !serviceCfg.hidden) && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="dashboard-chart-grid gap-4">
               {!trendCfg.hidden && (
               <ChartCard
                 accent="var(--dataviz-1)"

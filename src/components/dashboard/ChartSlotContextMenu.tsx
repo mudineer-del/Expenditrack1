@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { ChartLabelContext } from "./ChartLabelContext"
 import type { ChartTypeOption } from "@/components/dashboard/ChartTypeMenu"
 import { ChartZoomStepper, chartZoomStyle } from "@/components/dashboard/ChartZoomStepper"
 import {
@@ -107,7 +108,11 @@ export function ChartSlotContextMenu({
   return (
     <ContextMenu>
       <ContextMenuTrigger className="contents" style={chartZoomStyle(cfg.sizePercent)}>
-        {children}
+        <ChartLabelContext.Provider value={cfg}>
+          <div className="chart-label-scope" style={{ "--chart-label-size": `${(cfg.labelFontSize ?? 11) * (cfg.sizePercent ?? 100) / 100}px`, "--chart-label-color": cfg.labelColor || undefined } as React.CSSProperties}>
+            {children}
+          </div>
+        </ChartLabelContext.Provider>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-56">
         {hasDimension && (

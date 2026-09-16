@@ -28,7 +28,7 @@ import { InvoiceDrawer } from "@/components/invoices/InvoiceDrawer"
 import { InvoiceFiltersBar } from "@/components/invoices/InvoiceFiltersBar"
 import { InvoicesTable } from "@/components/invoices/InvoicesTable"
 import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
-import { buildContractLabels } from "@/lib/contracts"
+import { buildContractLabels, buildContractVendorMap } from "@/lib/contracts"
 import { fmtMoney } from "@/lib/dashboard"
 import { BLANK_FILTERS, filterAndSortInvoices, type SortState } from "@/lib/invoiceFilters"
 import { exportInvoicesCsv, exportInvoicesXlsx, invoiceDupKey } from "@/lib/invoiceIO"
@@ -45,7 +45,7 @@ import {
   useInvoicesQuery,
   useUpsertInvoice,
 } from "@/hooks/useInvoices"
-import type { Invoice } from "@/types/invoice"
+import { invoiceYear, type Invoice } from "@/types/invoice"
 
 const PAGE_SIZES = [25, 50, 75, 100]
 
@@ -106,8 +106,12 @@ export default function InvoicesPage() {
     [contractNumbers, contracts, invoices]
   )
 
+  // contractNo -> vendor, so the invoice entry form can narrow the Contract No. dropdown
+  // down to just the contracts that belong to whichever vendor is selected.
+  const contractVendorMap = useMemo(() => buildContractVendorMap(contracts, invoices), [contracts, invoices])
+
   const yearOptions = useMemo(
-    () => Array.from(new Set(invoices.map((r) => r.year).filter(Boolean))).map(String).sort(),
+    () => Array.from(new Set(invoices.map(invoiceYear).filter(Boolean))).sort(),
     [invoices]
   )
 
@@ -444,6 +448,7 @@ export default function InvoicesPage() {
         defaultDept={activeDept !== "ALL" ? activeDept : refLists.departments[0]}
         contractNumbers={contractNumbers}
         contractLabels={contractLabels}
+        contractVendorMap={contractVendorMap}
         canEdit={can("edit")}
         onOpenChange={setDrawerOpen}
         onSubmit={handleSave}

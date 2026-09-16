@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
@@ -70,10 +70,18 @@ export function WellCostCentreDrawer({
     defaultValues: toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId)),
   })
 
+  // Re-initialize only when a *different* item (or well/department/category) is being
+  // opened — not on every open/close toggle, so an accidental close (Escape, click outside)
+  // while filling the form doesn't wipe it.
+  const lastKeyRef = useRef<string | null>(null)
   useEffect(() => {
-    if (open) form.reset(toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId)))
+    if (!open) return
+    const key = item ? `edit:${item.id}` : `add:${wellId}:${departmentId}:${serviceCategoryId}`
+    if (lastKeyRef.current === key) return
+    lastKeyRef.current = key
+    form.reset(toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, item])
+  }, [open, item, wellId, departmentId, serviceCategoryId])
 
   function handleSubmit(values: Values) {
     const record: WellCostCentre = {

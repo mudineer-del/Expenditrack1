@@ -1,4 +1,4 @@
-import type { Invoice } from "@/types/invoice"
+import { invoiceQuarter, invoiceYear, type Invoice } from "@/types/invoice"
 
 export type ReportMode = "contract" | "compare" | "period" | "management"
 
@@ -55,8 +55,8 @@ export function reportRows(invoices: Invoice[], f: ReportFilters): Invoice[] {
   if (f.region) rows = rows.filter((r) => normStr(r.region) === normStr(f.region))
   if (f.status) rows = rows.filter((r) => normStr(r.status) === normStr(f.status))
   if (f.well) rows = rows.filter((r) => normStr(r.wellName) === normStr(f.well))
-  if (f.year) rows = rows.filter((r) => String(r.year) === String(f.year) || String(r.yr) === String(f.year))
-  if (f.qtr) rows = rows.filter((r) => r.qtr === f.qtr)
+  if (f.year) rows = rows.filter((r) => invoiceYear(r) === String(f.year))
+  if (f.qtr) rows = rows.filter((r) => invoiceQuarter(r) === f.qtr)
   if (f.from) rows = rows.filter((r) => { const d = r.invoiceDate || r.receivingDate; return d && d >= f.from })
   if (f.to) rows = rows.filter((r) => { const d = r.invoiceDate || r.receivingDate; return d && d <= f.to })
   return rows
@@ -125,8 +125,8 @@ export function groupRows(rows: Invoice[], groupBy: GroupBy): ReportGroup[] {
       case "department": key = r.department || "Unspecified"; break
       case "rig": key = r.rig || "Unspecified"; break
       case "location": key = r.location || "Unspecified"; break
-      case "year": key = r.year || r.yr || "—"; break
-      case "quarter": key = ((r.year || r.yr) ? (r.year || r.yr) + " " : "") + (r.qtr || "—"); break
+      case "year": key = invoiceYear(r) || "—"; break
+      case "quarter": key = (invoiceYear(r) ? invoiceYear(r) + " " : "") + (invoiceQuarter(r) || "—"); break
       case "month": key = r.invoiceDate && /^\d{4}-\d{2}/.test(r.invoiceDate) ? r.invoiceDate.slice(0, 7) : "Undated"; break
       case "contract":
       default: key = (r.contractNo || "").trim() || "No contract"; break
@@ -165,7 +165,7 @@ export function shortContract(c: string | null | undefined): string {
 }
 
 export function yearsInData(invoices: Invoice[]): string[] {
-  return Array.from(new Set(invoices.map((r) => r.year || r.yr).filter(Boolean).map(String))).sort()
+  return Array.from(new Set(invoices.map(invoiceYear).filter(Boolean))).sort()
 }
 
 /** Curated subset of `Aggregate`'s fields worth plotting as a chart's measure — the

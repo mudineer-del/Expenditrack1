@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,17 +23,16 @@ export function NameDialog({
   onOpenChange: (open: boolean) => void
   onSubmit: (name: string) => void
 }) {
+  // Not cleared on every open/close toggle — an accidental close (Escape, click outside)
+  // while typing shouldn't lose it. Cleared only once the name is actually submitted.
   const [value, setValue] = useState("")
-
-  useEffect(() => {
-    if (open) setValue("")
-  }, [open])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = value.trim()
     if (!trimmed) return
     onSubmit(trimmed)
+    setValue("")
   }
 
   return (

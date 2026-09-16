@@ -32,6 +32,11 @@ export type ChartType =
 export type BuiltinFont = "inter" | "nunito" | "roboto" | "open-sans" | "montserrat" | "poppins" | "system" | "serif" | "mono"
 export type FontSize = "sm" | "md" | "lg"
 export type ChartLabelPosition = "outside" | "inside"
+/** App-wide shape for every contractor logo chip (Settings ▸ Reference Lists, invoice
+ *  rows/cards, contract cards, dashboard widgets) — "round" is today's circular chip,
+ *  "square" keeps a soft corner (not a hard square) to stay consistent with the rest of
+ *  the app's rounded-corner look. */
+export type ContractorLogoShape = "round" | "square"
 /** How strongly each chart card's background is tinted by its own accent color —
  *  "flat" is a plain solid card (Office's "No fill"), "subtle" is today's soft accent
  *  wash, "gradient" is a bolder sweep. */
@@ -63,6 +68,8 @@ export type ChartSlotId =
   | "wellCostTrend" | "wellCostDept" | "wellCostService"
 
 export interface ChartSlotConfig {
+  labelFontSize?: number
+  labelColor?: string
   dimension?: ChartDimension
   measure: ChartMeasure
   /** When true, this chart's card is skipped entirely wherever it would normally render.
@@ -149,6 +156,7 @@ interface DisplayPrefs {
   /** App-wide — whether bars/lines/slices show their value directly on the chart. */
   chartLabelsEnabled: boolean
   chartLabelPosition: ChartLabelPosition
+  contractorLogoShape: ContractorLogoShape
   /** App-wide — every chart card's background tint, from a plain solid card up through a
    *  bolder accent gradient (see ChartBackground/ChartBackgroundDirection). */
   chartBackground: ChartBackground
@@ -191,6 +199,7 @@ interface DisplayState extends DisplayPrefs {
   setChartType: (key: ChartKey, type: ChartType) => void
   setChartLabelsEnabled: (v: boolean) => void
   setChartLabelPosition: (p: ChartLabelPosition) => void
+  setContractorLogoShape: (v: ContractorLogoShape) => void
   setChartBackground: (v: ChartBackground) => void
   setChartBackgroundDirection: (v: ChartBackgroundDirection) => void
   setReduce3DEffects: (v: boolean) => void
@@ -317,6 +326,7 @@ function loadPrefs(): DisplayPrefs {
     wellCostServiceChartType: saved?.wellCostServiceChartType || "pie",
     chartLabelsEnabled: needsProfessionalChartMigration ? false : (saved?.chartLabelsEnabled ?? false),
     chartLabelPosition: saved?.chartLabelPosition || "outside",
+    contractorLogoShape: saved?.contractorLogoShape || "round",
     chartBackground: needsProfessionalChartMigration ? "flat" : (saved?.chartBackground || "flat"),
     chartBackgroundDirection: saved?.chartBackgroundDirection || "diagonal",
     reduce3DEffects: saved?.reduce3DEffects ?? false,
@@ -374,6 +384,7 @@ function persist(state: DisplayPrefs): void {
     wellCostServiceChartType,
     chartLabelsEnabled,
     chartLabelPosition,
+    contractorLogoShape,
     chartBackground,
     chartBackgroundDirection,
     reduce3DEffects,
@@ -408,6 +419,7 @@ function persist(state: DisplayPrefs): void {
     wellCostServiceChartType,
     chartLabelsEnabled,
     chartLabelPosition,
+    contractorLogoShape,
     chartBackground,
     chartBackgroundDirection,
     reduce3DEffects,
@@ -509,6 +521,11 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
     persist(get())
   },
 
+  setContractorLogoShape: (contractorLogoShape) => {
+    set({ contractorLogoShape })
+    persist(get())
+  },
+
   setChartBackground: (chartBackground) => {
     set({ chartBackground })
     persist(get())
@@ -597,6 +614,7 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
       wellCostTrendChartType: prefs.wellCostTrendChartType ?? "bar",
       wellCostDeptChartType: prefs.wellCostDeptChartType ?? "bar",
       wellCostServiceChartType: prefs.wellCostServiceChartType ?? "pie",
+      contractorLogoShape: prefs.contractorLogoShape ?? "round",
       chartDesignVersion: CHART_DESIGN_VERSION,
       chartSlots: { ...DEFAULT_CHART_SLOTS, ...prefs.chartSlots },
     }

@@ -1,4 +1,5 @@
 import { Sector } from "recharts"
+import { useChartLabelOptions } from "./ChartLabelContext"
 import type { PieLabelRenderProps, PieSectorDataItem } from "recharts"
 
 const RADIAN = Math.PI / 180
@@ -57,16 +58,32 @@ export function makeDonutOuterLabel(
     const centerX = Number(cx)
     const centerY = Number(cy)
     const ringRadius = Number(outerRadius)
+    // Every offset/size below was originally a fixed pixel constant tuned for whatever
+    // the donut happened to render at by default — so the leader lines and label text
+    // stayed the same absolute size even as the ring itself grew or shrank (per-chart
+    // zoom stepper, browser zoom, window resize, or just a narrower/wider card from the
+    // dashboard grid reflow all change the container Recharts measures, and outerRadius
+    // is a PERCENTAGE of that). BASE_RADIUS is this donut's typical radius at an
+    // unzoomed default card width — dividing by it turns every constant below into "this
+    // many times the ring's own current size" instead of a fixed px value, so labels
+    // actually track the ring visually shrinking/growing rather than staying put while
+    // it moves underneath them. Clamped so an extreme zoom level never shrinks text below
+    // legibility or blows it up past the card.
+    const BASE_RADIUS = 85
+    const scale = Math.min(1.8, Math.max(0.5, ringRadius / BASE_RADIUS))
+    const scaledDistance = distance * scale
+    const fontSize = Math.min(14, Math.max(8.5, 11.5 * scale))
+    const textStroke = Math.min(4, Math.max(2, 3 * scale))
     const cos = Math.cos(-midAngle * RADIAN)
     const sin = Math.sin(-midAngle * RADIAN)
     const tipX = centerX + ringRadius * cos
     const tipY = centerY + ringRadius * sin
     const side: "left" | "right" = cos >= 0 ? "right" : "left"
-    const labelX = centerX + (side === "right" ? 1 : -1) * (ringRadius + distance + 24)
-    const availableHeight = ringRadius * 2 + 72
-    const laneGap = lane && lane.count > 1 ? Math.min(21, availableHeight / (lane.count - 1)) : 0
-    const y = lane ? centerY + (lane.rank - (lane.count - 1) / 2) * laneGap : centerY + (ringRadius + distance) * sin
-    const elbowX = centerX + (side === "right" ? 1 : -1) * (ringRadius + 10)
+    const labelX = centerX + (side === "right" ? 1 : -1) * (ringRadius + scaledDistance + 24 * scale)
+    const availableHeight = ringRadius * 2 + 72 * scale
+    const laneGap = lane && lane.count > 1 ? Math.min(21 * scale, availableHeight / (lane.count - 1)) : 0
+    const y = lane ? centerY + (lane.rank - (lane.count - 1) / 2) * laneGap : centerY + (ringRadius + scaledDistance) * sin
+    const elbowX = centerX + (side === "right" ? 1 : -1) * (ringRadius + 10 * scale)
     const pct = percent != null ? `${Math.round(percent * 100)}%` : ""
     const color = colors[itemIndex % colors.length]
     const rawName = String(labelData[itemIndex]?.name ?? name ?? "")
@@ -75,16 +92,16 @@ export function makeDonutOuterLabel(
       <g>
         <polyline points={`${tipX},${tipY} ${elbowX},${y} ${labelX},${y}`} fill="none" stroke={color} strokeWidth={1} strokeOpacity={0.62} />
       <text
-        x={labelX + (side === "right" ? 5 : -5)}
+        x={labelX + (side === "right" ? 5 : -5) * scale}
         y={y}
         fill={color}
-        fontSize={11.5}
+        fontSize={fontSize}
         fontWeight={700}
         textAnchor={side === "right" ? "start" : "end"}
         dominantBaseline="central"
         paintOrder="stroke"
         stroke="var(--card)"
-        strokeWidth={3}
+        strokeWidth={textStroke}
         strokeLinejoin="round"
       >
         {displayName} {pct && `(${pct})`}
@@ -195,6 +212,7 @@ export function makeRadialBarValueLabel(
     sideItems.forEach((item, rank) => lanes.set(item.itemIndex, { rank, count: sideItems.length }))
   }
   return function RadialBarValueLabel(props: RadialBarLabelProps) {
+    const options = useChartLabelOptions()
     const { value, index, payload } = props
     const viewBox = props.viewBox as PolarViewBox | undefined
     if (!viewBox || value == null || typeof index !== "number") return null
@@ -207,15 +225,18 @@ export function makeRadialBarValueLabel(
     const tipY = cy + outerRadius * sin
     const side = cos >= 0 ? "right" : "left"
     const lane = lanes.get(index)
-    const availableHeight = outerRadius * 2 + 94
-    const laneGap = lane && lane.count > 1 ? Math.min(34, availableHeight / (lane.count - 1)) : 0
+    const scale = Math.max(0.5, Math.min(1.6, Math.min(cx, cy) / 150))
+    const fontSize = (options.labelFontSize ?? 10.5) * scale
+    const availableHeight = Math.max(0, cy * 2 - fontSize * 3 - 12)
+    const laneGap = lane && lane.count > 1 ? Math.min(Math.max(34 * scale, fontSize * 2.8), availableHeight / (lane.count - 1)) : 0
     const labelY = lane ? cy + (lane.rank - (lane.count - 1) / 2) * laneGap : cy + outerRadius * sin
-    const labelX = cx + (side === "right" ? 1 : -1) * (outerRadius + 90)
-    const elbowX = cx + (side === "right" ? 1 : -1) * (outerRadius + 18)
-    const color = colors[index % colors.length]
+    const labelX = cx + (side === "right" ? 1 : -1) * Math.min(outerRadius + 28 * scale, cx * 0.48)
+    const elbowX = cx + (side === "right" ? 1 : -1) * (outerRadius + 10 * scale)
+    const color = options.labelColor || colors[index % colors.length]
     const text = formatter ? formatter(Number(value)) : String(value)
     const rawCategory = entries[index]?.name ?? String(payload?.service ?? payload?.vendor ?? payload?.type ?? payload?.status ?? payload?.name ?? "")
-    const category = rawCategory.length > 24 ? `${rawCategory.slice(0, 22)}…` : rawCategory
+    const maxChars = Math.max(5, Math.floor((cx - Math.abs(labelX - cx) - 12) / (fontSize * 0.6)))
+    const category = rawCategory.length > maxChars ? `${rawCategory.slice(0, maxChars - 1)}…` : rawCategory
     const anchorRight = side === "right"
     return (
       <g>
@@ -229,10 +250,11 @@ export function makeRadialBarValueLabel(
         />
         <text
           x={labelX + (anchorRight ? 4 : -4)}
-          y={labelY - (category ? 6 : 0)}
+          y={labelY - (category ? fontSize * 0.6 : 0)}
           textAnchor={anchorRight ? "start" : "end"}
           dominantBaseline="central"
-          fontSize={10.5}
+          className="radial-direct-label"
+          style={{ fontSize }}
           fontWeight={700}
           fill={color}
           paintOrder="stroke"

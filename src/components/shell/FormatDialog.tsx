@@ -320,7 +320,7 @@ const COLOR_FIELDS: { key: keyof PaletteVars; label: string }[] = [
   { key: "chart5", label: "Chart 5" },
 ]
 
-function SegmentedControl<T extends string>({
+export function SegmentedControl<T extends string>({
   options,
   value,
   onChange,

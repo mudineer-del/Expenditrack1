@@ -1,4 +1,5 @@
 import { useId } from "react"
+import { useChartLabelOptions } from "./ChartLabelContext"
 import {
   Area,
   Bar,
@@ -64,7 +65,8 @@ export function ServiceChart({
   const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
   const isMobile = useIsMobile()
   const gid = useId()
-  const valueLabel = (v: unknown) => fmtMoney(Number(v)).replace(".00", "")
+  const labelOptions = useChartLabelOptions()
+  const valueLabel = (v: unknown) => labelOptions.measure === "count" ? Number(v).toLocaleString() : fmtMoney(Number(v)).replace(".00", "")
 
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No service data</div>

@@ -69,6 +69,16 @@ export function ChartFormatMenu({ id, hasZoom, chartType }: { id: ChartSlotId; h
         </Button>
       </PopoverTrigger>
       <PopoverContent className="grid w-64 gap-3 p-3" align="end">
+        <div className="grid gap-2 border-b pb-3">
+          <Label htmlFor={`${id}-label-size`} className="text-xs">Label text size · {cfg.labelFontSize ?? 11}px</Label>
+          <input id={`${id}-label-size`} type="range" min="8" max="18" step="1" value={cfg.labelFontSize ?? 11} onChange={(e) => setChartSlot(id, { labelFontSize: Number(e.target.value) })} />
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor={`${id}-label-color`} className="text-xs">Label colour</Label>
+            <input id={`${id}-label-color`} aria-label="Label colour" type="color" value={cfg.labelColor || "#334155"} onChange={(e) => setChartSlot(id, { labelColor: e.target.value })} className="h-7 w-9 cursor-pointer" />
+            <Button size="sm" variant="ghost" onClick={() => setChartSlot(id, { labelFontSize: undefined, labelColor: undefined })}>Reset</Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">Applies to this chart. Text scales with chart zoom.</p>
+        </div>
         {hasZoom && (
           <div className="flex items-center justify-between gap-2">
             <Label htmlFor={`${id}-zoom-fmt`} className="text-xs font-normal text-muted-foreground">

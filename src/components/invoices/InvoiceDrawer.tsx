@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
@@ -147,6 +147,7 @@ export function InvoiceDrawer({
   refLists,
   contractNumbers,
   contractLabels,
+  contractVendorMap,
   defaultDept,
   canEdit,
   onOpenChange,
@@ -162,6 +163,9 @@ export function InvoiceDrawer({
   contractNumbers: string[]
   /** Contract No. -> "No. — Vendor" display label, so it's clear who each contract belongs to. */
   contractLabels: Record<string, string>
+  /** Contract No. -> vendor, used to narrow the Contract No. dropdown down to whichever
+   *  vendor is currently selected. */
+  contractVendorMap: Record<string, string>
   /** Department to pre-select for a brand-new invoice — the sidebar/dashboard's active
    *  department, so switching there means one less field to fill in on every add. */
   defaultDept?: string
@@ -176,10 +180,30 @@ export function InvoiceDrawer({
     defaultValues: toValues(invoice ?? blankInvoice(), nextSrNo, defaultDept),
   })
 
+  // Re-initialize only when a *different* invoice (or a fresh "add", signalled by nextSrNo
+  // advancing after a save) is being opened — not on every open/close toggle. Otherwise an
+  // accidental close (Escape, click outside) while filling the form silently wipes it, since
+  // the dialog stays mounted and merely re-shows on the next open.
+  const lastKeyRef = useRef<string | null>(null)
   useEffect(() => {
-    if (open) form.reset(toValues(invoice ?? blankInvoice(), nextSrNo, defaultDept))
+    if (!open) return
+    const key = invoice ? `edit:${invoice.id}` : `add:${nextSrNo ?? 0}`
+    if (lastKeyRef.current === key) return
+    lastKeyRef.current = key
+    form.reset(toValues(invoice ?? blankInvoice(), nextSrNo, defaultDept))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, invoice])
+  }, [open, invoice, nextSrNo])
+
+  // Narrow the Contract No. options to whichever vendor is selected, so picking a contract
+  // can't accidentally attach an invoice to the wrong vendor's contract. Once a vendor is
+  // picked, contracts with no known vendor are hidden too — but the currently-selected
+  // contract (if any) is always kept in the list so it doesn't just vanish out from under it.
+  const vendorValue = form.watch("vendor")
+  const contractNoValue = form.watch("contractNo")
+  const vendorContractNumbers = useMemo(() => {
+    if (!vendorValue) return contractNumbers
+    return contractNumbers.filter((c) => contractVendorMap[c] === vendorValue || c === contractNoValue)
+  }, [contractNumbers, contractVendorMap, vendorValue, contractNoValue])
 
   const amountExclTax = form.watch("amountExclTax")
   const gstPst = form.watch("gstPst")
@@ -287,7 +311,7 @@ export function InvoiceDrawer({
               <SelectField
                 name="contractNo"
                 label="Contract No."
-                options={contractNumbers}
+                options={vendorContractNumbers}
                 optionLabels={contractLabels}
                 form={form}
                 disabled={readOnly}

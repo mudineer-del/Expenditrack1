@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { useDisplayStore } from "@/store/useDisplayStore"
 
 export function ContractorLogo({
   vendor,
@@ -11,11 +12,18 @@ export function ContractorLogo({
   color: string
   size?: "sm" | "md" | "lg" | "xl"
 }) {
+  const shape = useDisplayStore((s) => s.contractorLogoShape)
   const initials = vendor.slice(0, 2).toUpperCase() || "?"
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-white",
+        "flex shrink-0 items-center justify-center overflow-hidden text-xs font-bold text-white",
+        // A percentage radius (not rounded-lg) so "square" stays a visibly soft-cornered
+        // square at every size instead of scaling with the app-wide Radius setting — at
+        // small sizes (the sm/md chips used in invoice rows/cards) --radius alone can
+        // exceed half the box and round it all the way into a circle, which is exactly
+        // the "square" option is supposed to avoid.
+        shape === "square" ? "rounded-[22%]" : "rounded-full",
         size === "sm" && "size-6 text-[10px]",
         size === "md" && "size-8",
         size === "lg" && "size-12 text-base",

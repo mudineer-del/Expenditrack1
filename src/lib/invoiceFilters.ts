@@ -1,4 +1,4 @@
-import type { Invoice } from "@/types/invoice"
+import { invoiceQuarter, invoiceYear, type Invoice } from "@/types/invoice"
 
 export interface InvoiceFilters {
   q: string
@@ -43,8 +43,8 @@ export function filterAndSortInvoices(invoices: Invoice[], f: InvoiceFilters, so
   if (f.status) rows = rows.filter((r) => r.status === f.status)
   if (f.region) rows = rows.filter((r) => r.region === f.region)
   if (f.contract) rows = rows.filter((r) => normContract(r.contractNo) === normContract(f.contract))
-  if (f.year) rows = rows.filter((r) => String(r.year) === String(f.year) || String(r.yr) === String(f.year))
-  if (f.qtr) rows = rows.filter((r) => r.qtr === f.qtr)
+  if (f.year) rows = rows.filter((r) => invoiceYear(r) === String(f.year))
+  if (f.qtr) rows = rows.filter((r) => invoiceQuarter(r) === f.qtr)
   if (f.enteredBy) rows = rows.filter((r) => r.createdByName === f.enteredBy)
 
   const { key, dir } = sort

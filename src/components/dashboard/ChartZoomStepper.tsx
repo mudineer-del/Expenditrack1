@@ -8,10 +8,14 @@ export const CHART_ZOOM_STEP = 10
 /** CSS var override for one chart's zoom — pass to the element wrapping that chart (see
  *  ChartSlotContextMenu's trigger, which already carries `--chart-h` down via inheritance
  *  since it's `display: contents`). `undefined`/100 means "don't override" — every other
- *  chart on the page keeps reading the cardScale-driven default straight from `:root`. */
+ *  chart on the page keeps reading the cardScale-driven default straight from `:root`.
+ *  Scales `--chart-h-base` (the cardScale default, never itself overridden — see
+ *  index.css), NOT `--chart-h` — a custom property can't reference itself to compute its
+ *  own value (that's an invalid cyclic dependency, which silently resolves to nothing), so
+ *  `calc(var(--chart-h) * pct)` here would never have actually resized anything. */
 export function chartZoomStyle(sizePercent: number | undefined): React.CSSProperties | undefined {
   if (!sizePercent || sizePercent === 100) return undefined
-  return { "--chart-h": `calc(var(--chart-h) * ${sizePercent / 100})` } as React.CSSProperties
+  return { "--chart-h": `calc(var(--chart-h-base) * ${sizePercent / 100})` } as React.CSSProperties
 }
 
 /** Small always-visible −/percentage/+ zoom control for one chart — writes the exact same

@@ -157,6 +157,7 @@ export default function DashboardPage() {
   const statusChartType = useDisplayStore((s) => s.statusChartType)
   const setChartType = useDisplayStore((s) => s.setChartType)
   const chartSlots = useDisplayStore((s) => s.chartSlots)
+  const contractorLogoShape = useDisplayStore((s) => s.contractorLogoShape)
 
   const invoices = invoicesQuery.data ?? []
   const contracts = contractsQuery.data ?? []
@@ -567,7 +568,10 @@ export default function DashboardPage() {
                   />
                   <div className="flex items-center gap-3">
                     <div
-                      className="rounded-full p-1.5 shadow-[0_5px_10px_-5px_var(--contractor-glow)] ring-1 ring-black/5 transition-transform duration-300 group-hover:scale-105 group-hover:[transform:rotateY(8deg)]"
+                      className={cn(
+                        "p-1.5 shadow-[0_5px_10px_-5px_var(--contractor-glow)] ring-1 ring-black/5 transition-transform duration-300 group-hover:scale-105 group-hover:[transform:rotateY(8deg)]",
+                        contractorLogoShape === "square" ? "rounded-xl" : "rounded-full"
+                      )}
                       style={{ backgroundColor: `color-mix(in oklch, ${accent} 10%, var(--card))` }}
                     >
                       <ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={logoColor} size="lg" />
