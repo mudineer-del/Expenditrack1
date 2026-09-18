@@ -1,9 +1,16 @@
-import { Building2 } from "lucide-react"
+import { Building2, Coins, FileCheck2, Hourglass, Receipt } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ContractorLogo } from "@/components/shared/ContractorLogo"
+import { KpiTile } from "@/components/dashboard/KpiTile"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { fmtMoney } from "@/lib/dashboard"
+import { fmtMoney, vendorColor } from "@/lib/dashboard"
+import { getContractorLogo, useContractorLogosQuery } from "@/lib/contractorLogos"
 import { aggregate, chartMeasureLabel, reportRows, turnaroundDays, type ReportFilters } from "@/lib/reports"
+import { cn } from "@/lib/utils"
+import { ChartCard } from "@/components/dashboard/ChartCard"
+import { ChartDataQuickMenu } from "@/components/dashboard/ChartDataQuickMenu"
+import { ChartFormatMenu } from "@/components/dashboard/ChartFormatMenu"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
 import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
@@ -43,6 +50,10 @@ export function ContractReportView({
   const bucketHidden = useDisplayStore((s) => s.chartSlots.contractBuckets.hidden)
   const monthlyMeasure = useDisplayStore((s) => s.chartSlots.contractMonthly.measure)
   const monthlyHidden = useDisplayStore((s) => s.chartSlots.contractMonthly.hidden)
+  const tableBanded = useDisplayStore((s) => s.tableBanded)
+  const tableHeaderShaded = useDisplayStore((s) => s.tableHeaderShaded)
+  const tableGridLines = useDisplayStore((s) => s.tableGridLines)
+  const contractorLogosQuery = useContractorLogosQuery()
 
   if (!filters.contract) {
     return (
@@ -74,44 +85,49 @@ export function ContractReportView({
           {c?.status && <StatusBadge status={c.status} />}
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
-          <button type="button" className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60" onClick={() => onDrill(rows, `Invoices — ${filters.contract}`)}>
-            <div className="text-xs text-muted-foreground">Invoices</div>
-            <div className="text-lg font-semibold">{a.count}</div>
-            <div className="text-xs text-muted-foreground">{a.cleared} cleared</div>
-          </button>
-          <button type="button" className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60" onClick={() => onDrill(rows, `Invoices — ${filters.contract}`)}>
-            <div className="text-xs text-muted-foreground">Value (incl. tax)</div>
-            <div className="text-lg font-semibold">{fmtMoney(a.incl)}</div>
-            <div className="text-xs text-muted-foreground">excl: {fmtMoney(a.exclTax)}</div>
-          </button>
-          <button
-            type="button"
-            className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+          <KpiTile
+            icon={<Receipt />}
+            accent="var(--dataviz-1)"
+            label="Invoices"
+            value={a.count}
+            sub={`${a.cleared} cleared`}
+            onClick={() => onDrill(rows, `Invoices — ${filters.contract}`)}
+          />
+          <KpiTile
+            icon={<Coins />}
+            accent="var(--dataviz-2)"
+            label="Value (incl. tax)"
+            value={fmtMoney(a.incl)}
+            sub={`excl: ${fmtMoney(a.exclTax)}`}
+            onClick={() => onDrill(rows, `Invoices — ${filters.contract}`)}
+          />
+          <KpiTile
+            icon={<FileCheck2 />}
+            accent="var(--status-cleared)"
+            label="Paid"
+            value={fmtMoney(a.paid)}
+            valueClassName="text-status-cleared"
+            sub={`${a.count ? ((a.paid / a.incl) * 100 || 0).toFixed(0) : 0}% of value`}
             onClick={() => onDrill(rows.filter((r) => (Number(r.amountPaid) || 0) > 0), `Paid Invoices — ${filters.contract}`)}
-          >
-            <div className="text-xs text-muted-foreground">Paid</div>
-            <div className="text-lg font-semibold text-status-cleared">{fmtMoney(a.paid)}</div>
-            <div className="text-xs text-muted-foreground">{a.count ? ((a.paid / a.incl) * 100 || 0).toFixed(0) : 0}% of value</div>
-          </button>
-          <button
-            type="button"
-            className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+          />
+          <KpiTile
+            icon={<Hourglass />}
+            accent={a.outstanding > 0 ? "var(--status-under)" : "var(--status-cleared)"}
+            label="Outstanding"
+            value={fmtMoney(a.outstanding)}
+            valueClassName={a.outstanding > 0 ? "text-status-under" : "text-status-cleared"}
+            sub="unpaid balance"
             onClick={() => onDrill(rows.filter((r) => (Number(r.amountInclTax) || 0) - (Number(r.amountPaid) || 0) > 0), `Outstanding Invoices — ${filters.contract}`)}
-          >
-            <div className="text-xs text-muted-foreground">Outstanding</div>
-            <div className={`text-lg font-semibold ${a.outstanding > 0 ? "text-status-under" : "text-status-cleared"}`}>
-              {fmtMoney(a.outstanding)}
-            </div>
-            <div className="text-xs text-muted-foreground">unpaid balance</div>
-          </button>
+          />
           {cost > 0 && (
-            <button type="button" className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60" onClick={() => onDrill(rows, `Invoices — ${filters.contract}`)}>
-              <div className="text-xs text-muted-foreground">Contract value</div>
-              <div className="text-lg font-semibold">{fmtMoney(cost)}</div>
-              <div className="text-xs" style={{ color: utilColor }}>
-                {util!.toFixed(1)}% utilized
-              </div>
-            </button>
+            <KpiTile
+              icon={<Building2 />}
+              accent={utilColor}
+              label="Contract value"
+              value={fmtMoney(cost)}
+              sub={`${util!.toFixed(1)}% utilized`}
+              onClick={() => onDrill(rows, `Invoices — ${filters.contract}`)}
+            />
           )}
         </div>
         {cost > 0 && (
@@ -122,17 +138,20 @@ export function ContractReportView({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border bg-card p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">
-              {bucketMeasure === "count" ? "Turnaround (Clearance Time)" : `${chartMeasureLabel(bucketMeasure)} by Turnaround Bucket`}
-            </h3>
-            <div className="flex items-center gap-1">
+        <ChartCard
+          id="contractBuckets"
+          accent="var(--dataviz-1)"
+          title={bucketMeasure === "count" ? "Turnaround (Clearance Time)" : `${chartMeasureLabel(bucketMeasure)} by Turnaround Bucket`}
+          action={
+            <>
               <ChartZoomStepper id="contractBuckets" />
+              <ChartDataQuickMenu id="contractBuckets" hasDimension={false} />
               <ChartVisibilityToggle id="contractBuckets" />
+              <ChartFormatMenu id="contractBuckets" />
               <span className="text-xs text-muted-foreground">Click a bar for details</span>
-            </div>
-          </div>
+            </>
+          }
+        >
           <div className="mb-3 grid grid-cols-5 gap-2 text-center text-xs">
             <div>
               <div className="text-base font-semibold">{a.taAvg !== null ? `${Math.round(a.taAvg)}d` : "—"}</div>
@@ -160,23 +179,26 @@ export function ContractReportView({
             <TaBucketChart rows={rows} measure={bucketMeasure} onBucketClick={onDrill} />
           </ChartSlotContextMenu>
           )}
-        </div>
+        </ChartCard>
         {!monthlyHidden && (
-        <div className="rounded-lg border bg-card p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">
-              {monthlyMeasure === "incl" ? "Monthly Expenditure" : `${chartMeasureLabel(monthlyMeasure)} by Month`}
-            </h3>
-            <div className="flex items-center gap-1">
+        <ChartCard
+          id="contractMonthly"
+          accent="var(--dataviz-2)"
+          title={monthlyMeasure === "incl" ? "Monthly Expenditure" : `${chartMeasureLabel(monthlyMeasure)} by Month`}
+          action={
+            <>
               <ChartZoomStepper id="contractMonthly" />
+              <ChartDataQuickMenu id="contractMonthly" hasDimension={false} />
               <ChartVisibilityToggle id="contractMonthly" />
+              <ChartFormatMenu id="contractMonthly" />
               <span className="text-xs text-muted-foreground">Click a bar for details</span>
-            </div>
-          </div>
+            </>
+          }
+        >
           <ChartSlotContextMenu id="contractMonthly" hasDimension={false}>
             <ReportMonthlyChart rows={rows} measure={monthlyMeasure} onMonthClick={onDrill} />
           </ChartSlotContextMenu>
-        </div>
+        </ChartCard>
         )}
       </div>
 
@@ -188,16 +210,16 @@ export function ContractReportView({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Sr</TableHead>
-                <TableHead>Invoice No</TableHead>
-                <TableHead>Contractor</TableHead>
-                <TableHead>Well</TableHead>
-                <TableHead>Inv. Date</TableHead>
-                <TableHead>Cleared</TableHead>
-                <TableHead className="text-center">TA</TableHead>
-                <TableHead className="text-right">Incl. Tax</TableHead>
-                <TableHead className="text-right">Paid</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className={cn(tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Sr</TableHead>
+                <TableHead className={cn(tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Invoice No</TableHead>
+                <TableHead className={cn(tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Contractor</TableHead>
+                <TableHead className={cn(tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Well</TableHead>
+                <TableHead className={cn(tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Inv. Date</TableHead>
+                <TableHead className={cn(tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Cleared</TableHead>
+                <TableHead className={cn("text-center", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>TA</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Incl. Tax</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Paid</TableHead>
+                <TableHead className={cn(tableHeaderShaded && "bg-muted")}>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,20 +227,30 @@ export function ContractReportView({
                 rows.slice(0, 300).map((r) => (
                   <TableRow
                     key={r.id}
-                    className="cursor-pointer"
+                    className={cn("cursor-pointer", tableBanded && "even:bg-muted/30")}
                     onClick={() => navigate("/invoices", { state: { openInvoiceId: r.id } })}
                   >
-                    <TableCell>{r.srNo}</TableCell>
-                    <TableCell>{r.invoiceNo}</TableCell>
-                    <TableCell>{r.vendor}</TableCell>
-                    <TableCell>{r.wellName || "—"}</TableCell>
-                    <TableCell>{r.invoiceDate || "—"}</TableCell>
-                    <TableCell>{r.clearanceDate || "—"}</TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className={cn(tableGridLines && "border-r")}>{r.srNo}</TableCell>
+                    <TableCell className={cn(tableGridLines && "border-r")}>{r.invoiceNo}</TableCell>
+                    <TableCell className={cn(tableGridLines && "border-r")}>
+                      <div className="flex items-center gap-2">
+                        <ContractorLogo
+                          vendor={r.vendor || "Unknown"}
+                          logo={getContractorLogo(contractorLogosQuery.data ?? {}, r.vendor)}
+                          color={vendorColor(r.vendor)}
+                          size="sm"
+                        />
+                        <span className="truncate">{r.vendor}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className={cn(tableGridLines && "border-r")}>{r.wellName || "—"}</TableCell>
+                    <TableCell className={cn(tableGridLines && "border-r")}>{r.invoiceDate || "—"}</TableCell>
+                    <TableCell className={cn(tableGridLines && "border-r")}>{r.clearanceDate || "—"}</TableCell>
+                    <TableCell className={cn("text-center", tableGridLines && "border-r")}>
                       <TaBadge days={turnaroundDays(r)} />
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{fmtMoney(r.amountInclTax)}</TableCell>
-                    <TableCell className="text-right tabular-nums text-status-cleared">{fmtMoney(r.amountPaid)}</TableCell>
+                    <TableCell className={cn("text-right tabular-nums", tableGridLines && "border-r")}>{fmtMoney(r.amountInclTax)}</TableCell>
+                    <TableCell className={cn("text-right tabular-nums text-status-cleared", tableGridLines && "border-r")}>{fmtMoney(r.amountPaid)}</TableCell>
                     <TableCell>
                       <StatusBadge status={r.status} />
                     </TableCell>

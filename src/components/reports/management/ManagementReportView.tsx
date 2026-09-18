@@ -2,7 +2,9 @@ import { ChevronLeft, ChevronRight, Printer } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { filterPillProps } from "@/components/shared/FilterPill"
 import { buildNarrative, buildReportData, shiftAnchor, REPORT_PERIODS, type ReportPeriod } from "@/lib/managementReport"
+import { cn } from "@/lib/utils"
 import type { Invoice } from "@/types/invoice"
 import { BoardNarrativeReport } from "./BoardNarrativeReport"
 import { ExecutiveAnalyticsReport } from "./ExecutiveAnalyticsReport"
@@ -10,10 +12,10 @@ import { StoryReport } from "./StoryReport"
 
 type ReportStyle = "narrative" | "analytics" | "story"
 
-const STYLE_TABS: { key: ReportStyle; label: string }[] = [
-  { key: "narrative", label: "Board Narrative" },
-  { key: "analytics", label: "Executive Analytics" },
-  { key: "story", label: "One-Page Story" },
+const STYLE_TABS: { key: ReportStyle; label: string; color: string }[] = [
+  { key: "narrative", label: "Board Narrative", color: "var(--dataviz-1)" },
+  { key: "analytics", label: "Executive Analytics", color: "var(--dataviz-2)" },
+  { key: "story", label: "One-Page Story", color: "var(--dataviz-3)" },
 ]
 
 /** Management spend report for board/committee presentation — weekly, fortnightly or
@@ -71,12 +73,15 @@ export function ManagementReportView({ invoices, onDrill }: { invoices: Invoice[
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex gap-1 rounded-lg border bg-muted/50 p-1">
-            {STYLE_TABS.map((t) => (
-              <Button key={t.key} size="sm" variant={style === t.key ? "default" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setStyle(t.key)}>
-                {t.label}
-              </Button>
-            ))}
+          <div className="flex gap-1.5 p-1">
+            {STYLE_TABS.map((t) => {
+              const pill = filterPillProps(t.color, style === t.key)
+              return (
+                <Button key={t.key} size="sm" className={cn("h-7 px-2.5 text-xs", pill.className)} style={pill.style} onClick={() => setStyle(t.key)}>
+                  {t.label}
+                </Button>
+              )
+            })}
           </div>
           <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => window.print()}>
             <Printer className="size-3.5" />

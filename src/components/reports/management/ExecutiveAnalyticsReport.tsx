@@ -1,9 +1,13 @@
 import { ServiceChart } from "@/components/dashboard/ServiceChart"
 import { TrendChart } from "@/components/dashboard/TrendChart"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { fmtMoney } from "@/lib/dashboard"
+import { ContractorLogo } from "@/components/shared/ContractorLogo"
+import { fmtMoney, vendorColor } from "@/lib/dashboard"
+import { getContractorLogo, useContractorLogosQuery } from "@/lib/contractorLogos"
 import type { ReportData } from "@/lib/managementReport"
+import { cn } from "@/lib/utils"
 import { TaBucketChart } from "@/components/reports/TaBucketChart"
+import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Invoice } from "@/types/invoice"
 import { Kpi } from "./ReportPrimitives"
 
@@ -22,6 +26,10 @@ export function ExecutiveAnalyticsReport({
   const clearedDelta = data.stats.clearedPct - data.prevStats.clearedPct
   const top = data.contractors[0]
   const topShare = top && data.stats.incl ? (top.incl / data.stats.incl) * 100 : null
+  const tableBanded = useDisplayStore((s) => s.tableBanded)
+  const tableHeaderShaded = useDisplayStore((s) => s.tableHeaderShaded)
+  const tableGridLines = useDisplayStore((s) => s.tableGridLines)
+  const contractorLogosQuery = useContractorLogosQuery()
 
   return (
     <div className="grid gap-5 rounded-lg border bg-card p-5 md:p-6">
@@ -82,20 +90,30 @@ export function ExecutiveAnalyticsReport({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Contractor</TableHead>
-                <TableHead className="text-right">Spend</TableHead>
-                <TableHead className="text-right">Invoices</TableHead>
-                <TableHead className="text-right">Avg clearance</TableHead>
-                <TableHead className="text-right">Outstanding</TableHead>
+                <TableHead className={cn(tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Contractor</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Spend</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Invoices</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Avg clearance</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted")}>Outstanding</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.contractors.slice(0, 8).map((g) => (
-                <TableRow key={g.key} className="cursor-pointer" onClick={() => onDrill(`Invoices — ${g.key}`, g.rows)}>
-                  <TableCell className="font-medium">{g.key}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtMoney(g.incl)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{g.count}</TableCell>
-                  <TableCell className="text-right tabular-nums">{g.taAvg !== null ? `${Math.round(g.taAvg)}d` : "—"}</TableCell>
+                <TableRow key={g.key} className={cn("cursor-pointer", tableBanded && "even:bg-muted/30")} onClick={() => onDrill(`Invoices — ${g.key}`, g.rows)}>
+                  <TableCell className={cn("font-medium", tableGridLines && "border-r")}>
+                    <div className="flex items-center gap-2">
+                      <ContractorLogo
+                        vendor={g.key || "Unknown"}
+                        logo={getContractorLogo(contractorLogosQuery.data ?? {}, g.key)}
+                        color={vendorColor(g.key)}
+                        size="sm"
+                      />
+                      <span className="truncate">{g.key}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className={cn("text-right tabular-nums", tableGridLines && "border-r")}>{fmtMoney(g.incl)}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums", tableGridLines && "border-r")}>{g.count}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums", tableGridLines && "border-r")}>{g.taAvg !== null ? `${Math.round(g.taAvg)}d` : "—"}</TableCell>
                   <TableCell className={`text-right tabular-nums font-semibold ${g.outstanding > 0 ? "text-status-under" : "text-status-cleared"}`}>{fmtMoney(g.outstanding)}</TableCell>
                 </TableRow>
               ))}

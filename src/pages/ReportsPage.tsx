@@ -7,7 +7,9 @@ import { ManagementReportView } from "@/components/reports/management/Management
 import { PeriodReportView } from "@/components/reports/PeriodReportView"
 import { ReportDetailDrawer, type ReportDetail } from "@/components/reports/ReportDetailDrawer"
 import { ReportFiltersBar } from "@/components/reports/ReportFiltersBar"
+import { filterPillProps } from "@/components/shared/FilterPill"
 import { buildContractLabels } from "@/lib/contracts"
+import { cn } from "@/lib/utils"
 import {
   BLANK_REPORT_FILTERS,
   downloadCsv,
@@ -25,11 +27,11 @@ import { useAppStore } from "@/store/useAppStore"
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
 
-const MODE_TABS: { key: ReportMode; label: string }[] = [
-  { key: "contract", label: "Contract report" },
-  { key: "compare", label: "Compare contracts" },
-  { key: "period", label: "Period analysis" },
-  { key: "management", label: "Management report" },
+const MODE_TABS: { key: ReportMode; label: string; color: string }[] = [
+  { key: "contract", label: "Contract report", color: "var(--dataviz-1)" },
+  { key: "compare", label: "Compare contracts", color: "var(--dataviz-2)" },
+  { key: "period", label: "Period analysis", color: "var(--dataviz-3)" },
+  { key: "management", label: "Management report", color: "var(--dataviz-4)" },
 ]
 
 /** Ported from renderReports and its 3 sub-modes (index.html:4375-4703). */
@@ -119,18 +121,21 @@ export default function ReportsPage() {
       <div className="rounded-lg border bg-card p-4 print:hidden">
         <div className={mode === "management" ? "flex flex-wrap items-center justify-between gap-3" : "mb-3 flex flex-wrap items-center justify-between gap-3"}>
           <h3 className="text-sm font-semibold">Financial Reporting</h3>
-          <div className="flex max-w-full gap-1 overflow-x-auto rounded-lg border bg-muted/50 p-1">
-            {MODE_TABS.map((t) => (
-              <Button
-                key={t.key}
-                size="sm"
-                variant={mode === t.key ? "default" : "ghost"}
-                className="shrink-0"
-                onClick={() => setMode(t.key)}
-              >
-                {t.label}
-              </Button>
-            ))}
+          <div className="flex max-w-full gap-1.5 overflow-x-auto p-1">
+            {MODE_TABS.map((t) => {
+              const pill = filterPillProps(t.color, mode === t.key)
+              return (
+                <Button
+                  key={t.key}
+                  size="sm"
+                  className={cn("shrink-0", pill.className)}
+                  style={pill.style}
+                  onClick={() => setMode(t.key)}
+                >
+                  {t.label}
+                </Button>
+              )
+            })}
           </div>
         </div>
         {mode !== "management" && (

@@ -1,11 +1,17 @@
+import { Clock, Coins, Hourglass, Receipt } from "lucide-react"
 import { useMemo } from "react"
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtMoney } from "@/lib/dashboard"
 import { aggregate, chartMeasureLabel, groupRows, reportGroupLabel, reportRows, turnaroundDays, type ReportFilters, type ReportGroup } from "@/lib/reports"
+import { ChartCard } from "@/components/dashboard/ChartCard"
+import { ChartDataQuickMenu } from "@/components/dashboard/ChartDataQuickMenu"
+import { ChartFormatMenu } from "@/components/dashboard/ChartFormatMenu"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
 import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
+import { KpiTile } from "@/components/dashboard/KpiTile"
 import { PeriodPaidChart, PeriodValueChart } from "@/components/reports/PeriodCharts"
+import { cn } from "@/lib/utils"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Invoice } from "@/types/invoice"
 
@@ -33,6 +39,9 @@ export function PeriodReportView({
   const isTime = TIME_GROUPS.includes(filters.groupBy)
   const valueMeasure = useDisplayStore((s) => s.chartSlots.periodValue.measure)
   const valueHidden = useDisplayStore((s) => s.chartSlots.periodValue.hidden)
+  const tableBanded = useDisplayStore((s) => s.tableBanded)
+  const tableHeaderShaded = useDisplayStore((s) => s.tableHeaderShaded)
+  const tableGridLines = useDisplayStore((s) => s.tableGridLines)
 
   function drillGroup(g: ReportGroup) {
     onDrill(g.rows, `${label}: ${g.key}`)
@@ -50,66 +59,70 @@ export function PeriodReportView({
   return (
     <div className="grid gap-4">
       <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 md:grid-cols-5">
-        <button type="button" className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60" onClick={() => onDrill(rows, "Invoices in scope")}>
-          <div className="text-xs text-muted-foreground">Invoices in scope</div>
-          <div className="text-lg font-semibold">{tot.count}</div>
-        </button>
-        <button type="button" className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60" onClick={() => onDrill(rows, "Invoices in scope")}>
-          <div className="text-xs text-muted-foreground">Total value</div>
-          <div className="text-lg font-semibold">{fmtMoney(tot.incl)}</div>
-        </button>
-        <button
-          type="button"
-          className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+        <KpiTile
+          icon={<Receipt />}
+          accent="var(--dataviz-1)"
+          label="Invoices in scope"
+          value={tot.count}
+          onClick={() => onDrill(rows, "Invoices in scope")}
+        />
+        <KpiTile
+          icon={<Coins />}
+          accent="var(--dataviz-2)"
+          label="Total value"
+          value={fmtMoney(tot.incl)}
+          onClick={() => onDrill(rows, "Invoices in scope")}
+        />
+        <KpiTile
+          icon={<Coins />}
+          accent="var(--status-cleared)"
+          label="Total paid"
+          value={fmtMoney(tot.paid)}
+          valueClassName="text-status-cleared"
           onClick={() => onDrill(rows.filter((r) => (Number(r.amountPaid) || 0) > 0), "Paid Invoices")}
-        >
-          <div className="text-xs text-muted-foreground">Total paid</div>
-          <div className="text-lg font-semibold text-status-cleared">{fmtMoney(tot.paid)}</div>
-        </button>
-        <button
-          type="button"
-          className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+        />
+        <KpiTile
+          icon={<Hourglass />}
+          accent="var(--status-under)"
+          label="Outstanding"
+          value={fmtMoney(tot.outstanding)}
+          valueClassName="text-status-under"
           onClick={() => onDrill(rows.filter((r) => (Number(r.amountInclTax) || 0) - (Number(r.amountPaid) || 0) > 0), "Outstanding Invoices")}
-        >
-          <div className="text-xs text-muted-foreground">Outstanding</div>
-          <div className="text-lg font-semibold text-status-under">{fmtMoney(tot.outstanding)}</div>
-        </button>
-        <button
-          type="button"
-          className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+        />
+        <KpiTile
+          icon={<Clock />}
+          accent="var(--dataviz-3)"
+          label="Avg turnaround"
+          value={tot.taAvg !== null ? `${Math.round(tot.taAvg)}d` : "—"}
+          sub={`${tot.delayed} delayed >30d`}
           onClick={() => onDrill(rows.filter((r) => turnaroundDays(r) !== null), "Invoices with recorded turnaround")}
-        >
-          <div className="text-xs text-muted-foreground">Avg turnaround</div>
-          <div className="text-lg font-semibold">{tot.taAvg !== null ? `${Math.round(tot.taAvg)}d` : "—"}</div>
-          <div className="text-xs text-muted-foreground">{tot.delayed} delayed &gt;30d</div>
-        </button>
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {!valueHidden && (
-        <div className="rounded-lg border bg-card p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">
-              {valueMeasure === "incl" ? `Expenditure by ${label}` : `${chartMeasureLabel(valueMeasure)} by ${label}`}
-            </h3>
-            <div className="flex items-center gap-1">
+        <ChartCard
+          id="periodValue"
+          accent="var(--dataviz-1)"
+          title={valueMeasure === "incl" ? `Expenditure by ${label}` : `${chartMeasureLabel(valueMeasure)} by ${label}`}
+          action={
+            <>
               <ChartZoomStepper id="periodValue" />
+              <ChartDataQuickMenu id="periodValue" hasDimension={false} />
               <ChartVisibilityToggle id="periodValue" />
+              <ChartFormatMenu id="periodValue" />
               <span className="text-xs text-muted-foreground">Click a point/bar for details</span>
-            </div>
-          </div>
+            </>
+          }
+        >
           <ChartSlotContextMenu id="periodValue" hasDimension={false}>
             <PeriodValueChart groups={groups} isTime={isTime} measure={valueMeasure} onGroupClick={drillGroup} />
           </ChartSlotContextMenu>
-        </div>
+        </ChartCard>
         )}
-        <div className="rounded-lg border bg-card p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Paid vs Outstanding by {label}</h3>
-            <span className="text-xs text-muted-foreground">Click a bar for details</span>
-          </div>
+        <ChartCard accent="var(--dataviz-2)" title={`Paid vs Outstanding by ${label}`} action={<span className="text-xs text-muted-foreground">Click a bar for details</span>}>
           <PeriodPaidChart groups={groups} onGroupClick={drillGroup} />
-        </div>
+        </ChartCard>
       </div>
 
       <div className="rounded-lg border bg-card">
@@ -122,30 +135,30 @@ export function PeriodReportView({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{label}</TableHead>
-                <TableHead className="text-right">Invoices</TableHead>
-                <TableHead className="text-right">Excl. Tax</TableHead>
-                <TableHead className="text-right">Tax</TableHead>
-                <TableHead className="text-right">Incl. Tax</TableHead>
-                <TableHead className="text-right">Paid</TableHead>
-                <TableHead className="text-right">Outstanding</TableHead>
-                <TableHead className="text-center">Avg TA</TableHead>
-                <TableHead className="text-right">Delayed</TableHead>
+                <TableHead className={cn(tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>{label}</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Invoices</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Excl. Tax</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Tax</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Incl. Tax</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Paid</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Outstanding</TableHead>
+                <TableHead className={cn("text-center", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Avg TA</TableHead>
+                <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted")}>Delayed</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {groups.map((g) => (
-                <TableRow key={g.key} className="cursor-pointer" onClick={() => drillGroup(g)}>
-                  <TableCell>{g.key}</TableCell>
-                  <TableCell className="text-right">{g.count}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtMoney(g.exclTax)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtMoney(g.tax)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtMoney(g.incl)}</TableCell>
-                  <TableCell className="text-right tabular-nums text-status-cleared">{fmtMoney(g.paid)}</TableCell>
-                  <TableCell className={`text-right tabular-nums ${g.outstanding > 0 ? "text-status-under" : "text-status-cleared"}`}>
+                <TableRow key={g.key} className={cn("cursor-pointer", tableBanded && "even:bg-muted/30")} onClick={() => drillGroup(g)}>
+                  <TableCell className={cn(tableGridLines && "border-r")}>{g.key}</TableCell>
+                  <TableCell className={cn("text-right", tableGridLines && "border-r")}>{g.count}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums", tableGridLines && "border-r")}>{fmtMoney(g.exclTax)}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums", tableGridLines && "border-r")}>{fmtMoney(g.tax)}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums", tableGridLines && "border-r")}>{fmtMoney(g.incl)}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums text-status-cleared", tableGridLines && "border-r")}>{fmtMoney(g.paid)}</TableCell>
+                  <TableCell className={cn(`text-right tabular-nums ${g.outstanding > 0 ? "text-status-under" : "text-status-cleared"}`, tableGridLines && "border-r")}>
                     {fmtMoney(g.outstanding)}
                   </TableCell>
-                  <TableCell className="text-center">{g.taAvg !== null ? `${Math.round(g.taAvg)}d` : "—"}</TableCell>
+                  <TableCell className={cn("text-center", tableGridLines && "border-r")}>{g.taAvg !== null ? `${Math.round(g.taAvg)}d` : "—"}</TableCell>
                   <TableCell className={`text-right ${g.delayed ? "text-status-returned" : ""}`}>{g.delayed}</TableCell>
                 </TableRow>
               ))}

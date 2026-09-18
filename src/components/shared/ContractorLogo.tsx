@@ -24,10 +24,13 @@ export function ContractorLogo({
         // exceed half the box and round it all the way into a circle, which is exactly
         // the "square" option is supposed to avoid.
         shape === "square" ? "rounded-[22%]" : "rounded-full",
-        size === "sm" && "size-6 text-[10px]",
-        size === "md" && "size-8",
-        size === "lg" && "size-12 text-base",
-        size === "xl" && "size-16 text-lg"
+        // Bumped up a size step from the old size-6/8/12/16 scale — at the old sizes an
+        // actual logo image (vs. plain initials) read as an illegible smudge, especially
+        // in dense contexts like the invoices table.
+        size === "sm" && "size-8 text-xs",
+        size === "md" && "size-10 text-sm",
+        size === "lg" && "size-14 text-lg",
+        size === "xl" && "size-20 text-xl"
       )}
       style={{
         background: `linear-gradient(155deg, color-mix(in oklch, ${color} 45%, white), ${color})`,

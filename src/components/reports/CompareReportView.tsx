@@ -1,4 +1,4 @@
-import { Check, Plus, Search, X } from "lucide-react"
+import { Check, CheckCircle2, Coins, FileText, Hourglass, Plus, Search, X } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -8,11 +8,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fmtMoney } from "@/lib/dashboard"
 import { chartMeasureLabel, groupRows, reportRows, shortContract, type ReportFilters, type ReportGroup } from "@/lib/reports"
+import { ChartCard } from "@/components/dashboard/ChartCard"
+import { ChartDataQuickMenu } from "@/components/dashboard/ChartDataQuickMenu"
+import { ChartFormatMenu } from "@/components/dashboard/ChartFormatMenu"
 import { ChartSlotContextMenu } from "@/components/dashboard/ChartSlotContextMenu"
 import { ChartVisibilityToggle } from "@/components/dashboard/ChartVisibilityToggle"
 import { ChartZoomStepper } from "@/components/dashboard/ChartZoomStepper"
 import { CompareTaChart, CompareValueChart } from "@/components/reports/CompareCharts"
+import { KpiTile } from "@/components/dashboard/KpiTile"
 import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
+import { cn } from "@/lib/utils"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import type { Invoice } from "@/types/invoice"
 
@@ -118,6 +123,9 @@ export function CompareReportView({
   const allGroups = useMemo(() => groupRows(rows, "contract").sort((a, b) => b.incl - a.incl), [rows])
   const taMeasure = useDisplayStore((s) => s.chartSlots.compareTa.measure)
   const taHidden = useDisplayStore((s) => s.chartSlots.compareTa.hidden)
+  const tableBanded = useDisplayStore((s) => s.tableBanded)
+  const tableHeaderShaded = useDisplayStore((s) => s.tableHeaderShaded)
+  const tableGridLines = useDisplayStore((s) => s.tableGridLines)
 
   const showNone = compareSelection.includes("__none__")
   const selected = compareSelection.filter((x) => x !== "__none__")
@@ -262,69 +270,66 @@ export function CompareReportView({
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 md:grid-cols-4">
-            <button
-              type="button"
-              className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+            <KpiTile
+              icon={<FileText />}
+              accent="var(--dataviz-1)"
+              label="Contracts compared"
+              value={groups.length}
               onClick={() => onDrill(groups.flatMap((g) => g.rows), "Invoices — compared contracts")}
-            >
-              <div className="text-xs text-muted-foreground">Contracts compared</div>
-              <div className="text-lg font-semibold">{groups.length}</div>
-            </button>
-            <button
-              type="button"
-              className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+            />
+            <KpiTile
+              icon={<Coins />}
+              accent="var(--dataviz-2)"
+              label="Combined value"
+              value={fmtMoney(totalIncl)}
               onClick={() => onDrill(groups.flatMap((g) => g.rows), "Invoices — compared contracts")}
-            >
-              <div className="text-xs text-muted-foreground">Combined value</div>
-              <div className="text-lg font-semibold">{fmtMoney(totalIncl)}</div>
-            </button>
-            <button
-              type="button"
-              className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+            />
+            <KpiTile
+              icon={<CheckCircle2 />}
+              accent="var(--status-cleared)"
+              label="Combined paid"
+              value={fmtMoney(tot.paid)}
+              valueClassName="text-status-cleared"
               onClick={() => onDrill(groups.flatMap((g) => g.rows.filter((r) => (Number(r.amountPaid) || 0) > 0)), "Paid Invoices — compared contracts")}
-            >
-              <div className="text-xs text-muted-foreground">Combined paid</div>
-              <div className="text-lg font-semibold text-status-cleared">{fmtMoney(tot.paid)}</div>
-            </button>
-            <button
-              type="button"
-              className="cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+            />
+            <KpiTile
+              icon={<Hourglass />}
+              accent="var(--status-under)"
+              label="Combined outstanding"
+              value={fmtMoney(tot.outstanding)}
+              valueClassName="text-status-under"
               onClick={() =>
                 onDrill(
                   groups.flatMap((g) => g.rows.filter((r) => (Number(r.amountInclTax) || 0) - (Number(r.amountPaid) || 0) > 0)),
                   "Outstanding Invoices — compared contracts"
                 )
               }
-            >
-              <div className="text-xs text-muted-foreground">Combined outstanding</div>
-              <div className="text-lg font-semibold text-status-under">{fmtMoney(tot.outstanding)}</div>
-            </button>
+            />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-lg border bg-card p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Value by Contract</h3>
-                <span className="text-xs text-muted-foreground">Click a bar for details</span>
-              </div>
+            <ChartCard accent="var(--dataviz-1)" title="Value by Contract" action={<span className="text-xs text-muted-foreground">Click a bar for details</span>}>
               <CompareValueChart groups={groups} onGroupClick={drillGroup} />
-            </div>
+            </ChartCard>
             {!taHidden && (
-            <div className="rounded-lg border bg-card p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">
-                  {taMeasure === "taAvg" ? "Avg Turnaround by Contract" : `${chartMeasureLabel(taMeasure)} by Contract`}
-                </h3>
-                <div className="flex items-center gap-1">
+            <ChartCard
+              id="compareTa"
+              accent="var(--dataviz-2)"
+              title={taMeasure === "taAvg" ? "Avg Turnaround by Contract" : `${chartMeasureLabel(taMeasure)} by Contract`}
+              action={
+                <>
                   <ChartZoomStepper id="compareTa" />
+                  <ChartDataQuickMenu id="compareTa" hasDimension={false} />
                   <ChartVisibilityToggle id="compareTa" />
+                  <ChartFormatMenu id="compareTa" />
                   <span className="text-xs text-muted-foreground">Click a bar for details</span>
-                </div>
-              </div>
+                </>
+              }
+            >
               <ChartSlotContextMenu id="compareTa" hasDimension={false}>
                 <CompareTaChart groups={groups} measure={taMeasure} onGroupClick={drillGroup} />
               </ChartSlotContextMenu>
-            </div>
+            </ChartCard>
             )}
           </div>
 
@@ -336,34 +341,34 @@ export function CompareReportView({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Contract</TableHead>
-                    <TableHead className="text-right">Inv.</TableHead>
-                    <TableHead className="text-right">Excl. Tax</TableHead>
-                    <TableHead className="text-right">Incl. Tax</TableHead>
-                    <TableHead className="text-right">Paid</TableHead>
-                    <TableHead className="text-right">Outstanding</TableHead>
-                    <TableHead className="text-right">Contract Val.</TableHead>
-                    <TableHead className="text-right">Util.</TableHead>
-                    <TableHead className="text-center">Avg TA</TableHead>
-                    <TableHead className="text-right">Delayed</TableHead>
+                    <TableHead className={cn(tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Contract</TableHead>
+                    <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Inv.</TableHead>
+                    <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Excl. Tax</TableHead>
+                    <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Incl. Tax</TableHead>
+                    <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Paid</TableHead>
+                    <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Outstanding</TableHead>
+                    <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Contract Val.</TableHead>
+                    <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Util.</TableHead>
+                    <TableHead className={cn("text-center", tableHeaderShaded && "bg-muted", tableGridLines && "border-r")}>Avg TA</TableHead>
+                    <TableHead className={cn("text-right", tableHeaderShaded && "bg-muted")}>Delayed</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {groups.map((g) => (
-                    <TableRow key={g.key} className="cursor-pointer" onClick={() => drillGroup(g)}>
-                      <TableCell className="max-w-[160px] truncate" title={g.key}>
+                    <TableRow key={g.key} className={cn("cursor-pointer", tableBanded && "even:bg-muted/30")} onClick={() => drillGroup(g)}>
+                      <TableCell className={cn("max-w-[160px] truncate", tableGridLines && "border-r")} title={g.key}>
                         {shortContract(g.key)}
                       </TableCell>
-                      <TableCell className="text-right">{g.count}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtMoney(g.exclTax)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtMoney(g.incl)}</TableCell>
-                      <TableCell className="text-right tabular-nums text-status-cleared">{fmtMoney(g.paid)}</TableCell>
-                      <TableCell className={`text-right tabular-nums ${g.outstanding > 0 ? "text-status-under" : "text-status-cleared"}`}>
+                      <TableCell className={cn("text-right", tableGridLines && "border-r")}>{g.count}</TableCell>
+                      <TableCell className={cn("text-right tabular-nums", tableGridLines && "border-r")}>{fmtMoney(g.exclTax)}</TableCell>
+                      <TableCell className={cn("text-right tabular-nums", tableGridLines && "border-r")}>{fmtMoney(g.incl)}</TableCell>
+                      <TableCell className={cn("text-right tabular-nums text-status-cleared", tableGridLines && "border-r")}>{fmtMoney(g.paid)}</TableCell>
+                      <TableCell className={cn(`text-right tabular-nums ${g.outstanding > 0 ? "text-status-under" : "text-status-cleared"}`, tableGridLines && "border-r")}>
                         {fmtMoney(g.outstanding)}
                       </TableCell>
-                      <TableCell className="text-right">—</TableCell>
-                      <TableCell className="text-right">—</TableCell>
-                      <TableCell className="text-center">{g.taAvg !== null ? `${Math.round(g.taAvg)}d` : "—"}</TableCell>
+                      <TableCell className={cn("text-right", tableGridLines && "border-r")}>—</TableCell>
+                      <TableCell className={cn("text-right", tableGridLines && "border-r")}>—</TableCell>
+                      <TableCell className={cn("text-center", tableGridLines && "border-r")}>{g.taAvg !== null ? `${Math.round(g.taAvg)}d` : "—"}</TableCell>
                       <TableCell className={`text-right ${g.delayed ? "text-status-returned" : ""}`}>{g.delayed}</TableCell>
                     </TableRow>
                   ))}
