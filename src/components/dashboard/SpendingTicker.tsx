@@ -34,13 +34,13 @@ function Segment({ item }: { item: TickerItem }) {
   return (
     <span
       className="mx-1 inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-1 text-sm whitespace-nowrap"
-      style={{ backgroundColor: `color-mix(in oklch, ${item.color} 10%, transparent)` }}
+      style={{ backgroundColor: `color-mix(in oklch, ${item.color} 16%, transparent)` }}
     >
       <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-      <span className="font-medium" style={{ color: item.color }}>
+      <span className="font-bold" style={{ color: item.color }}>
         {item.vendor}
       </span>
-      <span className="text-muted-foreground">— {item.story}</span>
+      <span className="font-semibold text-foreground">— {item.story}</span>
     </span>
   )
 }

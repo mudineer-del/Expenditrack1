@@ -1,8 +1,11 @@
+import { useMemo } from "react"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { SegmentSummaryPanel } from "@/components/shared/SegmentSummaryPanel"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { fmtMoney } from "@/lib/dashboard"
 import { shortContract, turnaroundDays } from "@/lib/reports"
+import { buildInvoiceSegmentSummary } from "@/lib/segmentSummary"
 import type { Invoice } from "@/types/invoice"
 
 export interface ReportDetail {
@@ -10,11 +13,14 @@ export interface ReportDetail {
   rows: Invoice[]
 }
 
+const EMPTY_ROWS: Invoice[] = []
+
 /** Ported from the click-to-detail drawer (openDetail/detailTableHtml, index.html:4767-4784). */
 export function ReportDetailDrawer({ detail, onOpenChange }: { detail: ReportDetail | null; onOpenChange: (open: boolean) => void }) {
-  const rows = detail?.rows ?? []
+  const rows = detail?.rows ?? EMPTY_ROWS
   const incl = rows.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0)
   const paid = rows.reduce((s, r) => s + (Number(r.amountPaid) || 0), 0)
+  const summary = useMemo(() => buildInvoiceSegmentSummary(rows), [rows])
 
   return (
     <Sheet open={!!detail} onOpenChange={onOpenChange}>
@@ -25,6 +31,9 @@ export function ReportDetailDrawer({ detail, onOpenChange }: { detail: ReportDet
             {rows.length} invoice{rows.length !== 1 ? "s" : ""} · {fmtMoney(incl)} incl. tax · {fmtMoney(paid)} paid
           </SheetDescription>
         </SheetHeader>
+        <div className="px-4 pb-2">
+          <SegmentSummaryPanel sentences={summary.sentences} />
+        </div>
         <div className="overflow-x-auto px-4">
           <Table>
             <TableHeader>

@@ -81,6 +81,7 @@ const CHART_TYPES: { key: ChartType; label: string }[] = [
   { key: "line", label: "Line" },
   { key: "area", label: "Area" },
   { key: "pie", label: "Pie" },
+  { key: "ringLegend", label: "Ring + legend" },
   { key: "radar", label: "Radar" },
 ]
 

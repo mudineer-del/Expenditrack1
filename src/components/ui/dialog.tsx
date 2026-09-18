@@ -239,7 +239,10 @@ function DialogContent({
           RESIZE_HANDLES.map(({ dir, className }) => (
             <div key={dir} data-resize-handle={dir} className={cn("absolute touch-none", className)} />
           ))}
-        <div className="absolute top-2 right-2 flex items-center gap-1">
+        {/* z-30 — above DialogHeader's own z-20 sticky layer, which now paints a solid
+            (not translucent) background and would otherwise cover these buttons since the
+            header stretches -mx-4 edge-to-edge over this same top-right corner. */}
+        <div className="absolute top-2 right-2 z-30 flex items-center gap-1">
           {maximizable && (
             <Button
               variant="ghost"
@@ -270,14 +273,26 @@ function DialogContent({
   )
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+function DialogHeader({ className, style, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
+      // Sticky (not just "top of the content") so the title bar stays pinned in view as
+      // the body scrolls under it on a long form — the -mx-4 -mt-4 pulls it flush into the
+      // content's own p-4 padding so it sticks right at the visible top edge, not 1rem
+      // below it. A darker theme-tinted gradient (not the same flat bg-popover as the
+      // body) plus a real drop shadow is what actually reads as "above" the scrolling
+      // content — the old bg-popover header was visually identical to the page under it.
       className={cn(
-        "-mx-4 -mt-4 flex flex-col gap-1.5 rounded-t-xl border-b border-primary/20 bg-primary/10 px-4 pt-4 pb-3",
+        "sticky top-0 z-20 -mx-4 -mt-4 flex flex-col gap-1.5 rounded-t-xl border-b-[3px] px-4 pt-4 pb-3 shadow-[0_4px_10px_-6px_rgba(0,0,0,0.4)]",
         className
       )}
+      style={{
+        backgroundImage:
+          "linear-gradient(155deg, color-mix(in oklch, var(--primary) 16%, var(--popover)) 0%, color-mix(in oklch, var(--foreground) 8%, var(--popover)) 100%)",
+        borderColor: "color-mix(in oklch, var(--primary) 45%, var(--border))",
+        ...style,
+      }}
       {...props}
     />
   )

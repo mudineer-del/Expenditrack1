@@ -18,6 +18,7 @@ import { SaveLayoutButton } from "@/components/dashboard/SaveLayoutButton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CategoryBreakdownChart, MonthlySpendTrendChart } from "@/components/wells/WellCostCharts"
 import { WellCostCompareDialog } from "@/components/wells/WellCostCompareDialog"
+import { WellCostDrillDialog, type WellCostDrillPayload } from "@/components/wells/WellCostDrillDialog"
 import { ServiceCostSummary } from "@/components/wells/ServiceCostSummary"
 import { WellPhaseCostSection } from "@/components/wells/WellPhaseCostSection"
 import { WellCostSourceEntries } from "@/components/wells/WellCostSourceEntries"
@@ -51,6 +52,7 @@ const TREND_TYPE_OPTIONS: ChartTypeOption[] = [
 const BREAKDOWN_TYPE_OPTIONS: ChartTypeOption[] = [
   { type: "bar", label: "Bar" },
   { type: "pie", label: "Donut" },
+  { type: "ringLegend", label: "Ring + legend" },
 ]
 const EMPTY_ROWS: never[] = []
 
@@ -62,6 +64,7 @@ export default function WellDashboardPage() {
   const [compareOpen, setCompareOpen] = useState(false)
   const [currency, setCurrency] = useState("USD")
   const [wellSearch, setWellSearch] = useState("")
+  const [drillPayload, setDrillPayload] = useState<WellCostDrillPayload | null>(null)
   const chartSlots = useDisplayStore((s) => s.chartSlots)
   const wellCostTrendChartType = useDisplayStore((s) => s.wellCostTrendChartType)
   const wellCostDeptChartType = useDisplayStore((s) => s.wellCostDeptChartType)
@@ -75,6 +78,7 @@ export default function WellDashboardPage() {
   const milestonesQuery = useWellMilestonesQuery()
 
   const wells = useMemo(() => (wellsQuery.data ?? []).filter((w) => !w.archived), [wellsQuery.data])
+  const wellNameById = useMemo(() => new Map(wells.map((w) => [w.id, w.name])), [wells])
   const allCostCentres = costCentresQuery.data ?? EMPTY_ROWS
   const costCentres = useMemo(() => {
     const activeWellIds = new Set(wells.map((w) => w.id))
@@ -203,6 +207,7 @@ export default function WellDashboardPage() {
 
       {!chartSlots.wellCostTrend.hidden && (
         <ChartCard
+          id="wellCostTrend"
           accent="var(--dataviz-3)"
           title="Monthly Spend Trend"
           action={
@@ -227,7 +232,12 @@ export default function WellDashboardPage() {
             chartTypeValue={wellCostTrendChartType}
             onChartTypeChange={(t) => setChartType("wellCostTrendChartType", t)}
           >
-            <MonthlySpendTrendChart currency={currency} data={monthlySpend} chartType={wellCostTrendChartType} />
+            <MonthlySpendTrendChart
+              currency={currency}
+              data={monthlySpend}
+              chartType={wellCostTrendChartType}
+              onDrill={(point) => setDrillPayload({ kind: "month", title: point.monthLabel, point })}
+            />
           </ChartSlotContextMenu>
         </ChartCard>
       )}
@@ -235,6 +245,7 @@ export default function WellDashboardPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {!chartSlots.wellCostDept.hidden && (
           <ChartCard
+            id="wellCostDept"
             accent="var(--chart-2)"
             title="Cost by Department"
             action={
@@ -257,12 +268,18 @@ export default function WellDashboardPage() {
               chartTypeValue={wellCostDeptChartType}
               onChartTypeChange={(t) => setChartType("wellCostDeptChartType", t)}
             >
-              <CategoryBreakdownChart currency={currency} items={departmentBreakdown} chartType={wellCostDeptChartType} />
+              <CategoryBreakdownChart
+                currency={currency}
+                items={departmentBreakdown}
+                chartType={wellCostDeptChartType}
+                onDrill={(entry) => setDrillPayload({ kind: "category", title: `${entry.name} — Cost by Department`, entry, wellNameById })}
+              />
             </ChartSlotContextMenu>
           </ChartCard>
         )}
         {!chartSlots.wellCostService.hidden && (
           <ChartCard
+            id="wellCostService"
             accent="var(--dataviz-1)"
             title="Spend by Service"
             action={
@@ -285,7 +302,13 @@ export default function WellDashboardPage() {
               chartTypeValue={wellCostServiceChartType}
               onChartTypeChange={(t) => setChartType("wellCostServiceChartType", t)}
             >
-              <CategoryBreakdownChart slotId="wellCostService" currency={currency} items={serviceBreakdown} chartType={wellCostServiceChartType} />
+              <CategoryBreakdownChart
+                slotId="wellCostService"
+                currency={currency}
+                items={serviceBreakdown}
+                chartType={wellCostServiceChartType}
+                onDrill={(entry) => setDrillPayload({ kind: "category", title: `${entry.name} — Spend by Service`, entry, wellNameById })}
+              />
             </ChartSlotContextMenu>
           </ChartCard>
         )}
@@ -367,6 +390,7 @@ export default function WellDashboardPage() {
       </Tabs>
 
       <WellCostCompareDialog currency={currency} open={compareOpen} onOpenChange={setCompareOpen} rows={rows} />
+      <WellCostDrillDialog payload={drillPayload} currency={currency} onOpenChange={(v) => !v && setDrillPayload(null)} />
     </div>
   )
 }

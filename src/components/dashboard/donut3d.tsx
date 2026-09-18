@@ -28,6 +28,10 @@ export function makeDonutOuterLabel(
   colors: string[],
   distance = 18,
   labelData: Array<{ name: string; value: number }> = [],
+  /** Settings ▸ Format ▸ Charts (or the chart's own right-click menu) ▸ "Label text
+   *  size"/"Label colour" — overrides this label's base size and, when set, its color
+   *  uniformly across every slice instead of the default per-slice palette color. */
+  overrides?: { fontSize?: number; color?: string },
 ) {
   const total = labelData.reduce((sum, entry) => sum + Math.max(0, entry.value), 0)
   let cumulative = 0
@@ -72,7 +76,8 @@ export function makeDonutOuterLabel(
     const BASE_RADIUS = 85
     const scale = Math.min(1.8, Math.max(0.5, ringRadius / BASE_RADIUS))
     const scaledDistance = distance * scale
-    const fontSize = Math.min(14, Math.max(8.5, 11.5 * scale))
+    const baseFontSize = overrides?.fontSize ?? 11.5
+    const fontSize = Math.min(baseFontSize * 1.3, Math.max(baseFontSize * 0.7, baseFontSize * scale))
     const textStroke = Math.min(4, Math.max(2, 3 * scale))
     const cos = Math.cos(-midAngle * RADIAN)
     const sin = Math.sin(-midAngle * RADIAN)
@@ -85,7 +90,7 @@ export function makeDonutOuterLabel(
     const y = lane ? centerY + (lane.rank - (lane.count - 1) / 2) * laneGap : centerY + (ringRadius + scaledDistance) * sin
     const elbowX = centerX + (side === "right" ? 1 : -1) * (ringRadius + 10 * scale)
     const pct = percent != null ? `${Math.round(percent * 100)}%` : ""
-    const color = colors[itemIndex % colors.length]
+    const color = overrides?.color || colors[itemIndex % colors.length]
     const rawName = String(labelData[itemIndex]?.name ?? name ?? "")
     const displayName = rawName.length > 26 ? `${rawName.slice(0, 24)}…` : rawName
     return (
@@ -129,14 +134,22 @@ interface RadarLabelProps {
  *  since every render passes a freshly-sliced data array, that transition never actually
  *  settles. Every `<Radar>` using this must pass
  *  `isAnimationActive={labelsEnabled ? false : animate}` so the labels can show. */
-export function makePolarValueLabel(colors: string[], formatter?: (v: number) => string, offsetY = -10) {
+export function makePolarValueLabel(
+  colors: string[],
+  formatter?: (v: number) => string,
+  offsetY = -10,
+  /** Settings ▸ Format ▸ Charts ▸ "Label text size"/"Label colour" for this chart slot —
+   *  same override contract as makeDonutOuterLabel above. */
+  overrides?: { fontSize?: number; color?: string },
+) {
   return function PolarValueLabel(props: RadarLabelProps) {
     const { x, y, value, index } = props
     if (x == null || y == null || value == null || typeof index !== "number") return null
-    const color = colors[index % colors.length]
+    const color = overrides?.color || colors[index % colors.length]
+    const fontSize = overrides?.fontSize ?? 11
     const text = formatter ? formatter(Number(value)) : String(value)
     return (
-      <text x={Number(x)} y={Number(y) + offsetY} textAnchor="middle" fontSize={11} fontWeight={700} fill={color}>
+      <text x={Number(x)} y={Number(y) + offsetY} textAnchor="middle" fontSize={fontSize} fontWeight={700} fill={color}>
         {text}
       </text>
     )

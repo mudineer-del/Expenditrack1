@@ -21,6 +21,9 @@ export type ChartType =
   | "treemap"
   | "funnel"
   | "horizontalBar"
+  // A 2D donut with a side legend list whose rows expand in place to a short invoice
+  // preview — see components/dashboard/RingLegendChart.tsx.
+  | "ringLegend"
   // Real WebGL 3D chart types (Three.js/react-three-fiber, see components/dashboard/chart3d) —
   // genuine extruded geometry with camera tilt/rotate, not the SVG "3D-look" the other types
   // above use. Falls back to the closest SVG type automatically when WebGL is unavailable.
@@ -70,6 +73,16 @@ export type ChartSlotId =
 export interface ChartSlotConfig {
   labelFontSize?: number
   labelColor?: string
+  /** Per-chart overrides for the "Value labels"/"Label position" controls — undefined
+   *  falls back to the app-wide chartLabelsEnabled/chartLabelPosition default (still set
+   *  from Settings ▸ Format ▸ Charts), but setting either here makes THIS chart stop
+   *  following that shared default so charts can genuinely differ from one another. */
+  labelsEnabled?: boolean
+  labelPosition?: ChartLabelPosition
+  /** Overrides this chart card's whole accent color (border, title chip, background
+   *  tint/glow — see ChartCard.tsx) in place of the fixed per-slot accent hardcoded at
+   *  each call site. Undefined keeps that default. Set from the chart's Format popover. */
+  accentColor?: string
   dimension?: ChartDimension
   measure: ChartMeasure
   /** When true, this chart's card is skipped entirely wherever it would normally render.

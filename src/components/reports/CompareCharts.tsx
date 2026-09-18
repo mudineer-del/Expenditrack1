@@ -4,6 +4,7 @@ import { bar3DShape } from "@/components/dashboard/donut3d"
 import { fmtMoney } from "@/lib/dashboard"
 import { chartMeasureLabel, formatMeasureValue, shortContract, type ChartMeasure, type ReportGroup } from "@/lib/reports"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { useChartLabelOptions } from "@/components/dashboard/ChartLabelContext"
 
 const valueLabel = (v: unknown) => fmtMoney(Number(v)).replace(".00", "")
 
@@ -41,7 +42,9 @@ export function CompareValueChart({ groups, onGroupClick }: { groups: ReportGrou
  *  (index.html:4951-4959). `measure` (Settings ▸ Charts, default "taAvg") picks which
  *  field is plotted — the turnaround color-coding only applies while it's still "taAvg". */
 export function CompareTaChart({ groups, measure, onGroupClick }: { groups: ReportGroup[]; measure: ChartMeasure; onGroupClick: (g: ReportGroup) => void }) {
-  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const labelOptions = useChartLabelOptions()
+  const labelsEnabled = labelOptions.labelsEnabled ?? globalLabelsEnabled
   const data = groups.map((g) => ({ ...g, label: shortContract(g.key), plotted: g[measure] ?? 0 }))
   const fmt = (v: unknown) => formatMeasureValue(measure, Number(v), (n) => fmtMoney(n).replace(".00", ""))
   const config = { plotted: { label: chartMeasureLabel(measure), color: "var(--primary)" } } satisfies ChartConfig
@@ -56,7 +59,7 @@ export function CompareTaChart({ groups, measure, onGroupClick }: { groups: Repo
           {data.map((g, i) => (
             <Cell key={i} fill={measure === "taAvg" ? taColor(g.taAvg) : "var(--primary)"} />
           ))}
-          {labelsEnabled && <LabelList dataKey="plotted" position="right" formatter={fmt} fontSize={10} fill="var(--muted-foreground)" />}
+          {labelsEnabled && <LabelList dataKey="plotted" position="right" formatter={fmt} fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--muted-foreground)"} />}
         </Bar>
       </BarChart>
     </ChartContainer>

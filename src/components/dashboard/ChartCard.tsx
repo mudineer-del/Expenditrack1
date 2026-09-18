@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
-import { useDisplayStore, type ChartBackground, type ChartBackgroundDirection } from "@/store/useDisplayStore"
+import { useDisplayStore, type ChartBackground, type ChartBackgroundDirection, type ChartSlotId } from "@/store/useDisplayStore"
 
 /** Settings ▸ Format ▸ Charts ▸ "Chart background" controls this — from a plain solid
  *  card ("flat", Office's "No fill") up through today's soft accent wash ("subtle") to a
@@ -23,11 +23,16 @@ export function accentBackgroundStyle(accent: string, level: ChartBackground, di
  *  titled cards read as one indistinguishable block. Shared by DashboardPage and any other
  *  page that wants the same chart-card chrome (e.g. VendorDetailSheet). */
 export function ChartCard({
+  id,
   accent,
   title,
   action,
   children,
 }: {
+  /** Chart slot this card belongs to — reads a per-chart accentColor override from
+   *  Settings when set (see ChartFormatMenu's "Background colour" picker). Omit for a
+   *  card with no per-slot config (e.g. a one-off chart nothing else customizes). */
+  id?: ChartSlotId
   accent: string
   title: ReactNode
   action?: ReactNode
@@ -35,6 +40,8 @@ export function ChartCard({
 }) {
   const chartBackground = useDisplayStore((s) => s.chartBackground)
   const chartBackgroundDirection = useDisplayStore((s) => s.chartBackgroundDirection)
+  const accentOverride = useDisplayStore((s) => (id ? s.chartSlots[id]?.accentColor : undefined))
+  const effectiveAccent = accentOverride || accent
 
   return (
     <div
@@ -60,10 +67,10 @@ export function ChartCard({
       )}
       style={
         {
-          borderColor: `color-mix(in oklch, ${accent} 30%, var(--border))`,
-          "--accent-shadow": `color-mix(in oklch, ${accent} 25%, var(--border))`,
-          "--accent-glow": `color-mix(in oklch, ${accent} 35%, transparent)`,
-          "--chart-accent": accent,
+          borderColor: `color-mix(in oklch, ${effectiveAccent} 30%, var(--border))`,
+          "--accent-shadow": `color-mix(in oklch, ${effectiveAccent} 25%, var(--border))`,
+          "--accent-glow": `color-mix(in oklch, ${effectiveAccent} 35%, transparent)`,
+          "--chart-accent": effectiveAccent,
         } as React.CSSProperties
       }
     >
@@ -82,8 +89,8 @@ export function ChartCard({
         {action && <div className="flex shrink-0 items-center gap-1">{action}</div>}
       </div>
       <div className="relative p-4 md:p-5">
-        <span className="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full opacity-[0.07] blur-2xl" style={{ backgroundColor: accent }} />
-        <div className="relative min-w-0" style={accentBackgroundStyle(accent, chartBackground, chartBackgroundDirection)}>
+        <span className="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full opacity-[0.07] blur-2xl" style={{ backgroundColor: effectiveAccent }} />
+        <div className="relative min-w-0" style={accentBackgroundStyle(effectiveAccent, chartBackground, chartBackgroundDirection)}>
           {children}
         </div>
       </div>

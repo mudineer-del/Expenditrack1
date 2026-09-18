@@ -67,7 +67,27 @@ import { cn } from "@/lib/utils"
 import { checkContractNotifications, loadNotifyConfig, loadNotifyPrefs, maybeSendWeeklyDigest } from "@/lib/notifications"
 
 const PICKER_NEUTRAL = "var(--muted-foreground)"
-const PICKER_PALETTE = ["var(--dataviz-1)", "var(--dataviz-2)", "var(--dataviz-3)", "var(--dataviz-4)", "var(--dataviz-5)", "var(--dataviz-6)"]
+
+/** Shared look for the desktop department/vendor filter pills — a solid, saturated chip
+ *  in the filter's own theme color rather than the old pale outline-on-white treatment,
+ *  with a tactile "3D" raised bottom edge that flattens into a pressed/inset look for
+ *  whichever one is currently selected. */
+const FILTER_PILL_CLASS =
+  "rounded-full border-0 px-3.5 text-[13px] font-bold text-white transition-all duration-150 ease-out"
+const FILTER_PILL_RAISED =
+  "shadow-[0_3px_0_var(--pill-shade),0_5px_10px_-6px_var(--pill-glow)] hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--pill-shade),0_8px_14px_-6px_var(--pill-glow)] active:translate-y-0.5 active:shadow-none"
+const FILTER_PILL_PRESSED = "shadow-[inset_0_2px_5px_rgba(0,0,0,0.3)] ring-2 ring-white/70"
+
+function filterPillProps(color: string, active: boolean): { className: string; style: React.CSSProperties } {
+  return {
+    className: cn(FILTER_PILL_CLASS, active ? FILTER_PILL_PRESSED : FILTER_PILL_RAISED),
+    style: {
+      backgroundColor: active ? color : `color-mix(in oklch, ${color} 62%, var(--card))`,
+      "--pill-shade": `color-mix(in oklch, ${color} 45%, var(--border))`,
+      "--pill-glow": `color-mix(in oklch, ${color} 45%, transparent)`,
+    } as React.CSSProperties,
+  }
+}
 
 /** Mobile-only department/vendor picker card. A flat gray box with a color
  *  only on the active one read as lifeless — every card now carries its own
@@ -295,11 +315,11 @@ export default function DashboardPage() {
               label="All Departments"
               onClick={() => setActiveDept("ALL")}
             />
-            {refLists.departments.map((d, i) => (
+            {refLists.departments.map((d) => (
               <PickerCard
                 key={d}
                 active={activeDept === d}
-                color={PICKER_PALETTE[i % PICKER_PALETTE.length]}
+                color="var(--primary)"
                 icon={<Building2 className="size-6" />}
                 label={d}
                 onClick={() => setActiveDept(d)}
@@ -309,36 +329,35 @@ export default function DashboardPage() {
           <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2 md:rounded-2xl md:border md:bg-card/80 md:p-2 md:shadow-[0_5px_0_hsl(var(--border)/0.7),0_12px_20px_-16px_hsl(var(--foreground)/0.35)]">
             <Button
               size="sm"
-              variant={activeDept === "ALL" ? "default" : "outline"}
-              className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+              {...filterPillProps("var(--primary)", activeDept === "ALL")}
               onClick={() => setActiveDept("ALL")}
             >
               All Departments
             </Button>
-            {refLists.departments.map((d, i) => {
-              const deptColor = PICKER_PALETTE[i % PICKER_PALETTE.length]
-              return (
-                <Button
-                  key={d}
-                  size="sm"
-                  variant={activeDept === d ? "default" : "outline"}
-                  className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                  style={
-                    activeDept === d
-                      ? { backgroundColor: deptColor, borderColor: deptColor }
-                      : { borderColor: `color-mix(in oklch, ${deptColor} 35%, var(--border))`, color: deptColor }
-                  }
-                  onClick={() => setActiveDept(d)}
-                >
-                  {d}
-                </Button>
-              )
-            })}
+            {refLists.departments.map((d) => (
+              <Button
+                key={d}
+                size="sm"
+                // Every department pill shares the app's one theme accent — departments are
+                // a single filter dimension, not a rainbow of unrelated categories the way
+                // contractors are (each contractor keeps its own vendorColor() below).
+                {...filterPillProps("var(--primary)", activeDept === d)}
+                onClick={() => setActiveDept(d)}
+              >
+                {d}
+              </Button>
+            ))}
           </div>
         </div>
       )}
 
       <div className="min-w-0">
+        {/* Names which department these contractor pills belong to — dataVendors is
+            already scoped to activeDept (see its own useMemo above), so this just makes
+            that scoping visible instead of a bare pill row that looks global. */}
+        <div className="mb-2 text-sm font-medium text-muted-foreground">
+          {activeDept === "ALL" ? "Contractors" : `Contractors — ${activeDept}`}
+        </div>
         <div className="grid grid-cols-3 gap-3 md:hidden">
           <PickerCard
             active={dashVendor === "ALL"}
@@ -362,8 +381,7 @@ export default function DashboardPage() {
         <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2 md:rounded-2xl md:border md:bg-card/80 md:p-2 md:shadow-[0_5px_0_hsl(var(--border)/0.7),0_12px_20px_-16px_hsl(var(--foreground)/0.35)]">
           <Button
             size="sm"
-            variant={dashVendor === "ALL" ? "default" : "outline"}
-            className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+            {...filterPillProps("var(--primary)", dashVendor === "ALL")}
             onClick={() => setDashVendor("ALL")}
           >
             All
@@ -372,13 +390,7 @@ export default function DashboardPage() {
             <Button
               key={v}
               size="sm"
-              variant={dashVendor === v ? "default" : "outline"}
-              className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-              style={
-                dashVendor === v
-                  ? { backgroundColor: vendorColor(v), borderColor: vendorColor(v) }
-                  : { borderColor: `color-mix(in oklch, ${vendorColor(v)} 35%, var(--border))`, color: vendorColor(v) }
-              }
+              {...filterPillProps(vendorColor(v), dashVendor === v)}
               onClick={() => setDashVendor(v)}
             >
               {v}
@@ -618,6 +630,7 @@ export default function DashboardPage() {
         <div className="dashboard-chart-grid gap-4 md:gap-6">
           {!chartSlots.dashTrend.hidden && (
           <ChartCard
+            id="dashTrend"
             accent="var(--dataviz-1)"
             title={(chartSlots.dashTrend.dimension && chartSlots.dashTrend.dimension !== "month") || chartSlots.dashTrend.measure !== "incl"
               ? `${chartMeasureLabel(chartSlots.dashTrend.measure)} by ${reportGroupLabel(chartSlots.dashTrend.dimension ?? "month")}`
@@ -655,6 +668,7 @@ export default function DashboardPage() {
           )}
           {!chartSlots.dashService.hidden && (
           <ChartCard
+            id="dashService"
             accent="var(--dataviz-3)"
             title={chartSlots.dashService.dimension && (chartSlots.dashService.dimension !== "service" || chartSlots.dashService.measure !== "incl")
               ? `${chartMeasureLabel(chartSlots.dashService.measure)} by ${reportGroupLabel(chartSlots.dashService.dimension)}`
@@ -690,6 +704,7 @@ export default function DashboardPage() {
           )}
           {!chartSlots.dashVendor.hidden && (
           <ChartCard
+            id="dashVendor"
             accent="var(--dataviz-4)"
             title={dashVendorSeries
               ? `${chartMeasureLabel(chartSlots.dashVendor.measure)} by ${reportGroupLabel(dashVendorDim)}`
@@ -724,6 +739,7 @@ export default function DashboardPage() {
           )}
           {!chartSlots.dashBreakdown.hidden && (
           <ChartCard
+            id="dashBreakdown"
             accent="var(--dataviz-2)"
             title={chartSlots.dashBreakdown.dimension || chartSlots.dashBreakdown.measure !== "count"
               ? `${chartMeasureLabel(chartSlots.dashBreakdown.measure)} by ${reportGroupLabel(dashBreakdownDim)}`
@@ -754,6 +770,7 @@ export default function DashboardPage() {
           )}
           {!chartSlots.dashStatus.hidden && (
           <ChartCard
+            id="dashStatus"
             accent="var(--dataviz-5)"
             title={chartSlots.dashStatus.dimension && (chartSlots.dashStatus.dimension !== "status" || chartSlots.dashStatus.measure !== "incl")
               ? `${chartMeasureLabel(chartSlots.dashStatus.measure)} by ${reportGroupLabel(chartSlots.dashStatus.dimension)}`

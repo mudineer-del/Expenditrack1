@@ -40,6 +40,7 @@ import {
   makeRadialBarValueLabel,
 } from "./donut3d"
 import { Chart3DBoundary, LazyArea3DScene, LazyBar3DScene, LazyDonut3DScene, type Chart3DDatum } from "./chart3d"
+import { RingLegendChart } from "./RingLegendChart"
 
 const config = {
   total: { label: "Expenditure (incl. tax)", color: "var(--dataviz-3)" },
@@ -61,12 +62,20 @@ export function ServiceChart({
   onDrill: (title: string, invoices: CategoryTotal["invoices"]) => void
 }) {
   const animate = useDisplayStore((s) => s.animationsEnabled)
-  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
-  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const globalLabelPosition = useDisplayStore((s) => s.chartLabelPosition)
   const isMobile = useIsMobile()
   const gid = useId()
   const labelOptions = useChartLabelOptions()
+  // This chart's own slot can override the app-wide "Value labels"/"Label position"
+  // default (see ChartFormatMenu/ChartSlotContextMenu), so each chart can genuinely differ.
+  const labelsEnabled = labelOptions.labelsEnabled ?? globalLabelsEnabled
+  const labelPosition = labelOptions.labelPosition ?? globalLabelPosition
   const valueLabel = (v: unknown) => labelOptions.measure === "count" ? Number(v).toLocaleString() : fmtMoney(Number(v)).replace(".00", "")
+  // This chart's own Format popover ("Label text size"/"Label colour") — threaded into
+  // every label renderer below so it actually takes effect, not just on the radial-bar
+  // view (makeRadialBarValueLabel already reads useChartLabelOptions() itself).
+  const labelOverride = { fontSize: labelOptions.labelFontSize, color: labelOptions.labelColor }
 
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No service data</div>
@@ -95,7 +104,7 @@ export function ServiceChart({
             cornerRadius={DONUT_CORNER_RADIUS}
             shape={donut3DShape}
             activeShape={donutActiveShape}
-            label={isMobile ? undefined : makeDonutOuterLabel(PIE_COLORS, 28, top.map((d) => ({ name: d.service, value: d.total })))}
+            label={isMobile ? undefined : makeDonutOuterLabel(PIE_COLORS, 28, top.map((d) => ({ name: d.service, value: d.total })), labelOverride)}
             labelLine={false}
             // Recharts only shows Pie labels once its entrance animation resolves
             // (showLabels: !isAnimating internally) — with `top` a fresh array
@@ -116,6 +125,14 @@ export function ServiceChart({
   }
 
   if (chartType === "pie") return renderDonut2D()
+
+  if (chartType === "ringLegend") {
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <RingLegendChart data={total3D} formatValue={valueLabel} onOpenAll={(d) => drill(top.find((t) => t.service === d.key) ?? null)} />
+      </div>
+    )
+  }
 
   if (chartType === "donut3d" || chartType === "donut3dExploded" || chartType === "donutSemi3d") {
     const variant = chartType === "donut3dExploded" ? "exploded" : chartType === "donutSemi3d" ? "semi" : "solid"
@@ -144,7 +161,7 @@ export function ServiceChart({
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
           <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.22} isAnimationActive={false} className="cursor-pointer">
-            <LabelList dataKey="total" content={makePolarValueLabel(PIE_COLORS, valueLabel, -14)} />
+            <LabelList dataKey="total" content={makePolarValueLabel(PIE_COLORS, valueLabel, -14, labelOverride)} />
           </Radar>
         </RadarChart>
       </ChartContainer>
@@ -207,7 +224,7 @@ export function ServiceChart({
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
           <Funnel data={top} dataKey="total" nameKey="service" isAnimationActive={animate}>
             {top.map((d, i) => <Cell key={d.service} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-            <LabelList position="right" fill="var(--foreground)" stroke="none" dataKey="service" fontSize={10} />
+            <LabelList position="right" fill={labelOptions.labelColor || "var(--foreground)"} stroke="none" dataKey="service" fontSize={labelOptions.labelFontSize ?? 10} />
           </Funnel>
         </FunnelChart>
       </ChartContainer>
@@ -228,8 +245,8 @@ export function ServiceChart({
                 dataKey="total"
                 position={labelPosition === "inside" ? "insideRight" : "right"}
                 formatter={valueLabel}
-                fontSize={10}
-                fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+                fontSize={labelOptions.labelFontSize ?? 10}
+                fill={labelOptions.labelColor || (labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)")}
               />
             )}
           </Bar>
@@ -276,7 +293,7 @@ export function ServiceChart({
             activeDot={{ r: 7, strokeWidth: 2, stroke: "var(--card)", fill: "var(--dataviz-3)" }}
             isAnimationActive={animate}
           >
-            {labelsEnabled && <LabelList dataKey="total" position="top" formatter={valueLabel} fontSize={10} fill="var(--muted-foreground)" />}
+            {labelsEnabled && <LabelList dataKey="total" position="top" formatter={valueLabel} fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--muted-foreground)"} />}
           </Area>
         </ComposedChart>
       </ChartContainer>
@@ -317,7 +334,7 @@ export function ServiceChart({
           activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
           isAnimationActive={animate}
         >
-          {labelsEnabled && <LabelList dataKey="total" position="top" formatter={valueLabel} fontSize={10} fill="var(--muted-foreground)" />}
+          {labelsEnabled && <LabelList dataKey="total" position="top" formatter={valueLabel} fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--muted-foreground)"} />}
         </Line>
       </ComposedChart>
     </ChartContainer>

@@ -5,6 +5,7 @@ import { bar3DShape } from "@/components/dashboard/donut3d"
 import { fmtMoney } from "@/lib/dashboard"
 import { chartMeasureLabel, formatGroupKey, formatMeasureValue, groupRows, seriesFromGroups, type ChartMeasure } from "@/lib/reports"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { useChartLabelOptions } from "@/components/dashboard/ChartLabelContext"
 import type { Invoice } from "@/types/invoice"
 
 /** Ported from the monthly-expenditure chart inside bindReportCharts (index.html:4917-4929).
@@ -19,8 +20,11 @@ export function ReportMonthlyChart({
   measure: ChartMeasure
   onMonthClick: (rows: Invoice[], label: string) => void
 }) {
-  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
-  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const globalLabelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const labelOptions = useChartLabelOptions()
+  const labelsEnabled = labelOptions.labelsEnabled ?? globalLabelsEnabled
+  const labelPosition = labelOptions.labelPosition ?? globalLabelPosition
   const data = useMemo(() => {
     const points = seriesFromGroups(groupRows(rows, "month"), "month", measure)
     return points.map((p) => ({ key: p.key, month: formatGroupKey("month", p.key), total: p.value, invoices: p.invoices }))
@@ -51,8 +55,8 @@ export function ReportMonthlyChart({
               dataKey="total"
               position={labelPosition === "inside" ? "inside" : "top"}
               formatter={fmt}
-              fontSize={10}
-              fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+              fontSize={labelOptions.labelFontSize ?? 10}
+              fill={labelOptions.labelColor || (labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)")}
             />
           )}
         </Bar>

@@ -111,6 +111,9 @@ export interface MonthlySpendPoint {
   monthLabel: string
   actual: number
   commitment: number
+  /** The raw ledger entries behind this month's totals — lets a chart click drill down
+   *  into exactly what was posted, not just the two summed numbers. */
+  transactions: WellCostTransaction[]
 }
 
 /** Every well_cost_transactions entry (across whichever cost centres the caller already
@@ -127,9 +130,11 @@ export function buildMonthlySpendSeries(transactions: WellCostTransaction[]): Mo
       monthLabel: new Date(`${monthKey}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" }),
       actual: 0,
       commitment: 0,
+      transactions: [],
     }
     if (t.kind === "commitment") point.commitment += Number(t.amount) || 0
     else point.actual += Number(t.amount) || 0
+    point.transactions.push(t)
     byMonth.set(monthKey, point)
   }
   return Array.from(byMonth.values()).sort((a, b) => a.monthKey.localeCompare(b.monthKey))
@@ -141,6 +146,9 @@ export interface CategoryCostBreakdown {
   budget: number
   actual: number
   commitment: number
+  /** The cost centres rolled into this category — lets a chart click drill down into
+   *  exactly which wells/cost centres make up this department or service's total. */
+  costCentres: WellCostCentre[]
 }
 
 /** Rolls a set of cost centres up by whichever grouping key `keyOf` picks (department id
@@ -155,11 +163,12 @@ function breakdownBy(
   const byKey = new Map<string, CategoryCostBreakdown>()
   for (const c of costCentres) {
     const key = keyOf(c)
-    const entry = byKey.get(key) ?? { id: key, name: labelOf(key), budget: 0, actual: 0, commitment: 0 }
+    const entry = byKey.get(key) ?? { id: key, name: labelOf(key), budget: 0, actual: 0, commitment: 0, costCentres: [] }
     entry.budget += Number(c.plannedBudget) || 0
     const t = totals[c.id] ?? ZERO_TOTALS
     entry.actual += t.actual
     entry.commitment += t.commitment
+    entry.costCentres.push(c)
     byKey.set(key, entry)
   }
   return Array.from(byKey.values()).sort((a, b) => b.actual + b.commitment - (a.actual + a.commitment))
@@ -181,6 +190,56 @@ export function buildServiceCategoryBreakdown(
 ): CategoryCostBreakdown[] {
   const nameById = new Map(serviceCategories.map((s) => [s.id, s.name]))
   return breakdownBy(costCentres, totals, (c) => c.serviceCategoryId, (id) => nameById.get(id) ?? "Unknown")
+}
+
+/** Plain-English account of one "Monthly Spend Trend" bar/point — count of ledger entries,
+ *  actual vs. committed split, and a peek at the operational remarks behind them — so
+ *  clicking a bar surfaces more than the two numbers already on the chart. */
+export function describeMonthlySpend(point: MonthlySpendPoint, currency: string): string[] {
+  const { transactions, actual, commitment, monthLabel } = point
+  const total = actual + commitment
+  if (!transactions.length) return [`No cost entries logged for ${monthLabel}.`]
+
+  const sentences: string[] = []
+  const actualCount = transactions.filter((t) => t.kind === "actual").length
+  const commitmentCount = transactions.length - actualCount
+  sentences.push(
+    `${transactions.length} entr${transactions.length !== 1 ? "ies" : "y"} logged in ${monthLabel}, totaling ${fmtCurrency(total, currency)} — ${fmtCurrency(actual, currency)} actual and ${fmtCurrency(commitment, currency)} committed.`
+  )
+  if (actualCount && commitmentCount) {
+    sentences.push(`${actualCount} actual posting${actualCount !== 1 ? "s" : ""} and ${commitmentCount} commitment${commitmentCount !== 1 ? "s" : ""}.`)
+  }
+  const remarks = transactions.map((t) => t.remarks?.trim()).filter((r): r is string => !!r)
+  if (remarks.length) {
+    const sample = remarks.slice(0, 2).join("; ")
+    sentences.push(`Recent notes: ${sample}${remarks.length > 2 ? `, +${remarks.length - 2} more` : ""}.`)
+  }
+  return sentences
+}
+
+/** Plain-English account of one "Cost by Department"/"Spend by Service" slice — how many
+ *  cost centres and which wells roll into it, and how that total sits against its budget. */
+export function describeCategoryBreakdown(entry: CategoryCostBreakdown, currency: string, wellNameById: Map<string, string>): string[] {
+  const { costCentres, budget, actual, commitment, name } = entry
+  const total = actual + commitment
+  if (!costCentres.length) return [`No cost centres logged under ${name}.`]
+
+  const sentences: string[] = []
+  sentences.push(
+    `${costCentres.length} cost centre${costCentres.length !== 1 ? "s" : ""} under ${name}, totaling ${fmtCurrency(total, currency)}` +
+      (budget > 0 ? ` against a ${fmtCurrency(budget, currency)} budget.` : " with no budget set.")
+  )
+  if (budget > 0) {
+    const pct = Math.round((total / budget) * 100)
+    sentences.push(pct > 100 ? `That's ${pct}% of budget — ${fmtCurrency(total - budget, currency)} over.` : `That's ${pct}% of budget utilized.`)
+  }
+  const wellNames = Array.from(new Set(costCentres.map((c) => wellNameById.get(c.wellId) || c.wellId)))
+  if (wellNames.length > 1) {
+    sentences.push(`Spans ${wellNames.length} wells: ${wellNames.slice(0, 4).join(", ")}${wellNames.length > 4 ? `, +${wellNames.length - 4} more` : ""}.`)
+  } else if (wellNames.length === 1) {
+    sentences.push(`All against ${wellNames[0]}.`)
+  }
+  return sentences
 }
 
 export interface ServiceCatalogRow extends CategoryCostBreakdown {
@@ -228,6 +287,10 @@ export function buildServiceCatalogSummary(
         budget: sums.budget,
         actual: sums.actual,
         commitment: sums.commitment,
+        // Not needed for the catalog summary table this feeds (no per-row drill-down
+        // there) — populated by breakdownBy() for the chart-facing department/service
+        // breakdowns instead, where a click needs to know which cost centres to show.
+        costCentres: [] as WellCostCentre[],
         available: sums.budget - sums.actual - sums.commitment,
         utilizationPct: sums.budget > 0 ? ((sums.actual + sums.commitment) / sums.budget) * 100 : 0,
       }

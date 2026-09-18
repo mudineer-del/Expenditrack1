@@ -4,6 +4,7 @@ import { bar3DShape } from "@/components/dashboard/donut3d"
 import { fmtMoney } from "@/lib/dashboard"
 import { aggregate, chartMeasureLabel, formatMeasureValue, turnaroundDays, type ChartMeasure } from "@/lib/reports"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { useChartLabelOptions } from "@/components/dashboard/ChartLabelContext"
 import type { Invoice } from "@/types/invoice"
 
 const BUCKETS: [string, number, number][] = [
@@ -26,8 +27,11 @@ export function TaBucketChart({
   measure: ChartMeasure
   onBucketClick: (rows: Invoice[], label: string) => void
 }) {
-  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
-  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const globalLabelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const labelOptions = useChartLabelOptions()
+  const labelsEnabled = labelOptions.labelsEnabled ?? globalLabelsEnabled
+  const labelPosition = labelOptions.labelPosition ?? globalLabelPosition
   const bucketRows = BUCKETS.map(() => [] as Invoice[])
   rows.forEach((r) => {
     const d = turnaroundDays(r)
@@ -60,8 +64,8 @@ export function TaBucketChart({
               dataKey="plotted"
               position={labelPosition === "inside" ? "inside" : "top"}
               formatter={fmt}
-              fontSize={10}
-              fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+              fontSize={labelOptions.labelFontSize ?? 10}
+              fill={labelOptions.labelColor || (labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)")}
             />
           )}
         </Bar>

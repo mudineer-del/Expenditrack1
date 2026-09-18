@@ -24,6 +24,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { activeChartPayload } from "@/lib/chartClick"
 import { fmtMoney, type TrendPoint } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { useChartLabelOptions } from "./ChartLabelContext"
 import { DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, donut3DShape, donutActiveShape, makeDonutOuterLabel, makePolarValueLabel } from "./donut3d"
 import { Chart3DBoundary, LazyArea3DScene, LazyBar3DScene, type Chart3DDatum } from "./chart3d"
 
@@ -49,6 +50,8 @@ export function TrendChart({
   const chartType = useDisplayStore((s) => s.trendChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
   const areaId = useId().replace(/:/g, "")
+  const labelOptions = useChartLabelOptions()
+  const labelOverride = { fontSize: labelOptions.labelFontSize, color: labelOptions.labelColor }
   // Only gates the pie/radar labels below — the line/bar/composed view further down stays
   // label-less on purpose (too many months of per-point labels turns into unreadable noise;
   // see the Brush/zoom control added for that same density problem).
@@ -75,7 +78,7 @@ export function TrendChart({
             cornerRadius={DONUT_CORNER_RADIUS}
             shape={donut3DShape}
             activeShape={donutActiveShape}
-            label={makeDonutOuterLabel(PIE_COLORS, 28, data.map((d) => ({ name: d.month, value: d.total })))}
+            label={makeDonutOuterLabel(PIE_COLORS, 28, data.map((d) => ({ name: d.month, value: d.total })), labelOverride)}
             labelLine={false}
             isAnimationActive={animate}
             cursor="pointer"
@@ -99,7 +102,7 @@ export function TrendChart({
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
           <Radar dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.22} isAnimationActive={false} className="cursor-pointer">
-            <LabelList dataKey="total" content={makePolarValueLabel(PIE_COLORS, valueLabel, -14)} />
+            <LabelList dataKey="total" content={makePolarValueLabel(PIE_COLORS, valueLabel, -14, labelOverride)} />
           </Radar>
         </RadarChart>
       </ChartContainer>

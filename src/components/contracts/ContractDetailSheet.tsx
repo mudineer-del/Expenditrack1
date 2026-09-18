@@ -192,6 +192,7 @@ export function ContractDetailSheet({
             <div className="dashboard-chart-grid gap-4">
               {!trendCfg.hidden && (
               <ChartCard
+                id="contractSheetTrend"
                 accent="var(--dataviz-1)"
                 title={(trendCfg.dimension && trendCfg.dimension !== "month") || trendCfg.measure !== "incl"
                   ? `${chartMeasureLabel(trendCfg.measure)} by ${reportGroupLabel(trendCfg.dimension ?? "month")}`
@@ -220,6 +221,7 @@ export function ContractDetailSheet({
               )}
               {!serviceCfg.hidden && (
               <ChartCard
+                id="contractSheetService"
                 accent="var(--dataviz-3)"
                 title={(serviceCfg.dimension && serviceCfg.dimension !== "service") || serviceCfg.measure !== "incl"
                   ? `${chartMeasureLabel(serviceCfg.measure)} by ${reportGroupLabel(serviceCfg.dimension ?? "service")}`

@@ -1,4 +1,4 @@
-import { AreaChart, BarChart3, Box, Disc2, Disc3, Gauge, LineChart, Mountain, PieChart, Radar } from "lucide-react"
+import { AreaChart, BarChart3, Box, Disc2, Disc3, Gauge, LineChart, ListTree, Mountain, PieChart, Radar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
@@ -16,6 +16,7 @@ const CHART_TYPE_ICONS: Record<ChartType, typeof BarChart3> = {
   treemap: PieChart,
   funnel: BarChart3,
   horizontalBar: BarChart3,
+  ringLegend: ListTree,
   donut3d: Disc3,
   donut3dExploded: Disc2,
   donutSemi3d: Gauge,
@@ -41,6 +42,7 @@ export const CHART_OPTIONS = {
     { type: "line", label: "Line" },
     { type: "area", label: "Area" },
     { type: "pie", label: "Donut" },
+    { type: "ringLegend", label: "Ring + legend" },
     { type: "radar", label: "Radar" },
     { type: "treemap", label: "Treemap" },
     { type: "radial", label: "Radial bar" },
@@ -50,6 +52,7 @@ export const CHART_OPTIONS = {
     { type: "line", label: "Line" },
     { type: "area", label: "Area" },
     { type: "pie", label: "Donut" },
+    { type: "ringLegend", label: "Ring + legend" },
     { type: "radar", label: "Radar" },
     { type: "horizontalBar", label: "Horizontal bar" },
     { type: "treemap", label: "Treemap" },
@@ -59,6 +62,7 @@ export const CHART_OPTIONS = {
     { type: "line", label: "Line" },
     { type: "area", label: "Area" },
     { type: "pie", label: "Donut" },
+    { type: "ringLegend", label: "Ring + legend" },
     { type: "radar", label: "Radar" },
     { type: "horizontalBar", label: "Horizontal bar" },
     { type: "treemap", label: "Treemap" },
@@ -68,6 +72,7 @@ export const CHART_OPTIONS = {
     { type: "line", label: "Line" },
     { type: "area", label: "Area" },
     { type: "pie", label: "Donut" },
+    { type: "ringLegend", label: "Ring + legend" },
     { type: "radar", label: "Radar" },
     { type: "radial", label: "Radial bar" },
     { type: "funnel", label: "Funnel" },

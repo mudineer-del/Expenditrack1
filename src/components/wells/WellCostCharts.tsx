@@ -1,6 +1,8 @@
 import { useMemo } from "react"
 import { Area, AreaChart, Bar, BarChart, Brush, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { RingLegendChart } from "@/components/dashboard/RingLegendChart"
+import { activeChartPayload } from "@/lib/chartClick"
 import { useDisplayStore, type ChartSlotId, type ChartType } from "@/store/useDisplayStore"
 import { fmtCurrency, type CategoryCostBreakdown, type MonthlySpendPoint } from "@/lib/wellCost"
 
@@ -34,21 +36,46 @@ function trendTooltip(currency: string) {
  *  as two series over time; anything else (including the default) renders as a stacked
  *  bar — the well-cost equivalent of TrendChart.tsx/ServiceChart.tsx's own chartType
  *  switch, just with a narrower, purpose-fit set of shapes for this data. */
-export function MonthlySpendTrendChart({ data, chartType, currency = "USD" }: { data: MonthlySpendPoint[]; chartType: ChartType; currency?: string }) {
+export function MonthlySpendTrendChart({
+  data,
+  chartType,
+  currency = "USD",
+  onDrill,
+}: {
+  data: MonthlySpendPoint[]
+  chartType: ChartType
+  currency?: string
+  /** Opens a descriptive drill-down (entry count, actual vs. committed, recent remarks) for
+   *  the clicked month — see WellCostDrillDialog. Omit to leave the chart non-interactive. */
+  onDrill?: (point: MonthlySpendPoint) => void
+}) {
   const cfg = useDisplayStore((s) => s.chartSlots.wellCostTrend)
-  const labels = useDisplayStore((s) => s.chartLabelsEnabled)
-  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
-  const label = labels ? { position: labelPosition === "inside" ? "inside" as const : "top" as const, fill: "var(--foreground)", fontSize: 11 } : false
+  const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const globalLabelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const labels = cfg.labelsEnabled ?? globalLabelsEnabled
+  const labelPosition = cfg.labelPosition ?? globalLabelPosition
+  const label = labels
+    ? {
+        position: labelPosition === "inside" ? "inside" as const : "top" as const,
+        fill: cfg.labelColor || "var(--foreground)",
+        fontSize: cfg.labelFontSize ?? 11,
+      }
+    : false
   const chartStyle = { height: 256 * (cfg.sizePercent ?? 100) / 100 }
   const brush = (cfg.zoomEnabled ?? true) && data.length > 1 ? <Brush dataKey="monthLabel" height={24} stroke="var(--muted-foreground)" fill="var(--card)" /> : null
   if (!data.length) {
     return <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">No cost entries logged yet</div>
   }
 
+  function drill(e: unknown) {
+    const point = activeChartPayload<MonthlySpendPoint>(e)
+    if (point) onDrill?.(point)
+  }
+
   if (chartType === "line") {
     return (
       <ChartContainer config={trendConfig} style={chartStyle} className="w-full">
-        <LineChart data={data} margin={{ left: 4 }}>
+        <LineChart data={data} margin={{ left: 4 }} onClick={drill} className={onDrill ? "cursor-pointer" : undefined}>
           <CartesianGrid vertical={false} />
           <XAxis dataKey="monthLabel" tickLine={false} axisLine={false} fontSize={11} />
           <YAxis tickLine={false} axisLine={false} fontSize={11} width={72} tickFormatter={(v) => fmtCurrency(v, currency)} />
@@ -65,7 +92,7 @@ export function MonthlySpendTrendChart({ data, chartType, currency = "USD" }: { 
   if (chartType === "area") {
     return (
       <ChartContainer config={trendConfig} style={chartStyle} className="w-full">
-        <AreaChart data={data} margin={{ left: 4 }}>
+        <AreaChart data={data} margin={{ left: 4 }} onClick={drill} className={onDrill ? "cursor-pointer" : undefined}>
           <CartesianGrid vertical={false} />
           <XAxis dataKey="monthLabel" tickLine={false} axisLine={false} fontSize={11} />
           <YAxis tickLine={false} axisLine={false} fontSize={11} width={72} tickFormatter={(v) => fmtCurrency(v, currency)} />
@@ -81,7 +108,7 @@ export function MonthlySpendTrendChart({ data, chartType, currency = "USD" }: { 
 
   return (
     <ChartContainer config={trendConfig} style={chartStyle} className="w-full">
-      <BarChart data={data} margin={{ left: 4 }} barGap={4}>
+      <BarChart data={data} margin={{ left: 4 }} barGap={4} onClick={drill} className={onDrill ? "cursor-pointer" : undefined}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="monthLabel" tickLine={false} axisLine={false} fontSize={11} />
         <YAxis tickLine={false} axisLine={false} fontSize={11} width={72} tickFormatter={(v) => fmtCurrency(v, currency)} />
@@ -108,11 +135,35 @@ const DONUT_TOP_N = 5
  *  the same chart-type switch. Default/"bar" is a horizontal grouped Budget-vs-Spent bar
  *  (the same color language as WellCostCompareDialog's per-well comparison); "pie" folds
  *  to a spend-share donut (top 5 + "Other", never an unbounded rainbow of slices). */
-export function CategoryBreakdownChart({ items, chartType, currency = "USD", slotId = "wellCostDept" }: { items: CategoryCostBreakdown[]; chartType: ChartType; currency?: string; slotId?: ChartSlotId }) {
-  const size = useDisplayStore((s) => s.chartSlots[slotId].sizePercent) ?? 100
-  const labels = useDisplayStore((s) => s.chartLabelsEnabled)
-  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
-  const label = labels ? { position: labelPosition === "inside" ? "inside" as const : "right" as const, fill: "var(--foreground)", fontSize: 11 } : false
+export function CategoryBreakdownChart({
+  items,
+  chartType,
+  currency = "USD",
+  slotId = "wellCostDept",
+  onDrill,
+}: {
+  items: CategoryCostBreakdown[]
+  chartType: ChartType
+  currency?: string
+  slotId?: ChartSlotId
+  /** Opens a descriptive drill-down (cost centre count, wells involved, budget
+   *  utilization) for the clicked category — see WellCostDrillDialog. Omit to leave the
+   *  chart non-interactive. */
+  onDrill?: (entry: CategoryCostBreakdown) => void
+}) {
+  const cfg = useDisplayStore((s) => s.chartSlots[slotId])
+  const size = cfg.sizePercent ?? 100
+  const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const globalLabelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const labels = cfg.labelsEnabled ?? globalLabelsEnabled
+  const labelPosition = cfg.labelPosition ?? globalLabelPosition
+  const label = labels
+    ? {
+        position: labelPosition === "inside" ? "inside" as const : "right" as const,
+        fill: cfg.labelColor || "var(--foreground)",
+        fontSize: cfg.labelFontSize ?? 11,
+      }
+    : false
   const donutSlices = useMemo(() => {
     const withSpend = items.map((i) => ({ name: i.name, value: i.actual + i.commitment })).filter((i) => i.value > 0)
     const top = withSpend.slice(0, DONUT_TOP_N)
@@ -120,6 +171,24 @@ export function CategoryBreakdownChart({ items, chartType, currency = "USD", slo
     const otherTotal = rest.reduce((s, i) => s + i.value, 0)
     return otherTotal > 0 ? [...top, { name: "Other", value: otherTotal }] : top
   }, [items])
+
+  // "Other" folds several small categories into one slice — there's no single item behind
+  // it to drill into, so this quietly no-ops for that one slice rather than showing
+  // whichever category happened to be first in it.
+  function drillByName(name: string) {
+    const item = items.find((i) => i.name === name)
+    if (item) onDrill?.(item)
+  }
+
+  if (chartType === "ringLegend") {
+    if (!donutSlices.length) return <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">No spend logged yet</div>
+    const ringData = donutSlices.map((s, i) => ({ key: s.name, label: s.name, value: s.value, color: DONUT_COLORS[i % DONUT_COLORS.length] }))
+    return (
+      <div style={{ height: 256 * size / 100 }}>
+        <RingLegendChart data={ringData} formatValue={(v) => fmtCurrency(v, currency)} onOpenAll={onDrill && ((d) => drillByName(d.key))} />
+      </div>
+    )
+  }
 
   if (chartType === "pie") {
     const total = donutSlices.reduce((s, i) => s + i.value, 0)
@@ -137,7 +206,13 @@ export function CategoryBreakdownChart({ items, chartType, currency = "USD", slo
     if (donutSlices.length === 1) {
       const only = donutSlices[0]
       return (
-        <div style={{ minHeight: 256 * size / 100 }} className="flex flex-col items-center justify-center gap-4">
+        <button
+          type="button"
+          onClick={onDrill ? () => drillByName(only.name) : undefined}
+          disabled={!onDrill}
+          className="flex w-full flex-col items-center justify-center gap-4 disabled:cursor-default"
+          style={{ minHeight: 256 * size / 100 }}
+        >
           <div className="flex size-36 items-center justify-center rounded-full" style={{ backgroundColor: DONUT_COLORS[0] }}>
             <div className="flex size-[52%] items-center justify-center rounded-full bg-card">
               <span className="text-xl font-bold tabular-nums">100%</span>
@@ -148,7 +223,7 @@ export function CategoryBreakdownChart({ items, chartType, currency = "USD", slo
             <span className="font-medium text-foreground">{only.name}</span>
             <span className="text-muted-foreground">· {fmtCurrency(only.value, currency)}</span>
           </div>
-        </div>
+        </button>
       )
     }
 
@@ -179,6 +254,8 @@ export function CategoryBreakdownChart({ items, chartType, currency = "USD", slo
             paddingAngle={donutSlices.length > 1 ? 2 : 0}
             strokeWidth={2}
             stroke="var(--card)"
+            cursor={onDrill ? "pointer" : undefined}
+            onClick={onDrill ? (_, index) => drillByName(donutSlices[index].name) : undefined}
           >
             {donutSlices.map((s, i) => (
               <Cell key={s.name} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
@@ -215,8 +292,26 @@ export function CategoryBreakdownChart({ items, chartType, currency = "USD", slo
           }
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar label={label} name="Budget" dataKey="budget" fill="var(--color-budget)" radius={5} maxBarSize={16} />
-        <Bar label={label} name="Actual + Commitments" dataKey="spent" fill="var(--color-spent)" radius={5} maxBarSize={16} />
+        <Bar
+          label={label}
+          name="Budget"
+          dataKey="budget"
+          fill="var(--color-budget)"
+          radius={5}
+          maxBarSize={16}
+          cursor={onDrill ? "pointer" : undefined}
+          onClick={onDrill ? (d) => drillByName((d as { name: string }).name) : undefined}
+        />
+        <Bar
+          label={label}
+          name="Actual + Commitments"
+          dataKey="spent"
+          fill="var(--color-spent)"
+          radius={5}
+          maxBarSize={16}
+          cursor={onDrill ? "pointer" : undefined}
+          onClick={onDrill ? (d) => drillByName((d as { name: string }).name) : undefined}
+        />
       </BarChart>
     </ChartContainer>
   )

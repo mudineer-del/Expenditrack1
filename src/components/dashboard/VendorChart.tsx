@@ -32,8 +32,10 @@ import {
 import { useDisplayStore } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import type { Invoice } from "@/types/invoice"
+import { useChartLabelOptions } from "./ChartLabelContext"
 import { Area3DDefs, bar3DShape, DONUT_CORNER_RADIUS, DONUT_PAD_ANGLE, donutActiveShape, makeDonutOuterLabel, makePolarValueLabel } from "./donut3d"
 import { Chart3DBoundary, LazyArea3DScene, LazyBar3DScene, LazyDonut3DScene, type Chart3DDatum } from "./chart3d"
+import { RingLegendChart } from "./RingLegendChart"
 
 const config = {
   total: { label: "Expenditure (incl. tax)" },
@@ -62,9 +64,12 @@ export function VendorChart({
 }) {
   const chartType = useDisplayStore((s) => s.vendorChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
-  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
   const isMobile = useIsMobile()
   const gid = useId()
+  const labelOptions = useChartLabelOptions()
+  const labelsEnabled = labelOptions.labelsEnabled ?? globalLabelsEnabled
+  const labelOverride = { fontSize: labelOptions.labelFontSize, color: labelOptions.labelColor }
 
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No vendor data</div>
@@ -108,7 +113,7 @@ export function VendorChart({
               paddingAngle={DONUT_PAD_ANGLE}
               cornerRadius={DONUT_CORNER_RADIUS}
               activeShape={donutActiveShape}
-              label={isMobile ? undefined : makeDonutOuterLabel(SERVICE_COLORS, 30, bySingleVendorType.map((d) => ({ name: d.type, value: d.total })))}
+              label={isMobile ? undefined : makeDonutOuterLabel(SERVICE_COLORS, 30, bySingleVendorType.map((d) => ({ name: d.type, value: d.total })), labelOverride)}
               labelLine={false}
               isAnimationActive={animate}
               cursor="pointer"
@@ -138,7 +143,7 @@ export function VendorChart({
             paddingAngle={DONUT_PAD_ANGLE}
             cornerRadius={DONUT_CORNER_RADIUS}
             activeShape={donutActiveShape}
-            label={isMobile ? undefined : makeDonutOuterLabel(top.map((d, i) => vendorColor(d.vendor, i)), 30, top.map((d) => ({ name: d.vendor, value: d.total })))}
+            label={isMobile ? undefined : makeDonutOuterLabel(top.map((d, i) => vendorColor(d.vendor, i)), 30, top.map((d) => ({ name: d.vendor, value: d.total })), labelOverride)}
             labelLine={false}
             isAnimationActive={animate}
             cursor="pointer"
@@ -154,6 +159,21 @@ export function VendorChart({
   }
 
   if (chartType === "pie") return renderDonut2D()
+
+  if (chartType === "ringLegend") {
+    const ringData: Chart3DDatum[] = bySingleVendorType
+      ? bySingleVendorType.map((d, i) => ({ key: d.type, label: d.type, value: d.total, color: SERVICE_COLORS[i % SERVICE_COLORS.length], invoices: d.invoices }))
+      : top.map((d, i) => ({ key: d.vendor, label: d.vendor, value: d.total, color: vendorColor(d.vendor, i), invoices: d.invoices }))
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <RingLegendChart
+          data={ringData}
+          formatValue={totalLabelFormatter}
+          onOpenAll={(d) => (bySingleVendorType ? drillType(bySingleVendorType.find((t) => t.type === d.key) ?? null) : drill(top.find((t) => t.vendor === d.key) ?? null))}
+        />
+      </div>
+    )
+  }
 
   if (chartType === "donut3d" || chartType === "donut3dExploded" || chartType === "donutSemi3d") {
     const variant = chartType === "donut3dExploded" ? "exploded" : chartType === "donutSemi3d" ? "semi" : "solid"
@@ -187,7 +207,7 @@ export function VendorChart({
             <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
             <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
             <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.22} isAnimationActive={false} className="cursor-pointer">
-              <LabelList dataKey="total" content={makePolarValueLabel(SERVICE_COLORS, totalLabelFormatter, -14)} />
+              <LabelList dataKey="total" content={makePolarValueLabel(SERVICE_COLORS, totalLabelFormatter, -14, labelOverride)} />
             </Radar>
           </RadarChart>
         </ChartContainer>
@@ -201,7 +221,7 @@ export function VendorChart({
           <PolarRadiusAxis tickFormatter={(v) => fmtMoney(v).replace(".00", "")} fontSize={9} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => fmtMoney(Number(v))} />} />
           <Radar dataKey="total" stroke="var(--dataviz-4)" fill="var(--dataviz-4)" fillOpacity={0.22} isAnimationActive={false} className="cursor-pointer">
-            <LabelList dataKey="total" content={makePolarValueLabel(top.map((d, i) => vendorColor(d.vendor, i)), totalLabelFormatter, -14)} />
+            <LabelList dataKey="total" content={makePolarValueLabel(top.map((d, i) => vendorColor(d.vendor, i)), totalLabelFormatter, -14, labelOverride)} />
           </Radar>
         </RadarChart>
       </ChartContainer>
@@ -328,7 +348,7 @@ export function VendorChart({
                 onClick={() => drillTypeSegment(t)}
               >
                 {i === types.length - 1 && labelsEnabled && (
-                  <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />
+                  <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--foreground)"} />
                 )}
               </Bar>
             ))}
@@ -370,7 +390,7 @@ export function VendorChart({
             >
               {/* One total label per contractor, on the topmost segment of its stack. */}
               {i === services.length - 1 && labelsEnabled && (
-                <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />
+                <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--foreground)"} />
               )}
             </Bar>
           ))}
@@ -400,7 +420,7 @@ export function VendorChart({
                 activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
                 isAnimationActive={animate}
               >
-                {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
+                {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--foreground)"} />}
               </Line>
             )}
             {effectiveType === "area" && (
@@ -418,7 +438,7 @@ export function VendorChart({
                   activeDot={{ r: 7, strokeWidth: 2, stroke: "var(--card)", fill: "var(--dataviz-4)" }}
                   isAnimationActive={animate}
                 >
-                  {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
+                  {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--foreground)"} />}
                 </Area>
               </>
             )}
@@ -445,7 +465,7 @@ export function VendorChart({
               activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
               isAnimationActive={animate}
             >
-              <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />
+              <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--foreground)"} />
             </Line>
           )}
           {effectiveType === "area" && (
@@ -463,7 +483,7 @@ export function VendorChart({
                 activeDot={{ r: 7, strokeWidth: 2, stroke: "var(--card)", fill: "var(--dataviz-4)" }}
                 isAnimationActive={animate}
               >
-                {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={10} fill="var(--foreground)" />}
+                {labelsEnabled && <LabelList dataKey="total" position="top" formatter={totalLabelFormatter} fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--foreground)"} />}
               </Area>
             </>
           )}

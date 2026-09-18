@@ -24,6 +24,7 @@ import { activeChartPayload } from "@/lib/chartClick"
 import type { TypeCount } from "@/lib/dashboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/useIsMobile"
+import { useChartLabelOptions } from "./ChartLabelContext"
 import {
   Area3DDefs,
   DONUT_CORNER_RADIUS,
@@ -33,6 +34,7 @@ import {
   makePolarValueLabel,
 } from "./donut3d"
 import { Chart3DBoundary, LazyArea3DScene, LazyBar3DScene, LazyDonut3DScene, type Chart3DDatum } from "./chart3d"
+import { RingLegendChart } from "./RingLegendChart"
 
 const config = {
   count: { label: "Invoices", color: "var(--dataviz-2)" },
@@ -48,10 +50,14 @@ const PIE_COLORS = ["var(--dataviz-1)", "var(--dataviz-2)", "var(--dataviz-3)", 
 export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: (title: string, invoices: TypeCount["invoices"]) => void }) {
   const chartType = useDisplayStore((s) => s.breakdownChartType)
   const animate = useDisplayStore((s) => s.animationsEnabled)
-  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
-  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const globalLabelPosition = useDisplayStore((s) => s.chartLabelPosition)
   const isMobile = useIsMobile()
   const gid = useId()
+  const labelOptions = useChartLabelOptions()
+  const labelsEnabled = labelOptions.labelsEnabled ?? globalLabelsEnabled
+  const labelPosition = labelOptions.labelPosition ?? globalLabelPosition
+  const labelOverride = { fontSize: labelOptions.labelFontSize, color: labelOptions.labelColor }
 
   if (!data.length) {
     return <div className="flex h-[var(--chart-h)] items-center justify-center text-sm text-muted-foreground">No type data</div>
@@ -79,7 +85,7 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
             paddingAngle={DONUT_PAD_ANGLE}
             cornerRadius={DONUT_CORNER_RADIUS}
             activeShape={donutActiveShape}
-            label={isMobile ? undefined : makeDonutOuterLabel(PIE_COLORS, 28, top.map((d) => ({ name: d.type, value: d.count })))}
+            label={isMobile ? undefined : makeDonutOuterLabel(PIE_COLORS, 28, top.map((d) => ({ name: d.type, value: d.count })), labelOverride)}
             labelLine={false}
             isAnimationActive={isMobile ? animate : false}
             cursor="pointer"
@@ -95,6 +101,14 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
   }
 
   if (chartType === "pie") return renderDonut2D()
+
+  if (chartType === "ringLegend") {
+    return (
+      <div className="h-[var(--chart-h)] w-full">
+        <RingLegendChart data={type3D} formatValue={countLabel} onOpenAll={(d) => drill(top.find((t) => t.type === d.key) ?? null)} />
+      </div>
+    )
+  }
 
   if (chartType === "donut3d" || chartType === "donut3dExploded" || chartType === "donutSemi3d") {
     const variant = chartType === "donut3dExploded" ? "exploded" : chartType === "donutSemi3d" ? "semi" : "solid"
@@ -123,7 +137,7 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
           <PolarRadiusAxis fontSize={9} allowDecimals={false} />
           <ChartTooltip content={<ChartTooltipContent />} />
           <Radar dataKey="count" stroke="var(--color-count)" fill="var(--color-count)" fillOpacity={0.22} isAnimationActive={false} className="cursor-pointer">
-            <LabelList dataKey="count" content={makePolarValueLabel(PIE_COLORS, undefined, -14)} />
+            <LabelList dataKey="count" content={makePolarValueLabel(PIE_COLORS, undefined, -14, labelOverride)} />
           </Radar>
         </RadarChart>
       </ChartContainer>
@@ -166,8 +180,8 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
               <LabelList
                 dataKey="count"
                 position={labelPosition === "inside" ? "insideRight" : "right"}
-                fontSize={10}
-                fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+                fontSize={labelOptions.labelFontSize ?? 10}
+                fill={labelOptions.labelColor || (labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)")}
               />
             )}
           </Bar>
@@ -189,8 +203,8 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
               <LabelList
                 dataKey="count"
                 position={labelPosition === "inside" ? "insideRight" : "right"}
-                fontSize={10}
-                fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+                fontSize={labelOptions.labelFontSize ?? 10}
+                fill={labelOptions.labelColor || (labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)")}
               />
             )}
           </Bar>
@@ -237,7 +251,7 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
             activeDot={{ r: 7, strokeWidth: 2, stroke: "var(--card)", fill: "var(--dataviz-2)" }}
             isAnimationActive={animate}
           >
-            {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={10} fill="var(--muted-foreground)" />}
+            {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--muted-foreground)"} />}
           </Area>
         </ComposedChart>
       </ChartContainer>
@@ -278,7 +292,7 @@ export function TypeCountChart({ data, onDrill }: { data: TypeCount[]; onDrill: 
           activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)" }}
           isAnimationActive={animate}
         >
-          {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={10} fill="var(--muted-foreground)" />}
+          {labelsEnabled && <LabelList dataKey="count" position="top" fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--muted-foreground)"} />}
         </Line>
       </ComposedChart>
     </ChartContainer>

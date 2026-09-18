@@ -29,6 +29,13 @@ const AUTO_DIMENSION = "__auto__"
 
 const CHART_3D_TYPES = new Set<ChartType>(["donut3d", "donut3dExploded", "donutSemi3d", "bar3d", "area3d"])
 
+const LABEL_SIZE_PRESETS: { value: number; label: string }[] = [
+  { value: 9, label: "Small" },
+  { value: 11, label: "Default" },
+  { value: 13, label: "Large" },
+  { value: 16, label: "Extra large" },
+]
+
 const DEPTH_PRESETS: { value: number; label: string }[] = [
   { value: 0.7, label: "Shallow" },
   { value: 1, label: "Default" },
@@ -89,10 +96,12 @@ export function ChartSlotContextMenu({
   const setChartSlot = useDisplayStore((s) => s.setChartSlot)
   const canBeAuto = id === "dashBreakdown"
 
-  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
-  const setChartLabelsEnabled = useDisplayStore((s) => s.setChartLabelsEnabled)
-  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
-  const setChartLabelPosition = useDisplayStore((s) => s.setChartLabelPosition)
+  // Per-slot override of the app-wide default, same fallback as ChartFormatMenu's popover
+  // — so "Value labels"/"Label position" set here changes only this one chart.
+  const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const globalLabelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const labelsEnabled = cfg.labelsEnabled ?? globalLabelsEnabled
+  const labelPosition = cfg.labelPosition ?? globalLabelPosition
   const background = useDisplayStore((s) => s.chartBackground)
   const setChartBackground = useDisplayStore((s) => s.setChartBackground)
   const backgroundDirection = useDisplayStore((s) => s.chartBackgroundDirection)
@@ -174,16 +183,35 @@ export function ChartSlotContextMenu({
         )}
 
         <ContextMenuSeparator />
-        <ContextMenuCheckboxItem checked={labelsEnabled} onCheckedChange={setChartLabelsEnabled}>
+        <ContextMenuCheckboxItem checked={labelsEnabled} onCheckedChange={(checked) => setChartSlot(id, { labelsEnabled: checked })}>
           Value labels
         </ContextMenuCheckboxItem>
         <ContextMenuSub>
           <ContextMenuSubTrigger>Label position</ContextMenuSubTrigger>
           <ContextMenuSubContent>
-            <ContextMenuRadioGroup value={labelPosition} onValueChange={(v) => setChartLabelPosition(v as "outside" | "inside")}>
+            <ContextMenuRadioGroup value={labelPosition} onValueChange={(v) => setChartSlot(id, { labelPosition: v as "outside" | "inside" })}>
               <ContextMenuRadioItem value="outside">Outside</ContextMenuRadioItem>
               <ContextMenuRadioItem value="inside">Inside</ContextMenuRadioItem>
             </ContextMenuRadioGroup>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>Label size</ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            <ContextMenuRadioGroup
+              value={String(cfg.labelFontSize ?? 11)}
+              onValueChange={(v) => setChartSlot(id, { labelFontSize: Number(v) })}
+            >
+              {LABEL_SIZE_PRESETS.map((p) => (
+                <ContextMenuRadioItem key={p.value} value={String(p.value)}>
+                  {p.label}
+                </ContextMenuRadioItem>
+              ))}
+            </ContextMenuRadioGroup>
+            <ContextMenuSeparator />
+            <ContextMenuLabel className="text-[10px] text-muted-foreground">
+              {labelsEnabled ? "Applies to this chart's labels." : "Bar/line/area charts need Value labels on (above) to show any — pie, radar, and radial-bar labels always show."}
+            </ContextMenuLabel>
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSub>

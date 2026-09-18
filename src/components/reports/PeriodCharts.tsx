@@ -4,6 +4,7 @@ import { bar3DShape } from "@/components/dashboard/donut3d"
 import { fmtMoney } from "@/lib/dashboard"
 import { chartMeasureLabel, formatMeasureValue, type ChartMeasure, type ReportGroup } from "@/lib/reports"
 import { useDisplayStore } from "@/store/useDisplayStore"
+import { useChartLabelOptions } from "@/components/dashboard/ChartLabelContext"
 
 const valueLabel = (v: unknown) => fmtMoney(Number(v)).replace(".00", "")
 
@@ -32,8 +33,11 @@ export function PeriodValueChart({
   measure: ChartMeasure
   onGroupClick: (g: ReportGroup) => void
 }) {
-  const labelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
-  const labelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
+  const globalLabelPosition = useDisplayStore((s) => s.chartLabelPosition)
+  const labelOptions = useChartLabelOptions()
+  const labelsEnabled = labelOptions.labelsEnabled ?? globalLabelsEnabled
+  const labelPosition = labelOptions.labelPosition ?? globalLabelPosition
   const data = groups.slice(0, 40).map((g) => ({ ...g, label: shortLabel(g.key) }))
   const fmt = (v: unknown) => formatMeasureValue(measure, Number(v), (n) => fmtMoney(n).replace(".00", ""))
   const valueConfig = { [measure]: { label: chartMeasureLabel(measure), color: "var(--primary)" } } satisfies ChartConfig
@@ -55,7 +59,7 @@ export function PeriodValueChart({
           <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={fmt} width={60} />
           <ChartTooltip content={<ChartTooltipContent formatter={(v) => formatMeasureValue(measure, Number(v), fmtMoney)} />} />
           <Line type="monotone" dataKey={measure} stroke={`var(--color-${measure})`} strokeWidth={2.5} dot={{ r: 3, cursor: "pointer" }}>
-            {labelsEnabled && <LabelList dataKey={measure} position="top" formatter={fmt} fontSize={10} fill="var(--muted-foreground)" />}
+            {labelsEnabled && <LabelList dataKey={measure} position="top" formatter={fmt} fontSize={labelOptions.labelFontSize ?? 10} fill={labelOptions.labelColor || "var(--muted-foreground)"} />}
           </Line>
         </LineChart>
       ) : (
@@ -73,8 +77,8 @@ export function PeriodValueChart({
                 dataKey={measure}
                 position={labelPosition === "inside" ? "inside" : "top"}
                 formatter={fmt}
-                fontSize={10}
-                fill={labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)"}
+                fontSize={labelOptions.labelFontSize ?? 10}
+                fill={labelOptions.labelColor || (labelPosition === "inside" ? "var(--background)" : "var(--muted-foreground)")}
               />
             )}
           </Bar>

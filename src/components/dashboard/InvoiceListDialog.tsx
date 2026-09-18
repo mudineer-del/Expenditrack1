@@ -1,7 +1,10 @@
+import { useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { SegmentSummaryPanel } from "@/components/shared/SegmentSummaryPanel"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { fmtMoney } from "@/lib/dashboard"
+import { buildInvoiceSegmentSummary } from "@/lib/segmentSummary"
 import type { Invoice } from "@/types/invoice"
 
 /** Cascading drill-down opened by clicking a chart segment — lists the invoices behind it,
@@ -20,6 +23,7 @@ export function InvoiceListDialog({
 }) {
   const navigate = useNavigate()
   const total = invoices.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0)
+  const summary = useMemo(() => buildInvoiceSegmentSummary(invoices), [invoices])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -30,6 +34,7 @@ export function InvoiceListDialog({
             {invoices.length.toLocaleString()} invoice{invoices.length !== 1 ? "s" : ""} · {fmtMoney(total)} total — click one to see its full details.
           </DialogDescription>
         </DialogHeader>
+        <SegmentSummaryPanel sentences={summary.sentences} />
         <div className="max-h-[60vh] overflow-y-auto rounded-lg border">
           {invoices.length ? (
             <div className="divide-y">

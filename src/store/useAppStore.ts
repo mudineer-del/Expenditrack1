@@ -19,5 +19,10 @@ export const useAppStore = create<AppState>((set) => ({
   dashVendor: "ALL",
   setDashVendor: (v) => set({ dashVendor: v }),
   activeDept: "ALL",
-  setActiveDept: (v) => set({ activeDept: v }),
+  // Resets the contractor filter along with the department — the contractor pills are
+  // always rebuilt from whichever department is now active (see DashboardPage's
+  // dataVendors), so a contractor picked under the old department can otherwise stay
+  // "selected" after switching to one it doesn't belong to, silently filtering
+  // everything down to zero rows.
+  setActiveDept: (v) => set({ activeDept: v, dashVendor: "ALL" }),
 }))
