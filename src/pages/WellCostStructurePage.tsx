@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { HoverPreview } from "@/components/shared/HoverPreview"
+import { CostCentrePreview } from "@/components/wells/WellHoverPreviews"
 import { CopyWellCostDialog } from "@/components/wells/CopyWellCostDialog"
 import { CostSummaryCards, UtilizationBar } from "@/components/wells/CostSummary"
 import { DmrImportDialog } from "@/components/wells/DmrImportDialog"
@@ -458,7 +460,8 @@ export default function WellCostStructurePage() {
                                     const totals = costCentreTotals[item.id] ?? ZERO_TOTALS
                                     const available = availableAmount(Number(item.plannedBudget) || 0, totals)
                                     return (
-                                      <TableRow key={item.id}>
+                                      <HoverPreview key={item.id} preview={<CostCentrePreview item={item} totals={costCentreTotals[item.id]} transactions={transactions} />}>
+                                      <TableRow>
                                         <TableCell className="font-medium">{item.costCentre}</TableCell>
                                         <TableCell>{item.fundCentre || "—"}</TableCell>
                                         <TableCell className="max-w-48 truncate text-muted-foreground">{item.description || "—"}</TableCell>
@@ -505,6 +508,7 @@ export default function WellCostStructurePage() {
                                           </div>
                                         </TableCell>
                                       </TableRow>
+                                      </HoverPreview>
                                     )
                                   })}
                                 </TableBody>

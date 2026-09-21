@@ -27,6 +27,10 @@ async function fetchAllInvoices(): Promise<Invoice[]> {
       .from("invoices")
       .select("*")
       .order("sr_no", { ascending: true })
+      // sr_no isn't unique (imports can carry duplicate Sr. Nos), and offset paging over a
+      // non-unique sort key can skip or repeat rows at the page boundary — id breaks the ties
+      // so every row lands in exactly one 1000-row page.
+      .order("id", { ascending: true })
       .range(from, from + PAGE_SIZE - 1)
     if (error) throw error
     const batch = (data ?? []) as InvoiceRow[]

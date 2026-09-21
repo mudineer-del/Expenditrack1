@@ -17,6 +17,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { HoverPreview } from "@/components/shared/HoverPreview"
+import { TransactionPreview } from "@/components/wells/WellHoverPreviews"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { WellCostTransactionDrawer } from "@/components/wells/WellCostTransactionDrawer"
 import { fmtCurrency } from "@/lib/wellCost"
@@ -295,7 +297,8 @@ export default function WellCostDailyLogPage() {
             </TableHeader>
             <TableBody>
               {filtered.map((entry) => (
-                <TableRow key={entry.id} className={cn(selected.has(entry.id) && "bg-muted/50")}>
+                <HoverPreview key={entry.id} preview={<TransactionPreview entry={entry} currency={currency} />}>
+                <TableRow className={cn(selected.has(entry.id) && "bg-muted/50")}>
                   <TableCell>
                     <Checkbox
                       checked={selected.has(entry.id)}
@@ -351,6 +354,7 @@ export default function WellCostDailyLogPage() {
                     </div>
                   </TableCell>
                 </TableRow>
+                </HoverPreview>
               ))}
             </TableBody>
           </Table>

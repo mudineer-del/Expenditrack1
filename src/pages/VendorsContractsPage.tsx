@@ -23,6 +23,7 @@ import { ContractPortfolioCard } from "@/components/contracts/ContractPortfolioC
 import { VendorCard } from "@/components/contracts/VendorCard"
 import { VendorDetailSheet } from "@/components/contracts/VendorDetailSheet"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
+import { ContractPreview, VendorPreview } from "@/components/shared/HoverPreview"
 import { avgLeadTime, fmtMoney, vendorColor } from "@/lib/dashboard"
 import { CONTRACT_TONE_CLASSES, contractExpenditure, contractStatusTone, invoicesForContract, utilizationColor } from "@/lib/contracts"
 import { getContractorLogo, useContractorLogosQuery } from "@/lib/contractorLogos"
@@ -191,6 +192,7 @@ export default function VendorsContractsPage() {
                 sharePct={v.sharePct}
                 count={v.count}
                 leadDays={v.lead}
+                preview={<VendorPreview vendor={v.vendor} invoices={invoices} contracts={contracts} />}
                 active={dashVendor === v.vendor}
                 onClick={() => {
                   setDashVendor(dashVendor === v.vendor ? "ALL" : v.vendor)
@@ -315,7 +317,7 @@ export default function VendorsContractsPage() {
               })}
             </div>
 
-            <div className="hidden grid-cols-1 gap-3 bg-gradient-to-b from-muted/20 to-transparent p-4 md:grid">{filteredContracts.map((c, index) => <ContractPortfolioCard key={c.id} contract={c} invoices={invoices} logo={getContractorLogo(contractorLogosQuery.data ?? {}, c.vendor.split("/")[0].trim())} index={index} canEdit={can("edit", "contract")} canDelete={can("delete", "contract")} onView={() => setViewingContract(c)} onEdit={() => openEdit(c)} onDelete={() => setDeleteTarget(c)} />)}</div><Table containerClassName="hidden">
+            <div className="hidden grid-cols-1 gap-3 bg-gradient-to-b from-muted/20 to-transparent p-4 md:grid">{filteredContracts.map((c, index) => <ContractPortfolioCard key={c.id} preview={<ContractPreview contract={c} invoices={invoices} />} contract={c} invoices={invoices} logo={getContractorLogo(contractorLogosQuery.data ?? {}, c.vendor.split("/")[0].trim())} index={index} canEdit={can("edit", "contract")} canDelete={can("delete", "contract")} onView={() => setViewingContract(c)} onEdit={() => openEdit(c)} onDelete={() => setDeleteTarget(c)} />)}</div><Table containerClassName="hidden">
               <TableHeader>
                 <TableRow>
                   <TableHead>Contract</TableHead>

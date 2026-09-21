@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { fmtMoney, vendorColor } from "@/lib/dashboard"
 import { getContractorLogo, type ContractorLogos } from "@/lib/contractorLogos"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { HoverPreview, InvoicePreview } from "@/components/shared/HoverPreview"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { InvoiceCard } from "@/components/invoices/InvoiceCard"
@@ -296,8 +297,8 @@ export function InvoicesTable({
         <TableBody>
           {rows.length ? (
             table.getRowModel().rows.map((row) => (
+              <HoverPreview key={row.id} preview={<InvoicePreview invoice={row.original} />}>
               <TableRow
-                key={row.id}
                 data-state={selected.has(row.original.id) ? "selected" : undefined}
                 className={cn("cursor-pointer border-border/50", tableBanded && "even:bg-muted/30")}
                 onClick={() => onView(row.original)}
@@ -318,6 +319,7 @@ export function InvoicesTable({
                   </TableCell>
                 ))}
               </TableRow>
+              </HoverPreview>
             ))
           ) : (
             <TableRow>

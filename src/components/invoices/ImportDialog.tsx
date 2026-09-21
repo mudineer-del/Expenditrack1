@@ -11,15 +11,63 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  collapseImportedDuplicates,
   finalizeImportedRecord,
+  findExistingForImport,
+  importFieldLabel,
   invoiceDupKey,
   mapImportedRows,
   mergeMissingFields,
   parseImportFile,
+  vendorInvoiceKey,
   type ImportedRecord,
+  type ImportHeaderMapping,
 } from "@/lib/invoiceIO"
 import { errorMessage } from "@/lib/utils"
 import type { Invoice } from "@/types/invoice"
+
+/** Every column detected in the source file — its title, what it was read as (or "Not
+ *  recognized" if nothing matched), and every value under it — so an Admin can review the
+ *  actual content column by column before importing, instead of finding out something
+ *  silently mapped wrong or got skipped afterward. */
+function HeaderMapTable({ headerMap }: { headerMap: ImportHeaderMapping[] }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+        Every column found in that file, with its content — check where each one is going before importing:
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {headerMap.map((h, i) => (
+          <div key={`${h.raw}-${i}`} className="grid content-start gap-1.5 rounded-lg border p-2.5">
+            <span className="truncate text-xs font-semibold" title={h.raw}>
+              {h.raw}
+            </span>
+            {h.field ? (
+              <Badge variant="secondary" className="justify-self-start">
+                {importFieldLabel(h.field)}
+              </Badge>
+            ) : (
+              <span className="flex items-center gap-1 text-[11px] text-status-under">
+                <AlertTriangle className="size-3" /> Not recognized — ignored
+              </span>
+            )}
+            <div className="max-h-32 overflow-y-auto rounded border bg-muted/30 p-1.5 text-[11px] leading-snug text-muted-foreground">
+              {h.values.length ? (
+                h.values.map((v, vi) => (
+                  <div key={vi} className="truncate" title={v}>
+                    {v}
+                  </div>
+                ))
+              ) : (
+                <span className="italic">No values</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export function ImportDialog({
   open,
@@ -34,7 +82,7 @@ export function ImportDialog({
 }) {
   const [fileName, setFileName] = useState("")
   const [records, setRecords] = useState<ImportedRecord[]>([])
-  const [unmatched, setUnmatched] = useState<string[]>([])
+  const [headerMap, setHeaderMap] = useState<ImportHeaderMapping[]>([])
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -45,30 +93,45 @@ export function ImportDialog({
     return map
   }, [existingInvoices])
 
-  // Every matched row either fills in missing details on the existing invoice
-  // (update) or already has everything the file offers (unchanged — skipped
-  // outright rather than re-saved). Unmatched rows import as new invoices.
+  const existingByVendorInvoice = useMemo(() => {
+    const map = new Map<string, Invoice>()
+    for (const inv of existingInvoices) map.set(vendorInvoiceKey(inv), inv)
+    return map
+  }, [existingInvoices])
+
+  // A row never becomes a second copy of an invoice: rows repeated inside the file are
+  // collapsed first, then each one either updates the matching existing invoice with
+  // whatever it can newly fill in, or (nothing new to add) is skipped outright. Only rows
+  // matching no existing invoice import as new.
   const plan = useMemo(() => {
+    const { records: unique, collapsed } = collapseImportedDuplicates(records)
     const fresh: ImportedRecord[] = []
-    const updates: Array<{ invoice: Invoice; filledFields: Array<keyof Invoice> }> = []
+    const updatedById = new Map<string, { invoice: Invoice; filledFields: Array<keyof Invoice> }>()
     let unchangedCount = 0
-    for (const r of records) {
-      const existing = existingByKey.get(invoiceDupKey(r))
+    for (const r of unique) {
+      const existing = findExistingForImport(r, existingByKey, existingByVendorInvoice)
       if (!existing) {
         fresh.push(r)
         continue
       }
-      const merged = mergeMissingFields(existing, r)
-      if (merged.filledFields.length) updates.push(merged)
-      else unchangedCount++
+      const prior = updatedById.get(existing.id)
+      const merged = mergeMissingFields(prior?.invoice ?? existing, r)
+      if (!merged.filledFields.length) {
+        unchangedCount++
+        continue
+      }
+      updatedById.set(existing.id, {
+        invoice: merged.invoice,
+        filledFields: [...(prior?.filledFields ?? []), ...merged.filledFields],
+      })
     }
-    return { fresh, updates, unchangedCount }
-  }, [records, existingByKey])
+    return { fresh, updates: Array.from(updatedById.values()), unchangedCount, collapsed }
+  }, [records, existingByKey, existingByVendorInvoice])
 
   function reset() {
     setFileName("")
     setRecords([])
-    setUnmatched([])
+    setHeaderMap([])
     setError("")
   }
 
@@ -77,14 +140,15 @@ export function ImportDialog({
     setFileName(file.name)
     try {
       const matrix = await parseImportFile(file)
-      const { records: mapped, unmatched: unmatchedHeaders } = mapImportedRows(matrix)
+      const { records: mapped, headerMap: mapping } = mapImportedRows(matrix)
       if (!mapped.length) {
         setError("No recognizable invoice rows found in this file.")
         setRecords([])
+        setHeaderMap(mapping)
         return
       }
       setRecords(mapped)
-      setUnmatched(unmatchedHeaders)
+      setHeaderMap(mapping)
     } catch (e) {
       setError(errorMessage(e, "Could not read this file."))
       setRecords([])
@@ -117,7 +181,7 @@ export function ImportDialog({
         onOpenChange(v)
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Import / Update Invoices</DialogTitle>
           <DialogDescription>
@@ -147,6 +211,7 @@ export function ImportDialog({
                 <AlertTriangle className="size-4" /> {error}
               </p>
             )}
+            {headerMap.length > 0 && <HeaderMapTable headerMap={headerMap} />}
           </div>
         ) : (
           <div className="grid gap-3 text-sm">
@@ -175,22 +240,16 @@ export function ImportDialog({
                     invoice with nothing new to add — skipped.
                   </li>
                 )}
+                {plan.collapsed > 0 && (
+                  <li className="flex items-center gap-1.5">
+                    <AlertTriangle className="size-3.5" />
+                    {plan.collapsed} row{plan.collapsed !== 1 ? "s" : ""} repeated an invoice already listed in
+                    this file — merged into one instead of added twice.
+                  </li>
+                )}
               </ul>
             </div>
-            {unmatched.length > 0 && (
-              <div>
-                <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-                  Columns not recognized (ignored):
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {unmatched.map((h) => (
-                    <Badge key={h} variant="secondary">
-                      {h}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
+            {headerMap.length > 0 && <HeaderMapTable headerMap={headerMap} />}
             <Button variant="outline" size="sm" onClick={reset} className="justify-self-start">
               Choose a different file
             </Button>

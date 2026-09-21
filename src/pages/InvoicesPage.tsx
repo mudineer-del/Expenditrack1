@@ -1,4 +1,4 @@
-import { CheckCircle2, Copy, Download, List, Plus, Trash2, Upload, Wallet } from "lucide-react"
+import { CheckCircle2, Copy, Download, List, ListOrdered, Plus, Trash2, Upload, Wallet } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -27,11 +27,12 @@ import { InvoiceDetailSheet } from "@/components/invoices/InvoiceDetailSheet"
 import { InvoiceDrawer } from "@/components/invoices/InvoiceDrawer"
 import { InvoiceFiltersBar } from "@/components/invoices/InvoiceFiltersBar"
 import { InvoicesTable } from "@/components/invoices/InvoicesTable"
+import { PageJump } from "@/components/shared/PageJump"
 import { SelectionToolbar } from "@/components/shared/SelectionToolbar"
 import { buildContractLabels, buildContractVendorMap } from "@/lib/contracts"
 import { fmtMoney } from "@/lib/dashboard"
 import { BLANK_FILTERS, filterAndSortInvoices, type SortState } from "@/lib/invoiceFilters"
-import { exportInvoicesCsv, exportInvoicesXlsx, invoiceDupKey } from "@/lib/invoiceIO"
+import { exportInvoicesCsv, exportInvoicesXlsx, invoiceDupKey, planSrNoRenumber } from "@/lib/invoiceIO"
 import { useContractorLogosQuery } from "@/lib/contractorLogos"
 import { useReferenceLists } from "@/lib/referenceLists"
 import { errorMessage } from "@/lib/utils"
@@ -79,6 +80,7 @@ export default function InvoicesPage() {
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [dupFinderOpen, setDupFinderOpen] = useState(false)
+  const [renumberConfirm, setRenumberConfirm] = useState(false)
   const [dupWarning, setDupWarning] = useState<{ record: Invoice; existing: Invoice } | null>(null)
 
   const activeDept = useAppStore((s) => s.activeDept)
@@ -94,6 +96,9 @@ export default function InvoicesPage() {
     () => (activeDept === "ALL" ? allContracts : allContracts.filter((c) => c.department === activeDept)),
     [allContracts, activeDept]
   )
+
+  // Sr. No. is one app-wide sequence, so this looks at every invoice, not just the active department's.
+  const srNoRenumberPlan = useMemo(() => planSrNoRenumber(allInvoices), [allInvoices])
 
   const contractNumbers = useMemo(() => {
     const known = contracts.map((c) => c.contractNo)
@@ -129,7 +134,7 @@ export default function InvoicesPage() {
   const sumIncl = filteredRows.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0)
   const sumPaid = filteredRows.reduce((s, r) => s + (Number(r.amountPaid) || 0), 0)
   const clearedN = filteredRows.filter((r) => (r.status || "").toLowerCase().includes("cleared")).length
-  const hasFilter = filters.q || filters.vendor || filters.service || filters.status || filters.region || filters.year || filters.qtr || filters.contract
+  const hasFilter = filters.q || filters.vendor || filters.service || filters.status || filters.region || filters.year || filters.qtr || filters.contract || filters.department
 
   const canBulk = can("delete")
 
@@ -245,6 +250,15 @@ export default function InvoicesPage() {
     })
   }
 
+  function handleRenumberConfirm() {
+    const plan = srNoRenumberPlan
+    setRenumberConfirm(false)
+    bulkUpsert.mutate(plan, {
+      onSuccess: (count) => toast.success(`Renumbered ${count} invoice${count !== 1 ? "s" : ""} with fresh Sr. Nos.`),
+      onError: (e) => toast.error(errorMessage(e, "Could not renumber invoices.")),
+    })
+  }
+
   if (invoicesQuery.isLoading) {
     return (
       <div className="grid grid-cols-1 gap-4">
@@ -356,6 +370,16 @@ export default function InvoicesPage() {
             >
               <Copy /> Find Duplicates
             </Button>
+            {srNoRenumberPlan.length > 0 && can("edit") && (
+              <Button
+                variant="outline"
+                size="sm"
+                title="Some invoices share a Sr. No. — give the later ones fresh numbers"
+                onClick={() => setRenumberConfirm(true)}
+              >
+                <ListOrdered /> Renumber Duplicates ({srNoRenumberPlan.length})
+              </Button>
+            )}
             <Button
               size="sm"
               disabled={!can("add")}
@@ -425,14 +449,18 @@ export default function InvoicesPage() {
               </Select>
             </div>
             <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" title="First page" disabled={clampedPage <= 1} onClick={() => setPageNum(1)}>
+                «
+              </Button>
               <Button variant="outline" size="sm" disabled={clampedPage <= 1} onClick={() => setPageNum(clampedPage - 1)}>
                 ‹
               </Button>
-              <span className="px-2">
-                {clampedPage} / {totalPages}
-              </span>
+              <PageJump page={clampedPage} totalPages={totalPages} onPageChange={setPageNum} />
               <Button variant="outline" size="sm" disabled={clampedPage >= totalPages} onClick={() => setPageNum(clampedPage + 1)}>
                 ›
+              </Button>
+              <Button variant="outline" size="sm" title="Last page" disabled={clampedPage >= totalPages} onClick={() => setPageNum(totalPages)}>
+                »
               </Button>
             </div>
           </div>
@@ -489,6 +517,23 @@ export default function InvoicesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={renumberConfirm} onOpenChange={setRenumberConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Renumber {srNoRenumberPlan.length} duplicate Sr. Nos.?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {srNoRenumberPlan.length} invoice{srNoRenumberPlan.length !== 1 ? "s" : ""} share a Sr. No. with another
+              invoice (or have none). The oldest invoice in each group keeps its number; the rest get new numbers
+              from {Number(srNoRenumberPlan[0]?.srNo) || "—"} upward. Nothing else on them changes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRenumberConfirm}>Renumber</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

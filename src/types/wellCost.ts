@@ -64,6 +64,8 @@ export interface WellCostCentre {
   currency: string
   vendor: string
   notes: string
+  /** When the centre was first created (the table's `created_at`) — read-only. */
+  createdAt?: string
 }
 
 export type WellCostCentreRow = Record<string, unknown> & { id: string }
@@ -97,6 +99,7 @@ export function fromWellCostCentreRow(row: WellCostCentreRow): WellCostCentre {
     currency: (row.currency as string) || "USD",
     vendor: (row.vendor as string) || "",
     notes: (row.notes as string) || "",
+    createdAt: row.created_at ? String(row.created_at) : "",
   }
 }
 
@@ -133,6 +136,9 @@ export interface WellCostTransaction {
    *  not a note about the entry itself. */
   remarks: string
   createdByName: string
+  /** When this entry was uploaded/logged (the table's `created_at`) — distinct from
+   *  `entryDate`, the day the cost is for. Read-only. */
+  createdAt?: string
 }
 
 export type WellCostTransactionRow = Record<string, unknown> & { id: string }
@@ -160,6 +166,7 @@ export function fromWellCostTransactionRow(row: WellCostTransactionRow): WellCos
     notes: (row.notes as string) || "",
     remarks: (row.remarks as string) || "",
     createdByName: (row.created_by_name as string) || "",
+    createdAt: row.created_at ? String(row.created_at) : "",
   }
 }
 

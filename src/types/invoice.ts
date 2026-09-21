@@ -28,6 +28,8 @@ export interface Invoice {
   amountPaid: number | ""
   status: string
   /** Server-stamped (see supabase/invoices_attribution_setup.sql) — not written by toRow(). */
+  /** When the row was first uploaded/entered — the table's own `created_at`, never sent back. */
+  createdAt?: string
   createdByName?: string
   updatedByName?: string
   updatedAt?: string
@@ -119,6 +121,7 @@ export function fromRow(row: InvoiceRow): Invoice {
   }
   // Server-stamped columns, deliberately outside SB_FIELDS so toRow() never sends
   // client values for them — the DB trigger is the only thing that sets these.
+  draft.createdAt = row.created_at ? String(row.created_at) : ""
   draft.createdByName = row.created_by_name || ""
   draft.updatedByName = row.updated_by_name || ""
   draft.updatedAt = row.updated_at ? String(row.updated_at) : ""

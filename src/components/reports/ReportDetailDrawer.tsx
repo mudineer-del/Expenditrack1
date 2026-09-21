@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { HoverPreview, InvoicePreview } from "@/components/shared/HoverPreview"
 import { SegmentSummaryPanel } from "@/components/shared/SegmentSummaryPanel"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { fmtMoney } from "@/lib/dashboard"
@@ -52,7 +53,8 @@ export function ReportDetailDrawer({ detail, onOpenChange }: { detail: ReportDet
             <TableBody>
               {rows.length ? (
                 rows.slice(0, 300).map((r) => (
-                  <TableRow key={r.id}>
+                  <HoverPreview key={r.id} preview={<InvoicePreview invoice={r} />} side="left" align="center">
+                  <TableRow>
                     <TableCell>{r.srNo}</TableCell>
                     <TableCell>{r.invoiceNo || "—"}</TableCell>
                     <TableCell>{r.vendor || "—"}</TableCell>
@@ -69,6 +71,7 @@ export function ReportDetailDrawer({ detail, onOpenChange }: { detail: ReportDet
                       <StatusBadge status={r.status} />
                     </TableCell>
                   </TableRow>
+                  </HoverPreview>
                 ))
               ) : (
                 <TableRow>

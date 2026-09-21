@@ -1,5 +1,7 @@
+import type { ReactNode } from "react"
 import { fmtMoney } from "@/lib/dashboard"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
+import { HoverPreview } from "@/components/shared/HoverPreview"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 /** Ported from the vendor-card markup inside renderVendors (index.html:4153-4172). */
@@ -13,7 +15,10 @@ export function VendorCard({
   leadDays,
   active,
   onClick,
+  preview,
 }: {
+  /** Shown in a hover card over the whole tile — see HoverPreview. */
+  preview?: ReactNode
   vendor: string
   color: string
   logo?: string
@@ -32,6 +37,7 @@ export function VendorCard({
   const isMobile = useIsMobile()
 
   return (
+    <HoverPreview preview={preview}>
     <button
       type="button"
       onClick={onClick}
@@ -67,5 +73,6 @@ export function VendorCard({
         <span>{leadDays !== null ? `${leadDays}d lead` : "—"}</span>
       </div>
     </button>
+    </HoverPreview>
   )
 }

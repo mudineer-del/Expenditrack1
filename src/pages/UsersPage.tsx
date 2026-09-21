@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AccessGrantPanel } from "@/components/users/AccessGrantPanel"
 import { AddAccountDialog } from "@/components/users/AddAccountDialog"
+import { EditUserDialog } from "@/components/users/EditUserDialog"
 import { SendEmailDialog } from "@/components/users/SendEmailDialog"
 import { SetPasswordDialog } from "@/components/users/SetPasswordDialog"
 import { AVATAR_ACCEPT, uploadAvatarFile } from "@/lib/avatars"
@@ -49,6 +50,7 @@ export default function UsersPage() {
   const updateStatus = useUpdateProfileStatus()
   const deleteAccount = useDeleteAccount()
   const [passwordTarget, setPasswordTarget] = useState<AppUser | null>(null)
+  const [editTarget, setEditTarget] = useState<AppUser | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null)
   const [addAccountOpen, setAddAccountOpen] = useState(false)
   const [sendingResetFor, setSendingResetFor] = useState<string | null>(null)
@@ -173,10 +175,15 @@ export default function UsersPage() {
                     <Avatar className="size-7">
                       <AvatarFallback className="text-xs">{p.initials}</AvatarFallback>
                     </Avatar>
-                    <div>
+                    <button
+                      type="button"
+                      className="-m-1 cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+                      title={`Edit ${p.name}'s details`}
+                      onClick={() => setEditTarget(p)}
+                    >
                       <div className="text-sm font-medium">{p.name}</div>
                       <div className="text-xs text-muted-foreground">{p.email}</div>
-                    </div>
+                    </button>
                   </div>
                   {accessPanel?.id !== p.id && (
                     <Button size="sm" onClick={() => setAccessPanel({ id: p.id, mode: "approve" })}>
@@ -268,13 +275,25 @@ export default function UsersPage() {
                             </button>
                           )}
                         </div>
-                        <div>
-                          <div className="font-medium">
-                            {p.name}
-                            {isSelf && <span className="ml-1 text-xs text-muted-foreground">(you)</span>}
+                        {isAdmin || isSelf ? (
+                          <button
+                            type="button"
+                            className="-m-1 cursor-pointer rounded-md p-1 text-left transition-colors hover:bg-muted/60"
+                            title={`Edit ${p.name}'s details`}
+                            onClick={() => setEditTarget(p)}
+                          >
+                            <div className="font-medium">
+                              {p.name}
+                              {isSelf && <span className="ml-1 text-xs text-muted-foreground">(you)</span>}
+                            </div>
+                            <div className="text-xs text-muted-foreground">{p.email}</div>
+                          </button>
+                        ) : (
+                          <div>
+                            <div className="font-medium">{p.name}</div>
+                            <div className="text-xs text-muted-foreground">{p.email}</div>
                           </div>
-                          <div className="text-xs text-muted-foreground">{p.email}</div>
-                        </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{p.dept || "—"}</TableCell>
@@ -425,6 +444,8 @@ export default function UsersPage() {
       </div>
 
       <SetPasswordDialog user={passwordTarget} open={!!passwordTarget} onOpenChange={(v) => !v && setPasswordTarget(null)} />
+
+      <EditUserDialog user={editTarget} open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)} />
 
       <AddAccountDialog open={addAccountOpen} onOpenChange={setAddAccountOpen} />
 

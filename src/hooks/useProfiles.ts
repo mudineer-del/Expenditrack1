@@ -61,6 +61,43 @@ export function useUpdateProfileRole() {
   })
 }
 
+/** Recomputes the 2-letter initials chip from a full name, same rule the profile row
+ *  falls back to when `initials` is blank (see lib/profiles.ts's fromProfileRow) — kept
+ *  in sync here too so renaming someone doesn't leave their old initials stuck behind. */
+function initialsFrom(name: string): string {
+  return name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()
+}
+
+/** Edits another user's name/phone/department/designation from the Users page (Admin-only
+ *  in the UI — RLS also allows editing your own row this way, same as Settings ▸ Profile,
+ *  but that path already exists via useAuth().updateProfile). */
+export function useUpdateProfileDetails() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      name,
+      phone,
+      dept,
+      designation,
+    }: {
+      id: string
+      name: string
+      phone?: string
+      dept?: string
+      designation?: string
+    }) => {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase
+        .from("profiles")
+        .update({ name, initials: initialsFrom(name), phone: phone || null, dept: dept || null, designation: designation || null })
+        .eq("id", id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PROFILES_QUERY_KEY }),
+  })
+}
+
 /** Setting someone else's photo (the file itself already uploaded via uploadAvatarFile).
  *  RLS (see supabase/avatars_setup.sql + profiles_setup.sql) rejects the storage write and
  *  this update unless the caller is an Admin. */

@@ -8,6 +8,8 @@ export interface Well {
   archived: boolean
   startDate: string
   description: string
+  /** When the well was first added (the table's `created_at`) — read-only. */
+  createdAt?: string
 }
 
 export type WellRow = Record<string, unknown> & { id: string }
@@ -37,6 +39,7 @@ export function fromWellRow(row: WellRow): Well {
     archived: !!row.archived,
     startDate: (row.start_date as string) || "",
     description: (row.description as string) || "",
+    createdAt: row.created_at ? String(row.created_at) : "",
   }
 }
 

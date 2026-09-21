@@ -19,6 +19,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CategoryBreakdownChart, MonthlySpendTrendChart } from "@/components/wells/WellCostCharts"
 import { WellCostCompareDialog } from "@/components/wells/WellCostCompareDialog"
 import { WellCostDrillDialog, type WellCostDrillPayload } from "@/components/wells/WellCostDrillDialog"
+import { WellPreview } from "@/components/wells/WellHoverPreviews"
+import { HoverPreview } from "@/components/shared/HoverPreview"
 import { ServiceCostSummary } from "@/components/wells/ServiceCostSummary"
 import { WellPhaseCostSection } from "@/components/wells/WellPhaseCostSection"
 import { WellCostSourceEntries } from "@/components/wells/WellCostSourceEntries"
@@ -345,7 +347,8 @@ export default function WellDashboardPage() {
               {rows.filter(({ well }) => `${well.name} ${well.code ?? ""}`.toLowerCase().includes(wellSearch.trim().toLowerCase())).map(({ well, r }) => {
                 const tone = wellStatusTone(well.status)
                 return (
-                  <TableRow key={well.id} className="cursor-pointer" onClick={() => openWell(well)}>
+                  <HoverPreview key={well.id} preview={<WellPreview well={well} cost={r} costCentres={costCentres} transactions={transactions} currency={currency} />}>
+                  <TableRow className="cursor-pointer" onClick={() => openWell(well)}>
                     <TableCell>
                       <button type="button" className="rounded text-left font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring" onClick={(e) => { e.stopPropagation(); openWell(well) }}>{well.name}</button>
                       {well.code && <div className="text-xs text-muted-foreground">{well.code}</div>}
@@ -372,6 +375,7 @@ export default function WellDashboardPage() {
                       </span>
                     </TableCell>
                   </TableRow>
+                  </HoverPreview>
                 )
               })}
             </TableBody>

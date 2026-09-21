@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { HoverPreview, InvoicePreview } from "@/components/shared/HoverPreview"
 import { SegmentSummaryPanel } from "@/components/shared/SegmentSummaryPanel"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { fmtMoney } from "@/lib/dashboard"
@@ -39,8 +40,8 @@ export function InvoiceListDialog({
           {invoices.length ? (
             <div className="divide-y">
               {invoices.map((r) => (
+                <HoverPreview key={r.id} preview={<InvoicePreview invoice={r} />} side="right" align="center">
                 <button
-                  key={r.id}
                   type="button"
                   onClick={() => {
                     onOpenChange(false)
@@ -59,6 +60,7 @@ export function InvoiceListDialog({
                     <StatusBadge status={r.status} />
                   </div>
                 </button>
+                </HoverPreview>
               ))}
             </div>
           ) : (

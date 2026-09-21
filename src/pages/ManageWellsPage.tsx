@@ -17,7 +17,11 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { HoverPreview } from "@/components/shared/HoverPreview"
 import { WellDrawer } from "@/components/wells/WellDrawer"
+import { WellPreviewFromLists } from "@/components/wells/WellHoverPreviews"
+import { useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
+import { useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
 import { WELL_STATUS_OPTIONS, wellStatusTone, WELL_STATUS_TONE_CLASSES } from "@/lib/wellCost"
 import { cn, errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
@@ -30,6 +34,8 @@ export default function ManageWellsPage() {
   const { can } = useAuth()
   const navigate = useNavigate()
   const wellsQuery = useWellsQuery()
+  const costCentresQuery = useWellCostCentresQuery()
+  const transactionsQuery = useWellCostTransactionsQuery()
   const upsertWell = useUpsertWell()
   const deleteWell = useDeleteWell()
 
@@ -244,8 +250,11 @@ export default function ManageWellsPage() {
                 {filteredWells.map((w) => {
                   const tone = wellStatusTone(w.status)
                   return (
-                    <TableRow
+                    <HoverPreview
                       key={w.id}
+                      preview={<WellPreviewFromLists well={w} costCentres={costCentresQuery.data ?? []} transactions={transactionsQuery.data ?? []} />}
+                    >
+                    <TableRow
                       className="cursor-pointer"
                       onClick={() => navigate("/well-cost/structure", { state: { wellId: w.id } })}
                     >
@@ -303,6 +312,7 @@ export default function ManageWellsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
+                    </HoverPreview>
                   )
                 })}
               </TableBody>

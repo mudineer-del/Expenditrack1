@@ -6,6 +6,7 @@ import {
   CircleCheck,
   FileText,
   Filter,
+  Layers,
   MapPin,
   Search,
   UserCircle,
@@ -96,7 +97,7 @@ export function InvoiceFiltersBar({
   enteredByOptions: string[]
 }) {
   const activeCount = (
-    ["vendor", "service", "contract", "status", "region", "year", "qtr", "enteredBy"] as const
+    ["department", "vendor", "service", "contract", "status", "region", "year", "qtr", "enteredBy"] as const
   ).filter((k) => filters[k]).length
   const hasFilter = activeCount > 0 || !!filters.q
 
@@ -132,6 +133,7 @@ export function InvoiceFiltersBar({
             <DialogTitle>Filter invoices</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
+            <FilterSelect label="Department" icon={Layers} color={FILTER_COLORS[3]} value={filters.department} options={refLists.departments} onChange={(v) => set("department", v)} />
             <FilterSelect label="Vendor" icon={Building2} color={FILTER_COLORS[0]} value={filters.vendor} options={refLists.vendors} onChange={(v) => set("vendor", v)} />
             <FilterSelect label="Service" icon={Wrench} color={FILTER_COLORS[1]} value={filters.service} options={refLists.services} onChange={(v) => set("service", v)} />
             <FilterSelect label="Contract" icon={FileText} color={FILTER_COLORS[2]} value={filters.contract} options={contractNumbers} optionLabels={contractLabels} onChange={(v) => set("contract", v)} />

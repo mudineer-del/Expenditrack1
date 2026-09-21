@@ -38,6 +38,7 @@ import { TrendChart } from "@/components/dashboard/TrendChart"
 import { VendorChart } from "@/components/dashboard/VendorChart"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
+import { HoverPreview, InvoicePreview, VendorPreview } from "@/components/shared/HoverPreview"
 import { filterPillProps } from "@/components/shared/FilterPill"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import {
@@ -367,14 +368,15 @@ export default function DashboardPage() {
             All
           </Button>
           {dataVendors.map((v) => (
-            <Button
-              key={v}
-              size="sm"
-              {...filterPillProps(vendorColor(v), dashVendor === v)}
-              onClick={() => setDashVendor(v)}
-            >
-              {v}
-            </Button>
+            <HoverPreview key={v} preview={<VendorPreview vendor={v} invoices={deptInvoices} contracts={deptContracts} />}>
+              <Button
+                size="sm"
+                {...filterPillProps(vendorColor(v), dashVendor === v)}
+                onClick={() => setDashVendor(v)}
+              >
+                {v}
+              </Button>
+            </HoverPreview>
           ))}
         </div>
       </div>
@@ -843,8 +845,8 @@ export default function DashboardPage() {
           <TableBody>
             {recent.length ? (
               recent.map((r) => (
+                <HoverPreview key={r.id} preview={<InvoicePreview invoice={r} />}>
                 <TableRow
-                  key={r.id}
                   className="cursor-pointer"
                   onClick={() => navigate("/invoices", { state: { openInvoiceId: r.id } })}
                 >
@@ -865,6 +867,7 @@ export default function DashboardPage() {
                     <StatusBadge status={r.status} />
                   </TableCell>
                 </TableRow>
+                </HoverPreview>
               ))
             ) : (
               <TableRow>

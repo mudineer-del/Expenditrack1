@@ -8,6 +8,8 @@ export interface Contract {
   endDate: string
   status: string
   department: string
+  /** When the row was first uploaded/entered (the table's `created_at`, if it has one) — read-only. */
+  createdAt?: string
 }
 
 export type ContractRow = Record<string, unknown> & { id: string }
@@ -48,6 +50,7 @@ export function fromContractRow(row: ContractRow): Contract {
     endDate: (row.end_date as string) || "",
     status: (row.status as string) || "",
     department: (row.department as string) || "",
+    createdAt: row.created_at ? String(row.created_at) : "",
   }
 }
 

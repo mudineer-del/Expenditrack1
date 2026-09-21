@@ -63,7 +63,7 @@ const IMPORT_ALIASES: Record<string, string> = {
   vendor: "vendor", contractor: "vendor", supplier: "vendor", "vendor name": "vendor",
   "invoice no": "invoiceNo", invoiceno: "invoiceNo", invoice: "invoiceNo", "inv no": "invoiceNo", "bill no": "invoiceNo", "invoice number": "invoiceNo", "invoice #": "invoiceNo",
   "contract no": "contractNo", contractno: "contractNo", contract: "contractNo", "contract number": "contractNo",
-  "well name": "wellName", wellname: "wellName", well: "wellName",
+  "well name": "wellName", wellname: "wellName", well: "wellName", "name of well": "wellName",
   "invoice date": "invoiceDate", invoicedate: "invoiceDate", date: "invoiceDate", "inv date": "invoiceDate",
   "receiving date": "receivingDate", receivingdate: "receivingDate", received: "receivingDate", "received date": "receivingDate", "rcv date": "receivingDate",
   "clearance date": "clearanceDate", clearancedate: "clearanceDate", cleared: "clearanceDate", "clearing date": "clearanceDate", "clear date": "clearanceDate",
@@ -78,7 +78,24 @@ const IMPORT_ALIASES: Record<string, string> = {
   tax: "tax", "tax amount": "tax", "tax usd": "tax", "tax value": "tax",
   "amount incl tax": "amountInclTax", amountincltax: "amountInclTax", "incl tax": "amountInclTax", "gross amount": "amountInclTax", total: "amountInclTax", "amount including tax": "amountInclTax", "amount including tax usd": "amountInclTax", "amount incl tax usd": "amountInclTax", "amt incl tax": "amountInclTax", "including tax": "amountInclTax",
   "amount paid": "amountPaid", amountpaid: "amountPaid", paid: "amountPaid", "amount paid usd": "amountPaid", "amt paid": "amountPaid",
+  "amount verified": "amountPaid", "verified amount": "amountPaid", "amount cleared": "amountPaid",
   status: "status", quarter: "qtr", qtr: "qtr", q: "qtr", "yr-qtr": "yrQtr", year: "year",
+}
+
+/** Friendly display name for every field an imported column can map to — EXPORT_COLS'
+ *  labels plus the handful of importable-only fields (loginDate/receivingMonth/
+ *  serviceMonth/yr) that never round-trip through export. Drives the column-mapping
+ *  preview in ImportDialog. */
+const FIELD_LABELS: Record<string, string> = {
+  ...Object.fromEntries(EXPORT_COLS.map(([key, label]) => [key, label])),
+  loginDate: "Log-in Date",
+  receivingMonth: "Receiving Month",
+  serviceMonth: "Service Month",
+  yr: "Year (short)",
+}
+
+export function importFieldLabel(field: string): string {
+  return FIELD_LABELS[field] || field
 }
 
 export type ImportMatrix = unknown[][]
@@ -190,13 +207,35 @@ export interface ImportedRecord {
   [key: string]: string | number
 }
 
+/** One column of the source file, and what it mapped to (null when unrecognized) —
+ *  the full picture ImportDialog's column-mapping preview needs, in file column order,
+ *  including blank/unmatched columns the old `unmatched`-only return silently allowed
+ *  through unlisted. `values` are every non-blank cell under that header, in row order,
+ *  so the preview can show a column's actual content next to its title before import. */
+export interface ImportHeaderMapping {
+  raw: string
+  field: string | null
+  values: string[]
+}
+
 /** Ported from mapImportedRows (index.html:2596-2629). */
-export function mapImportedRows(matrix: ImportMatrix): { records: ImportedRecord[]; unmatched: string[] } {
-  if (!matrix.length) return { records: [], unmatched: [] }
+export function mapImportedRows(matrix: ImportMatrix): { records: ImportedRecord[]; unmatched: string[]; headerMap: ImportHeaderMapping[] } {
+  if (!matrix.length) return { records: [], unmatched: [], headerMap: [] }
   const hIdx = detectHeaderRow(matrix)
   const rawHeaders = matrix[hIdx] || []
   const headers = rawHeaders.map(normHeader)
   const map = headers.map((h) => IMPORT_ALIASES[h] || null)
+  const dataRows = matrix.slice(hIdx + 1)
+  const headerMap: ImportHeaderMapping[] = rawHeaders
+    .map((raw, i) => ({
+      raw: String(raw).replace(/[\r\n]+/g, " ").trim(),
+      field: map[i] === "yrQtr" ? null : map[i],
+      values: dataRows
+        .map((row) => row?.[i])
+        .filter((v) => v !== undefined && v !== null && String(v).trim() !== "")
+        .map((v) => String(v).trim()),
+    }))
+    .filter((o) => o.raw)
   const unmatched = headers
     .map((h, i) => ({ h, raw: rawHeaders[i] }))
     .filter((o, i) => !map[i] && o.h)
@@ -232,7 +271,7 @@ export function mapImportedRows(matrix: ImportMatrix): { records: ImportedRecord
     })
     if (hasData && (rec.vendor || rec.invoiceNo || rec.amountExclTax || rec.amountInclTax)) records.push(rec)
   }
-  return { records, unmatched }
+  return { records, unmatched, headerMap }
 }
 
 /** Ported from invoiceDupKey (index.html:2630-2635). */
@@ -289,9 +328,8 @@ export function saveIgnoredDuplicateIds(ids: Set<string>): void {
 
 /** Fields eligible to be backfilled onto an existing invoice during an
  *  update-import. Deliberately excludes vendor/invoiceNo (part of the dup
- *  key, so they already match) and the financial fields (amountExclTax is
- *  part of the dup key; tax/amountInclTax/amountPaid/gstPst default to 0,
- *  which is indistinguishable from a deliberately-recorded zero). */
+ *  key, so they already match), amountExclTax (also part of the key) and
+ *  gstPst — the paid/tax/incl-tax amounts are handled separately below. */
 const MERGEABLE_FIELDS: Array<keyof Invoice> = [
   "contractNo", "wellName", "invoiceDate", "receivingDate", "clearanceDate", "loginDate",
   "yr", "receivingMonth", "serviceMonth", "qtr", "service", "type", "department",
@@ -302,10 +340,14 @@ function isBlank(v: unknown): boolean {
   return v === undefined || v === null || String(v).trim() === ""
 }
 
+/** Amounts a file can add to an existing invoice — filled only while the stored
+ *  value is still 0/blank (a fresh invoice defaults these to 0), never overwritten. */
+const MERGEABLE_AMOUNTS: Array<keyof Invoice> = ["amountPaid", "tax", "amountInclTax"]
+
 /** Fills only currently-blank fields on an existing invoice from a matched
  *  imported row, so re-importing a refreshed spreadsheet backfills missing
- *  details (well name, dates, department, …) without ever overwriting a
- *  field that already has a value and without creating a duplicate row. */
+ *  details (well name, dates, department, paid amount, …) without ever
+ *  overwriting a value that's already there and without creating a duplicate row. */
 export function mergeMissingFields(
   existing: Invoice,
   rec: ImportedRecord
@@ -319,7 +361,59 @@ export function mergeMissingFields(
     ;(invoice as unknown as Record<string, unknown>)[key] = incoming
     filledFields.push(key)
   }
+  for (const key of MERGEABLE_AMOUNTS) {
+    if (Number(existing[key]) > 0) continue
+    const incoming = Number(rec[key as string])
+    if (!(incoming > 0)) continue
+    ;(invoice as unknown as Record<string, unknown>)[key] = incoming
+    filledFields.push(key)
+  }
   return { invoice, filledFields }
+}
+
+/** Collapses rows of one import file that describe the same invoice (same vendor,
+ *  invoice no. and amount) into one record — later rows only fill what earlier ones
+ *  left blank — so a file listing an invoice twice can't create it twice. Rows with
+ *  neither vendor nor invoice no. have nothing to identify them by and are left alone. */
+export function collapseImportedDuplicates(records: ImportedRecord[]): { records: ImportedRecord[]; collapsed: number } {
+  const byKey = new Map<string, ImportedRecord>()
+  const out: ImportedRecord[] = []
+  let collapsed = 0
+  for (const r of records) {
+    if (isBlank(r.vendor) && isBlank(r.invoiceNo)) {
+      out.push(r)
+      continue
+    }
+    const key = invoiceDupKey(r)
+    const prev = byKey.get(key)
+    if (!prev) {
+      const copy = { ...r }
+      byKey.set(key, copy)
+      out.push(copy)
+      continue
+    }
+    collapsed++
+    for (const [k, v] of Object.entries(r)) if (isBlank(prev[k]) && !isBlank(v)) prev[k] = v
+  }
+  return { records: out, collapsed }
+}
+
+export function vendorInvoiceKey(r: { vendor?: unknown; invoiceNo?: unknown }): string {
+  return `${String(r.vendor || "").trim().toLowerCase()}::${String(r.invoiceNo || "").trim().toLowerCase()}`
+}
+
+/** The existing invoice an imported row refers to: the exact vendor + invoice no. +
+ *  amount match, or — when the row carries no amount to compare — the same vendor +
+ *  invoice no., so an amount-less row updates that invoice instead of adding a 0.00 twin. */
+export function findExistingForImport(
+  rec: ImportedRecord,
+  byKey: Map<string, Invoice>,
+  byVendorInvoice: Map<string, Invoice>
+): Invoice | undefined {
+  const exact = byKey.get(invoiceDupKey(rec))
+  if (exact) return exact
+  if (Number(rec.amountExclTax) > 0 || isBlank(rec.invoiceNo)) return undefined
+  return byVendorInvoice.get(vendorInvoiceKey(rec))
 }
 
 /** Ported from finalizeImported (index.html:2659-2677). */
@@ -336,12 +430,15 @@ export function finalizeImportedRecord(rec: ImportedRecord, nextSrNo: () => numb
   }
   return {
     id: crypto.randomUUID(),
-    srNo: (rec.srNo as number) || nextSrNo(),
     vendor: "", invoiceNo: "", contractNo: "", wellName: "",
     invoiceDate: "", receivingDate: "", clearanceDate: "", loginDate: "", yr: "", receivingMonth: "", serviceMonth: "",
     service: "", type: "", department: "", region: "", rig: "", location: "",
     description: "", gstPst: g, year: String(new Date().getFullYear()), qtr: "", status: "Under Process",
     ...rec,
+    // Always the app's own next Sr. No. — the spreadsheet's SNO is that file's row
+    // counter, and keeping it made imported rows collide with existing invoices' numbers
+    // (1,367 invoices but a highest Sr. No. of 1,338).
+    srNo: nextSrNo(),
     amountExclTax: a,
     tax,
     amountInclTax: incl,
@@ -361,4 +458,30 @@ export async function parseImportFile(file: File): Promise<ImportMatrix> {
   const wb = XLSX.read(buf, { type: "array" })
   const sheet = wb.Sheets[wb.SheetNames[0]]
   return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: "" }) as ImportMatrix
+}
+
+/** Invoices whose Sr. No. is missing or shared with an earlier invoice, returned with a
+ *  fresh Sr. No. after the current highest. Within each shared number the oldest invoice
+ *  (by createdAt, else list order) keeps it — only the later duplicates change. */
+export function planSrNoRenumber(invoices: Invoice[]): Invoice[] {
+  const byCreated = (a: Invoice, b: Invoice) => String(a.createdAt || "").localeCompare(String(b.createdAt || ""))
+  const groups = new Map<number, Invoice[]>()
+  const unnumbered: Invoice[] = []
+  for (const inv of invoices) {
+    const n = Number(inv.srNo)
+    if (!n) {
+      unnumbered.push(inv)
+      continue
+    }
+    const list = groups.get(n) ?? []
+    list.push(inv)
+    groups.set(n, list)
+  }
+  const needsNew: Invoice[] = [...unnumbered]
+  for (const list of groups.values()) {
+    if (list.length > 1) needsNew.push(...list.slice().sort(byCreated).slice(1))
+  }
+  needsNew.sort(byCreated)
+  let next = invoices.reduce((m, r) => Math.max(m, Number(r.srNo) || 0), 0)
+  return needsNew.map((inv) => ({ ...inv, srNo: ++next }))
 }
