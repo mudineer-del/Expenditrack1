@@ -8,13 +8,21 @@ const TONE_STYLES = {
   other: { color: "var(--muted-foreground)", backgroundColor: "var(--muted)" },
 } as const
 
-export function StatusBadge({ status }: { status: string | null | undefined }) {
+const DOT_COLORS = {
+  cleared: "bg-[var(--status-cleared)]",
+  under: "bg-[var(--status-under)]",
+  returned: "bg-[var(--status-returned)]",
+  other: "bg-muted-foreground",
+} as const
+
+export function StatusBadge({ status, withDot = true }: { status: string | null | undefined; withDot?: boolean }) {
   const tone = statusTone(status)
   return (
     <span
-      className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium")}
+      className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium")}
       style={TONE_STYLES[tone]}
     >
+      {withDot && <span className={cn("size-1.5 rounded-full", DOT_COLORS[tone])} />}
       {status || "—"}
     </span>
   )

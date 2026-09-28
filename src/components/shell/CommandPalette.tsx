@@ -1,4 +1,4 @@
-import { Building2, FileText, Receipt, Search } from "lucide-react"
+import { Building2, FileText, HelpCircle, Keyboard, Receipt, Search } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -7,6 +7,7 @@ import { fmtMoney } from "@/lib/dashboard"
 import { useReferenceLists } from "@/lib/referenceLists"
 import { useAppStore } from "@/store/useAppStore"
 import { useCommandPaletteStore } from "@/store/useCommandPaletteStore"
+import { useKeyboardShortcutsStore } from "@/store/useKeyboardShortcutsStore"
 import { useContractsQuery } from "@/hooks/useContracts"
 import { useInvoicesQuery } from "@/hooks/useInvoices"
 import type { Contract } from "@/types/contract"
@@ -31,6 +32,7 @@ export function CommandPalette() {
   const { ref: refLists } = useReferenceLists()
   const setActiveDept = useAppStore((s) => s.setActiveDept)
   const setDashVendor = useAppStore((s) => s.setDashVendor)
+  const setKeyboardShortcutsOpen = useKeyboardShortcutsStore((s) => s.setOpen)
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -49,16 +51,37 @@ export function CommandPalette() {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return { invoices: [] as Invoice[], contracts: [] as Contract[], vendors: [] as string[] }
+
+    if (!q) {
+      // Show recent invoices when search is empty
+      const recent = (invoicesQuery.data ?? [])
+        .sort((a, b) => {
+          const aDate = a.invoiceDate ? new Date(a.invoiceDate).getTime() : 0
+          const bDate = b.invoiceDate ? new Date(b.invoiceDate).getTime() : 0
+          return bDate - aDate
+        })
+        .slice(0, 3)
+
+      return { invoices: recent, contracts: [] as Contract[], vendors: [] as string[], isRecent: true }
+    }
+
+    // Support "dept:" prefix for department search
+    const isDeptSearch = q.startsWith("dept:")
+    const searchQuery = isDeptSearch ? q.slice(5).trim() : q
 
     const invoices = (invoicesQuery.data ?? [])
-      .filter(
-        (r) =>
+      .filter((r) => {
+        if (isDeptSearch) {
+          return r.department?.toLowerCase().includes(searchQuery)
+        }
+        return (
           r.invoiceNo?.toLowerCase().includes(q) ||
           r.vendor?.toLowerCase().includes(q) ||
           r.wellName?.toLowerCase().includes(q) ||
-          r.contractNo?.toLowerCase().includes(q)
-      )
+          r.contractNo?.toLowerCase().includes(q) ||
+          r.department?.toLowerCase().includes(q)
+        )
+      })
       .slice(0, MAX_PER_GROUP)
 
     const contracts = (contractsQuery.data ?? [])
@@ -67,7 +90,7 @@ export function CommandPalette() {
 
     const vendors = refLists.vendors.filter((v) => v.toLowerCase().includes(q)).slice(0, MAX_PER_GROUP)
 
-    return { invoices, contracts, vendors }
+    return { invoices, contracts, vendors, isRecent: false }
   }, [query, invoicesQuery.data, contractsQuery.data, refLists.vendors])
 
   function goInvoice(inv: Invoice) {
@@ -114,7 +137,47 @@ export function CommandPalette() {
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-2">
           {!query.trim() ? (
-            <p className="p-4 text-center text-sm text-muted-foreground">Type to search across invoices, contracts, and vendors.</p>
+            <>
+              {results.isRecent && results.invoices.length > 0 && (
+                <div className="mb-3">
+                  <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Recent Invoices</p>
+                  {results.invoices.map((inv) => (
+                    <button
+                      key={inv.id}
+                      type="button"
+                      onClick={() => goInvoice(inv)}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                    >
+                      <Receipt className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1 truncate">
+                        {inv.invoiceNo || `#${inv.srNo}`} — {inv.vendor}
+                      </span>
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{fmtMoney(inv.amountInclTax)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Search Tips</p>
+              <div className="mb-3 space-y-1.5 rounded-md bg-muted/40 p-2.5">
+                <p className="text-xs text-muted-foreground"><span className="font-medium">Invoice:</span> type invoice number or vendor</p>
+                <p className="text-xs text-muted-foreground"><span className="font-medium">Department:</span> type <kbd className="rounded bg-muted px-1">dept:Engineering</kbd></p>
+                <p className="text-xs text-muted-foreground"><span className="font-medium">Contract:</span> search by contract number or vendor</p>
+              </div>
+
+              <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Help</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setKeyboardShortcutsOpen(true)
+                  setOpen(false)
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+              >
+                <Keyboard className="size-4 shrink-0 text-muted-foreground" />
+                <span>Keyboard Shortcuts</span>
+                <kbd className="ml-auto text-xs text-muted-foreground">Cmd/?</kbd>
+              </button>
+            </>
           ) : !hasResults ? (
             <p className="p-4 text-center text-sm text-muted-foreground">No matches for "{query}".</p>
           ) : (

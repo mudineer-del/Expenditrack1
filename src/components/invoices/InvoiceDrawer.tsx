@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { fmtMoney } from "@/lib/dashboard"
 import { blankInvoice, type Invoice } from "@/types/invoice"
 import type { ReferenceLists } from "@/lib/referenceLists"
+import { DuplicateDetectionWarning } from "@/components/invoices/DuplicateDetectionWarning"
+import { InvoiceTemplateSelector } from "@/components/invoices/InvoiceTemplateSelector"
+import { SaveAsTemplateButton } from "@/components/invoices/SaveAsTemplateButton"
+import { detectDuplicates } from "@/lib/duplicateDetection"
+import { useInvoiceUndoRedoStore } from "@/store/useInvoiceUndoRedoStore"
+import { useInvoicesQuery } from "@/hooks/useInvoices"
 
 const schema = z.object({
   srNo: z.coerce.number().int().min(1, "Required"),
@@ -175,6 +181,11 @@ export function InvoiceDrawer({
   onSwitchToEdit: () => void
 }) {
   const readOnly = mode === "view"
+  const invoicesQuery = useInvoicesQuery()
+  const [showDupWarning, setShowDupWarning] = useState(true)
+  const [ignoredDups, setIgnoredDups] = useState<Set<string>>(new Set())
+  const { push: pushHistory } = useInvoiceUndoRedoStore()
+
   const form = useForm<FormInput, unknown, Values>({
     resolver: zodResolver(schema),
     defaultValues: toValues(invoice ?? blankInvoice(), nextSrNo, defaultDept),
@@ -200,10 +211,28 @@ export function InvoiceDrawer({
   // contract (if any) is always kept in the list so it doesn't just vanish out from under it.
   const vendorValue = form.watch("vendor")
   const contractNoValue = form.watch("contractNo")
+  const invoiceNoValue = form.watch("invoiceNo")
+  const invoiceDateValue = form.watch("invoiceDate")
+  const amountInclTaxValue = form.watch("amountExclTax")
+
   const vendorContractNumbers = useMemo(() => {
     if (!vendorValue) return contractNumbers
     return contractNumbers.filter((c) => contractVendorMap[c] === vendorValue || c === contractNoValue)
   }, [contractNumbers, contractVendorMap, vendorValue, contractNoValue])
+
+  // Detect potential duplicates based on current form values
+  const duplicateMatches = useMemo(() => {
+    if (!showDupWarning || mode === "view" || !invoicesQuery.data) return []
+    const formValues: Partial<Invoice> = {
+      invoiceNo: invoiceNoValue,
+      vendor: vendorValue,
+      invoiceDate: invoiceDateValue,
+      amountInclTax: amountInclTaxValue,
+    }
+    const matches = detectDuplicates(formValues, invoicesQuery.data, invoice?.id)
+    // Filter out ignored duplicates
+    return matches.filter((m) => !ignoredDups.has(m.invoice.id))
+  }, [invoiceNoValue, vendorValue, invoiceDateValue, amountInclTaxValue, invoice?.id, invoicesQuery.data, ignoredDups, showDupWarning, mode])
 
   const amountExclTax = form.watch("amountExclTax")
   const gstPst = form.watch("gstPst")
@@ -245,7 +274,25 @@ export function InvoiceDrawer({
       amountPaid: values.amountPaid,
       status: values.status,
     }
+
+    // Track change in history for undo/redo
+    pushHistory({
+      invoice: record,
+      action: invoice ? "update" : "create",
+      timestamp: Date.now(),
+    })
+
     onSubmit(record)
+  }
+
+  function handleApplyTemplate(templateData: Partial<Invoice>) {
+    form.reset({
+      ...form.getValues(),
+      vendor: templateData.vendor || form.getValues("vendor"),
+      service: templateData.service || form.getValues("service"),
+      department: templateData.department || form.getValues("department"),
+      region: templateData.region || form.getValues("region"),
+    })
   }
 
   const title = mode === "add" ? "New Invoice Entry" : mode === "edit" ? "Edit Invoice" : "Invoice Details"
@@ -254,20 +301,33 @@ export function InvoiceDrawer({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] w-full overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="sr-only">Invoice entry form</DialogDescription>
-          {invoice?.createdByName && (
-            <p className="text-xs text-muted-foreground">
-              Entered by <b>{invoice.createdByName}</b>
-              {invoice.updatedByName && invoice.updatedByName !== invoice.createdByName && (
-                <>
-                  {" "}
-                  · last edited by <b>{invoice.updatedByName}</b>
-                </>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1">
+              <DialogTitle>{title}</DialogTitle>
+              <DialogDescription className="sr-only">Invoice entry form</DialogDescription>
+              {invoice?.createdByName && (
+                <p className="text-xs text-muted-foreground">
+                  Entered by <b>{invoice.createdByName}</b>
+                  {invoice.updatedByName && invoice.updatedByName !== invoice.createdByName && (
+                    <>
+                      {" "}
+                      · last edited by <b>{invoice.updatedByName}</b>
+                    </>
+                  )}
+                  {invoice.updatedAt && ` · ${invoice.updatedAt.slice(0, 10)}`}
+                </p>
               )}
-              {invoice.updatedAt && ` · ${invoice.updatedAt.slice(0, 10)}`}
-            </p>
-          )}
+            </div>
+            {mode === "add" && canEdit && (
+              <InvoiceTemplateSelector
+                currentVendor={vendorValue}
+                onApplyTemplate={handleApplyTemplate}
+                onSaveAsTemplate={() => {
+                  // Templates are saved via the dialog's own state after user fills the form
+                }}
+              />
+            )}
+          </div>
         </DialogHeader>
         <Form {...form}>
           <form
@@ -279,6 +339,16 @@ export function InvoiceDrawer({
             }}
             className="flex flex-col gap-4"
           >
+            {duplicateMatches.length > 0 && (
+              <DuplicateDetectionWarning
+                matches={duplicateMatches}
+                onIgnore={() => {
+                  const ids = new Set(duplicateMatches.map((m) => m.invoice.id))
+                  setIgnoredDups(new Set([...ignoredDups, ...ids]))
+                }}
+              />
+            )}
+
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
               <FormField
                 control={form.control}
@@ -516,6 +586,15 @@ export function InvoiceDrawer({
                       that flip, happening mid-click, as if the original click landed on a submit
                       button — silently submitting the form the instant you press Edit. Calling
                       handleSubmit directly sidesteps native submit semantics entirely. */}
+                  {mode === "add" && (
+                    <SaveAsTemplateButton
+                      vendor={form.getValues("vendor")}
+                      service={form.getValues("service")}
+                      department={form.getValues("department")}
+                      region={form.getValues("region")}
+                    />
+                  )}
+                  <div className="flex-1" />
                   <Button type="button" onClick={form.handleSubmit(handleSubmit)}>
                     Save Entry
                   </Button>

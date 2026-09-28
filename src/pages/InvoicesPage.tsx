@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { BatchStatusUpdateDialog } from "@/components/invoices/BatchStatusUpdateDialog"
 import { DuplicateFinderDialog } from "@/components/invoices/DuplicateFinderDialog"
 import { ImportDialog } from "@/components/invoices/ImportDialog"
 import { InvoiceDetailSheet } from "@/components/invoices/InvoiceDetailSheet"
@@ -78,6 +79,7 @@ export default function InvoicesPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null)
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
+  const [batchStatusUpdateOpen, setBatchStatusUpdateOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [dupFinderOpen, setDupFinderOpen] = useState(false)
   const [renumberConfirm, setRenumberConfirm] = useState(false)
@@ -259,6 +261,24 @@ export default function InvoicesPage() {
     })
   }
 
+  async function handleBatchStatusUpdate(status: string) {
+    const selectedInvoices = invoices.filter((r) => selected.has(r.id))
+    const updates = selectedInvoices.map((inv) => ({ ...inv, status }))
+
+    return new Promise((resolve, reject) => {
+      bulkUpsert.mutate(updates, {
+        onSuccess: () => {
+          setSelected(new Set())
+          setBatchStatusUpdateOpen(false)
+          resolve(null)
+        },
+        onError: (e) => {
+          reject(e)
+        },
+      })
+    })
+  }
+
   if (invoicesQuery.isLoading) {
     return (
       <div className="grid grid-cols-1 gap-4">
@@ -399,9 +419,14 @@ export default function InvoicesPage() {
               summary={`${fmtMoney(invoices.filter((r) => selected.has(r.id)).reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0))} total`}
               onClear={() => setSelected(new Set())}
               action={
-                <Button variant="destructive" size="sm" onClick={() => setBulkDeleteConfirm(true)}>
-                  <Trash2 /> Delete selected
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setBatchStatusUpdateOpen(true)}>
+                    Update Status
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => setBulkDeleteConfirm(true)}>
+                    <Trash2 /> Delete selected
+                  </Button>
+                </div>
               }
             />
           </div>
@@ -496,6 +521,13 @@ export default function InvoicesPage() {
       />
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} existingInvoices={allInvoices} onImport={handleImport} />
+
+      <BatchStatusUpdateDialog
+        open={batchStatusUpdateOpen}
+        invoices={invoices.filter((r) => selected.has(r.id))}
+        onOpenChange={setBatchStatusUpdateOpen}
+        onConfirm={handleBatchStatusUpdate}
+      />
 
       <DuplicateFinderDialog
         open={dupFinderOpen}

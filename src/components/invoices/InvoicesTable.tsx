@@ -4,7 +4,8 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { Eye, Pencil, Trash2 } from "lucide-react"
+import { Copy, Eye, Pencil, Trash2 } from "lucide-react"
+import { useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -13,6 +14,7 @@ import { fmtMoney, vendorColor } from "@/lib/dashboard"
 import { getContractorLogo, type ContractorLogos } from "@/lib/contractorLogos"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { HoverPreview, InvoicePreview } from "@/components/shared/HoverPreview"
+import { copyToClipboard } from "@/lib/clipboard"
 import { useDisplayStore } from "@/store/useDisplayStore"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { InvoiceCard } from "@/components/invoices/InvoiceCard"
@@ -87,9 +89,19 @@ export function InvoicesTable({
       cell: ({ row }) => {
         const r = row.original
         return (
-          <div className="flex items-center gap-2">
+          <div className="group flex items-center gap-2">
             <ContractorLogo vendor={r.vendor || "Unknown"} logo={getContractorLogo(contractorLogos, r.vendor)} color={vendorColor(r.vendor)} size="sm" />
             <span className="font-medium">{r.vendor}</span>
+            <button
+              className="opacity-0 transition-opacity group-hover:opacity-100"
+              title="Copy vendor name"
+              onClick={(e) => {
+                e.stopPropagation()
+                copyToClipboard(r.vendor || "", "vendor name")
+              }}
+            >
+              <Copy className="size-3.5 text-muted-foreground hover:text-foreground" />
+            </button>
           </div>
         )
       },
@@ -98,7 +110,21 @@ export function InvoicesTable({
       id: "invoiceNo",
       header: "Invoice No.",
       size: 140,
-      cell: ({ row }) => <span className="font-medium">{row.original.invoiceNo}</span>,
+      cell: ({ row }) => (
+        <div className="group flex items-center gap-2">
+          <span className="font-medium">{row.original.invoiceNo}</span>
+          <button
+            className="opacity-0 transition-opacity group-hover:opacity-100"
+            title="Copy invoice number"
+            onClick={(e) => {
+              e.stopPropagation()
+              copyToClipboard(row.original.invoiceNo || "", "invoice number")
+            }}
+          >
+            <Copy className="size-3.5 text-muted-foreground hover:text-foreground" />
+          </button>
+        </div>
+      ),
     }),
     columnHelper.display({
       id: "wellName",
@@ -178,25 +204,29 @@ export function InvoicesTable({
       cell: ({ row }) => {
         const r = row.original
         return (
-          <div className="flex justify-end gap-1">
-            <button className="rounded p-1 hover:bg-muted" title="View" onClick={() => onView(r)}>
-              <Eye className="size-4" />
+          <div className="flex justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <button
+              className="rounded p-1.5 hover:bg-muted transition-colors"
+              title="View details"
+              onClick={() => onView(r)}
+            >
+              <Eye className="size-4 text-muted-foreground hover:text-foreground" />
             </button>
             <button
-              className="rounded p-1 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded p-1.5 hover:bg-muted transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               title={canEdit ? "Edit" : "Only Editors and Admins can edit invoices"}
               disabled={!canEdit}
               onClick={() => onEdit(r)}
             >
-              <Pencil className="size-4" />
+              <Pencil className="size-4 text-muted-foreground hover:text-foreground" />
             </button>
             <button
-              className="rounded p-1 text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded p-1.5 hover:bg-destructive/10 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               title={canDelete ? "Delete" : "Only Admins can delete invoices"}
               disabled={!canDelete}
               onClick={() => onDelete(r)}
             >
-              <Trash2 className="size-4" />
+              <Trash2 className="size-4 text-destructive" />
             </button>
           </div>
         )
@@ -300,7 +330,7 @@ export function InvoicesTable({
               <HoverPreview key={row.id} preview={<InvoicePreview invoice={row.original} />}>
               <TableRow
                 data-state={selected.has(row.original.id) ? "selected" : undefined}
-                className={cn("cursor-pointer border-border/50", tableBanded && "even:bg-muted/30")}
+                className={cn("group cursor-pointer border-border/50", tableBanded && "even:bg-muted/30")}
                 onClick={() => onView(row.original)}
               >
                 {canBulk && (

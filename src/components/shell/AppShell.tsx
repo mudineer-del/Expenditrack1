@@ -1,5 +1,7 @@
 import { Home, Layers, LogOut, Search, Settings, User } from "lucide-react"
-import { NavLink, Outlet, useLocation } from "react-router-dom"
+import { useEffect } from "react"
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
+import { useTheme } from "next-themes"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +17,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/shell/AppSidebar"
 import { CommandPalette } from "@/components/shell/CommandPalette"
 import { FormatDialog } from "@/components/shell/FormatDialog"
+import { KeyboardShortcutsDialog } from "@/components/shell/KeyboardShortcutsDialog"
 import { NavIconChip } from "@/components/shell/NavIconChip"
 import { QuickAddButton } from "@/components/shell/QuickAddButton"
 import { ThemeToggle } from "@/components/shell/ThemeToggle"
@@ -58,9 +61,29 @@ function isDeptScoped(pathname: string): boolean {
 
 export function AppShell() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { setTheme, resolvedTheme } = useTheme()
   const { user, signOut } = useAuth()
   const activeDept = useAppStore((s) => s.activeDept)
   const openPalette = useCommandPaletteStore((s) => s.setOpen)
+
+  // Keyboard shortcuts: Cmd+N for new invoice, Cmd+D for dark mode
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key.toLowerCase() === "n") {
+          e.preventDefault()
+          navigate("/invoices", { state: { openAdd: true } })
+        } else if (e.key.toLowerCase() === "d") {
+          e.preventDefault()
+          setTheme(resolvedTheme === "dark" ? "light" : "dark")
+        }
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [navigate, setTheme, resolvedTheme])
+
   return (
     <>
       <SidebarProvider>
@@ -166,6 +189,7 @@ export function AppShell() {
           </main>
         </SidebarInset>
         <CommandPalette />
+        <KeyboardShortcutsDialog />
         <QuickAddButton />
       </SidebarProvider>
       <MobileBottomNav />
