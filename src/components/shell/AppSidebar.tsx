@@ -6,6 +6,8 @@ import {
   Download,
   History,
   LayoutGrid,
+  PanelLeftClose,
+  PanelLeftOpen,
   List,
   Settings,
   Users,
@@ -33,6 +35,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { OgdclMark } from "@/components/shared/OgdclMark"
@@ -138,6 +141,11 @@ export const HIDEABLE_NAV_ITEMS: HideableNavItem[] = collectHideableNavItems()
 export function AppSidebar() {
   const { user, isAdmin } = useAuth()
   const location = useLocation()
+  const { setOpen } = useSidebar()
+  const design = useSidebarPrefsStore((s) => s.design)
+  const showIconBar = useSidebarPrefsStore((s) => s.showIconBar)
+  const setShowIconBar = useSidebarPrefsStore((s) => s.setShowIconBar)
+  const railVisible = design === "dual" && showIconBar
   const [wellCostExpanded, setWellCostExpanded] = useState(location.pathname.startsWith("/well-cost"))
   const sidebarTitle = useLabelsStore((s) => s.sidebarTitle)
   const sidebarSubtitle = useLabelsStore((s) => s.sidebarSubtitle)
@@ -174,15 +182,58 @@ export function AppSidebar() {
         ).length
       : 0
 
+  // Both surfaces honor the same access grants and hidden-item preferences.
+  const railGroups = NAV_GROUPS.map((group) => ({
+    label: group.label,
+    items: group.items.flatMap((item) => {
+      if ("children" in item) {
+        const first = item.children.find((child) => canSeeArea(child.to) && !hiddenItems.includes(child.to))
+        return first ? [{ to: first.to as string, label: item.label as string, icon: item.icon as ComponentType<{ className?: string }>, restricted: false, wellCost: true }] : []
+      }
+      if (!ALWAYS_VISIBLE_PATHS.has(item.to) && (!canSeeArea(item.to) || hiddenItems.includes(item.to))) return []
+      return [{ to: item.to as string, label: item.label as string, icon: resolveIcon(item.to, item.icon, iconOverrides), restricted: "adminOnly" in item && item.adminOnly && !isAdmin, wellCost: false }]
+    }),
+  }))
+
   return (
-    <Sidebar collapsible="icon" className="app-sidebar border-r-0" data-density={density}>
+    <Sidebar collapsible="icon" className={`app-sidebar ${design === "dual" ? "app-sidebar-dual" : design === "stacked" ? "app-sidebar-stacked" : ""} border-r-0`} data-density={density} data-icon-bar={railVisible}>
+      {railVisible && <nav className="dual-icon-rail" aria-label="Quick navigation">
+        <NavLink to="/settings" className="dual-rail-brand" aria-label="Your profile" title={user?.name || "Your profile"}><Avatar className="size-9">{user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}<AvatarFallback>{user?.initials || "?"}</AvatarFallback></Avatar></NavLink>
+        <div className="dual-rail-scroll">
+          {railGroups.filter((group) => group.items.length).map((group) => (
+            <div className="dual-rail-group" key={group.label} role="group" aria-label={group.label}>
+              {group.items.map((item) => {
+                const Icon = item.icon
+                const active = item.wellCost ? location.pathname.startsWith("/well-cost") : item.to === "/" ? location.pathname === "/" : location.pathname === item.to || location.pathname.startsWith(item.to + "/")
+                const badge = item.to === "/messages" ? unreadMessages : item.to === "/activity" ? unreadActivity : 0
+                return item.restricted ? (
+                  <button key={item.label} className="dual-rail-button" disabled aria-label={item.label} title="Only Admins can access Users"><Icon className="size-[18px]" /></button>
+                ) : (
+                  <NavLink key={item.label} to={item.to} end={!item.wellCost} aria-label={item.label} title={item.label}
+                    className={"dual-rail-button" + (active ? " is-active" : "")}
+                    onClick={() => { if (item.wellCost) { setOpen(true); setWellCostExpanded(true) } }}>
+                    <Icon className="size-[18px]" />
+                    {badge > 0 && <span className="dual-rail-badge">{badge > 99 ? "99+" : badge}</span>}
+                  </NavLink>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+        <NavLink to="/settings" className="dual-rail-account" aria-label="Profile & settings" title="Profile & settings">
+          <Avatar className="size-8"><AvatarFallback>{user?.initials || "?"}</AvatarFallback></Avatar>
+        </NavLink>
+      </nav>}
+      <div className={design === "dual" ? "dual-navigation-panel" : "contents"}>
+
       <SidebarHeader className="app-sidebar-header">
         <div className="flex items-center gap-2.5 px-2 py-2">
           <OgdclMark size="sm" />
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <p className="app-sidebar-brand-title truncate text-[15px] font-extrabold tracking-tight">{sidebarTitle}</p>
-            <p className="app-sidebar-subtitle truncate text-[11px]">{sidebarSubtitle}</p>
+            <p className="app-sidebar-brand-title truncate text-[0.9375rem] font-extrabold tracking-tight">{sidebarTitle}</p>
+            <p className="app-sidebar-subtitle truncate text-[0.6875rem]">{sidebarSubtitle}</p>
           </div>
+          {design === "dual" && <button type="button" className="ml-auto shrink-0 rounded-md p-1.5 hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden" aria-label={showIconBar ? "Hide icon bar" : "Show icon bar"} aria-pressed={showIconBar} title={showIconBar ? "Hide icon bar" : "Show icon bar"} onClick={() => { setOpen(true); setShowIconBar(!showIconBar) }}>{showIconBar ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}</button>}
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -213,14 +264,14 @@ export function AppSidebar() {
                           onMouseEnter={() => setWellCostExpanded(true)}
                           onMouseLeave={() => setWellCostExpanded(false)}
                         >
-                          <SidebarMenuButton size={topLevelSize} onClick={() => setWellCostExpanded((v) => !v)} tooltip={item.label}>
+                          <SidebarMenuButton aria-expanded={wellCostExpanded} aria-controls="well-cost-submenu" size={topLevelSize} onClick={() => setWellCostExpanded((v) => !v)} tooltip={item.label}>
                             <SidebarIcon icon={item.icon} color={color} flat={flatIcons} />
                             <span>{item.label}</span>
                             <ChevronRight
                               className={`ml-auto size-4 shrink-0 transition-transform ${wellCostExpanded ? "rotate-90" : ""}`}
                             />
                           </SidebarMenuButton>
-                            <SidebarMenuSub className={`app-well-submenu ${wellCostExpanded ? "is-open" : ""}`}>
+                            <SidebarMenuSub id="well-cost-submenu" inert={!wellCostExpanded} className={`app-well-submenu ${wellCostExpanded ? "is-open" : ""}`}>
                               {visibleChildren.map((child) => (
                                 <SidebarMenuSubItem key={child.to}>
                                   <SidebarMenuSubButton asChild className="app-sidebar-subnav">
@@ -317,11 +368,11 @@ export function AppSidebar() {
               <NavLink to="/settings">
                 <Avatar className="size-5">
                   {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
-                  <AvatarFallback className="text-[10px]">{user?.initials || "?"}</AvatarFallback>
+                  <AvatarFallback className="text-[0.6875rem]">{user?.initials || "?"}</AvatarFallback>
                 </Avatar>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-semibold tracking-tight">{user?.name || "Account"}</span>
-                  <span className="block truncate text-[10px] font-medium uppercase tracking-[0.07em] opacity-60">
+                  <span className="block truncate text-[0.6875rem] font-medium uppercase tracking-[0.07em] opacity-60">
                     {isAdmin ? "Administrator" : "User"}
                   </span>
                 </span>
@@ -331,6 +382,7 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      </div>
       <SidebarRail />
     </Sidebar>
   )
