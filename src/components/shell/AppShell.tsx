@@ -63,10 +63,6 @@ function isDeptScoped(pathname: string): boolean {
 }
 
 export function AppShell() {
-  const sidebarDesign = useSidebarPrefsStore((s) => s.design)
-  const showIconBar = useSidebarPrefsStore((s) => s.showIconBar)
-  const sidebarWidth = sidebarDesign === "original" ? "16rem" : sidebarDesign === "dual" && showIconBar ? "23rem" : "19rem"
-  const iconWidth = sidebarDesign === "original" ? "3rem" : sidebarDesign === "dual" && showIconBar ? "5rem" : "4.5rem"
   const location = useLocation()
   const navigate = useNavigate()
   const { setTheme, resolvedTheme } = useTheme()
