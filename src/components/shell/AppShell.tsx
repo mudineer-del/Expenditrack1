@@ -27,7 +27,6 @@ import { InstallPrompt } from "@/components/shell/InstallPrompt"
 import { OgdclLogoFull } from "@/components/shared/OgdclMark"
 import { useAuth } from "@/hooks/useAuth"
 import { NAV_ITEM_COLORS } from "@/lib/navColors"
-import { useSidebarPrefsStore } from "@/store/useSidebarPrefsStore"
 import { useAppStore } from "@/store/useAppStore"
 import { useCommandPaletteStore } from "@/store/useCommandPaletteStore"
 import { useHelpDialogStore } from "@/store/useHelpDialogStore"
@@ -90,7 +89,7 @@ export function AppShell() {
 
   return (
     <>
-      <SidebarProvider className="app-shell-layout" style={{ "--sidebar-width": sidebarWidth, "--sidebar-width-icon": iconWidth } as CSSProperties}>
+      <SidebarProvider className="app-shell-layout" style={{ "--sidebar-width": "16rem", "--sidebar-width-icon": "3rem" } as CSSProperties}>
         <a href="#main-content" className="sr-only z-50 rounded-md bg-background p-3 text-foreground shadow-md focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to content</a>
         <AppSidebar />
         <SidebarInset className="min-h-0 min-w-0">
