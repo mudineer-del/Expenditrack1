@@ -185,7 +185,8 @@ const HELP_TOPICS = [
 ]
 
 export function HelpDialog() {
-  const [open, setOpen] = useHelpDialogStore((s) => [s.open, s.setOpen])
+  const open = useHelpDialogStore((s) => s.open)
+  const setOpen = useHelpDialogStore((s) => s.setOpen)
   const [searchQuery, setSearchQuery] = useState("")
 
   const filteredTopics = useMemo(() => {
