@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw, Upload } from "lucide-react"
+import { AlertTriangle, RefreshCw, Upload, ChevronDown, ChevronRight } from "lucide-react"
 import { useMemo, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   collapseImportedDuplicates,
   finalizeImportedRecord,
@@ -109,7 +110,7 @@ export function ImportDialog({
     const updatedById = new Map<string, { invoice: Invoice; filledFields: Array<keyof Invoice> }>()
     let unchangedCount = 0
     for (const r of unique) {
-      const existing = findExistingForImport(r, existingByKey, existingByVendorInvoice)
+      const existing = findExistingForImport(r, existingByKey, existingByVendorInvoice, existingInvoices)
       if (!existing) {
         fresh.push(r)
         continue
@@ -126,7 +127,7 @@ export function ImportDialog({
       })
     }
     return { fresh, updates: Array.from(updatedById.values()), unchangedCount, collapsed }
-  }, [records, existingByKey, existingByVendorInvoice])
+  }, [records, existingByKey, existingByVendorInvoice, existingInvoices])
 
   function reset() {
     setFileName("")
@@ -223,32 +224,65 @@ export function ImportDialog({
                 {plan.fresh.length > 0 && (
                   <li className="flex items-center gap-1.5">
                     <Upload className="size-3.5 text-primary" />
-                    {plan.fresh.length} new invoice{plan.fresh.length !== 1 ? "s" : ""} will be added.
+                    <span>
+                      <b className="text-primary">{plan.fresh.length}</b> new invoice{plan.fresh.length !== 1 ? "s" : ""} will be added.
+                    </span>
                   </li>
                 )}
                 {plan.updates.length > 0 && (
                   <li className="flex items-center gap-1.5 text-status-under">
                     <RefreshCw className="size-3.5" />
-                    {plan.updates.length} existing invoice{plan.updates.length !== 1 ? "s" : ""} will be
-                    updated with missing details (nothing already filled in gets overwritten).
+                    <span>
+                      <b className="text-status-under">{plan.updates.length}</b> existing invoice{plan.updates.length !== 1 ? "s" : ""} will be
+                      updated with missing details (smart matching by vendor + invoice number, nothing already filled in gets overwritten).
+                    </span>
                   </li>
                 )}
                 {plan.unchangedCount > 0 && (
                   <li className="flex items-center gap-1.5">
                     <AlertTriangle className="size-3.5" />
-                    {plan.unchangedCount} row{plan.unchangedCount !== 1 ? "s" : ""} already match an existing
-                    invoice with nothing new to add — skipped.
+                    <span>
+                      {plan.unchangedCount} row{plan.unchangedCount !== 1 ? "s" : ""} already match an existing invoice with nothing new to add — skipped.
+                    </span>
                   </li>
                 )}
                 {plan.collapsed > 0 && (
                   <li className="flex items-center gap-1.5">
                     <AlertTriangle className="size-3.5" />
-                    {plan.collapsed} row{plan.collapsed !== 1 ? "s" : ""} repeated an invoice already listed in
-                    this file — merged into one instead of added twice.
+                    <span>
+                      {plan.collapsed} row{plan.collapsed !== 1 ? "s" : ""} repeated within this file — merged into one.
+                    </span>
                   </li>
                 )}
               </ul>
+              <p className="mt-3 text-xs text-muted-foreground bg-background/50 rounded p-2 border-l-2 border-primary">
+                💡 <b>Smart matching:</b> Invoices are matched by vendor name + invoice number (handles minor spelling changes and missing amounts).
+              </p>
             </div>
+
+            {plan.updates.length > 0 && (
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm" className="justify-self-start gap-2">
+                    <ChevronRight className="size-4" />
+                    View {plan.updates.length} invoice{plan.updates.length !== 1 ? "s" : ""} that will be updated
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 space-y-2 rounded-lg border bg-muted/20 p-3">
+                  {plan.updates.map((u, idx) => (
+                    <div key={idx} className="grid gap-1 rounded bg-background/50 p-2 text-xs">
+                      <div className="font-semibold">
+                        {u.invoice.vendor} — {u.invoice.invoiceNo}
+                      </div>
+                      <div className="text-muted-foreground">
+                        Will add/update: {u.filledFields.join(", ")}
+                      </div>
+                    </div>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
             {headerMap.length > 0 && <HeaderMapTable headerMap={headerMap} />}
             <Button variant="outline" size="sm" onClick={reset} className="justify-self-start">
               Choose a different file

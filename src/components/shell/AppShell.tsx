@@ -1,5 +1,6 @@
-import { Home, Layers, LogOut, Search, Settings, User } from "lucide-react"
-import { useEffect } from "react"
+import "./app-shell-layout.css"
+import { Home, Layers, LogOut, Search, Settings, User, HelpCircle } from "lucide-react"
+import { useEffect, type CSSProperties } from "react"
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
 import { useTheme } from "next-themes"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -17,6 +18,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/shell/AppSidebar"
 import { CommandPalette } from "@/components/shell/CommandPalette"
 import { FormatDialog } from "@/components/shell/FormatDialog"
+import { HelpDialog } from "@/components/shell/HelpDialog"
 import { KeyboardShortcutsDialog } from "@/components/shell/KeyboardShortcutsDialog"
 import { NavIconChip } from "@/components/shell/NavIconChip"
 import { QuickAddButton } from "@/components/shell/QuickAddButton"
@@ -26,8 +28,10 @@ import { InstallPrompt } from "@/components/shell/InstallPrompt"
 import { OgdclLogoFull } from "@/components/shared/OgdclMark"
 import { useAuth } from "@/hooks/useAuth"
 import { NAV_ITEM_COLORS } from "@/lib/navColors"
+import { useSidebarPrefsStore } from "@/store/useSidebarPrefsStore"
 import { useAppStore } from "@/store/useAppStore"
 import { useCommandPaletteStore } from "@/store/useCommandPaletteStore"
+import { useHelpDialogStore } from "@/store/useHelpDialogStore"
 
 const TITLES: Record<string, string> = {
   "/": "Dashboard",
@@ -60,12 +64,17 @@ function isDeptScoped(pathname: string): boolean {
 }
 
 export function AppShell() {
+  const sidebarDesign = useSidebarPrefsStore((s) => s.design)
+  const showIconBar = useSidebarPrefsStore((s) => s.showIconBar)
+  const sidebarWidth = sidebarDesign === "original" ? "16rem" : sidebarDesign === "dual" && showIconBar ? "23rem" : "19rem"
+  const iconWidth = sidebarDesign === "original" ? "3rem" : sidebarDesign === "dual" && showIconBar ? "5rem" : "4.5rem"
   const location = useLocation()
   const navigate = useNavigate()
   const { setTheme, resolvedTheme } = useTheme()
   const { user, signOut } = useAuth()
   const activeDept = useAppStore((s) => s.activeDept)
   const openPalette = useCommandPaletteStore((s) => s.setOpen)
+  const openHelp = useHelpDialogStore((s) => s.setOpen)
 
   // Keyboard shortcuts: Cmd+N for new invoice, Cmd+D for dark mode
   useEffect(() => {
@@ -86,10 +95,10 @@ export function AppShell() {
 
   return (
     <>
-      <SidebarProvider>
+      <SidebarProvider className="app-shell-layout" style={{ "--sidebar-width": sidebarWidth, "--sidebar-width-icon": iconWidth } as CSSProperties}>
         <a href="#main-content" className="sr-only z-50 rounded-md bg-background p-3 text-foreground shadow-md focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to content</a>
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="min-h-0 min-w-0">
           {/* Light, token-driven bar matching the sidebar surface — keeps the shell
               reading as one cohesive light frame instead of a dark stripe sitting
               on top of an otherwise light app. Adapts automatically with theme/dark
@@ -145,6 +154,15 @@ export function AppShell() {
               <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => openPalette(true)} title="Search">
                 <Search />
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => openHelp(true)}
+                title="Help & Documentation"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <HelpCircle className="size-4" />
+              </Button>
               <FormatDialog />
               <ThemeToggle />
               <Button variant="ghost" size="icon" asChild title="Settings" className="hidden sm:inline-flex">
@@ -178,7 +196,7 @@ export function AppShell() {
               </DropdownMenu>
             </div>
           </header>
-          <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 overflow-auto p-4 pb-24 md:pb-4">
+          <main id="main-content" tabIndex={-1} className="min-h-0 min-w-0 flex-1 overflow-auto p-4 pb-24 md:pb-4">
             {/* Keyed by pathname so each page swap remounts this wrapper and
                 replays the entrance animation — react-router doesn't animate
                 route transitions on its own, so without this, navigating felt
@@ -190,6 +208,7 @@ export function AppShell() {
         </SidebarInset>
         <CommandPalette />
         <KeyboardShortcutsDialog />
+        <HelpDialog />
         <QuickAddButton />
       </SidebarProvider>
       <MobileBottomNav />

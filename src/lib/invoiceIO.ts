@@ -402,18 +402,68 @@ export function vendorInvoiceKey(r: { vendor?: unknown; invoiceNo?: unknown }): 
   return `${String(r.vendor || "").trim().toLowerCase()}::${String(r.invoiceNo || "").trim().toLowerCase()}`
 }
 
-/** The existing invoice an imported row refers to: the exact vendor + invoice no. +
- *  amount match, or — when the row carries no amount to compare — the same vendor +
- *  invoice no., so an amount-less row updates that invoice instead of adding a 0.00 twin. */
+/** Similarity score between two vendor names (0-1, where 1 is identical).
+ *  Handles minor spelling variations and extra spaces. */
+function vendorSimilarity(a: string, b: string): number {
+  const normalize = (s: string) => s.trim().toLowerCase()
+  const an = normalize(a)
+  const bn = normalize(b)
+  if (an === bn) return 1
+  if (an.includes(bn) || bn.includes(an)) return 0.95
+  const aWords = new Set(an.split(/\s+/))
+  const bWords = new Set(bn.split(/\s+/))
+  const common = Array.from(aWords).filter((w) => bWords.has(w)).length
+  const total = Math.max(aWords.size, bWords.size)
+  return total > 0 ? common / total : 0
+}
+
+/** Amount similarity - true if within 5% or exact match (handles rounding errors). */
+function amountSimilar(a: number | undefined, b: number | undefined): boolean {
+  if (!a || !b) return true
+  const diff = Math.abs(a - b)
+  const pct = (diff / Math.max(a, b)) * 100
+  return pct <= 5
+}
+
+/** The existing invoice an imported row refers to:
+ *  1. Exact: vendor + invoice no. + amount
+ *  2. Fuzzy: vendor (95%+ match) + invoice no. (same)
+ *  3. Loose: vendor + invoice no. only (when amount is missing)
+ *  This catches invoices that should be updated even if amount format changed. */
 export function findExistingForImport(
   rec: ImportedRecord,
   byKey: Map<string, Invoice>,
-  byVendorInvoice: Map<string, Invoice>
+  byVendorInvoice: Map<string, Invoice>,
+  allInvoices?: Invoice[]
 ): Invoice | undefined {
   const exact = byKey.get(invoiceDupKey(rec))
   if (exact) return exact
-  if (Number(rec.amountExclTax) > 0 || isBlank(rec.invoiceNo)) return undefined
-  return byVendorInvoice.get(vendorInvoiceKey(rec))
+
+  const invNo = String(rec.invoiceNo || "").trim().toLowerCase()
+  if (isBlank(invNo)) return undefined
+
+  const vendor = String(rec.vendor || "").trim()
+  const recAmt = Number(rec.amountExclTax) || undefined
+
+  if (!allInvoices) {
+    if (!recAmt || recAmt === 0) return byVendorInvoice.get(vendorInvoiceKey(rec))
+    return undefined
+  }
+
+  for (const existing of allInvoices) {
+    const exInvNo = String(existing.invoiceNo || "").trim().toLowerCase()
+    if (exInvNo !== invNo) continue
+
+    const exVendor = String(existing.vendor || "").trim()
+    const similarity = vendorSimilarity(vendor, exVendor)
+    if (similarity < 0.9) continue
+
+    if (recAmt && !amountSimilar(recAmt, existing.amountExclTax)) continue
+
+    return existing
+  }
+
+  return undefined
 }
 
 /** Ported from finalizeImported (index.html:2659-2677). */
