@@ -1,4 +1,4 @@
-import { Building2, FileText, Keyboard, Receipt, Search } from "lucide-react"
+import { Building2, FileText, HelpCircle, Keyboard, Receipt, Search } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"

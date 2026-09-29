@@ -1,3 +1,0 @@
-export type View = "dashboard" | "invoices" | "contracts" | "reports"
-export type Invoice = { id:string; invoiceNo:string; vendor:string; contractNo:string; wellName:string; invoiceDate:string; amount:number; paid:number; status:string; service:string; department:string }
-export type Contract = { id:string; contractNo:string; vendor:string; title:string; value:number; startDate:string; endDate:string; status:string; department:string }

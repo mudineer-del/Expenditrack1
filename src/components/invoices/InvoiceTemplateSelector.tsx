@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from "lucide-react"
+import { useState } from "react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ export function InvoiceTemplateSelector({
   onSaveAsTemplate: () => void
 }) {
   const { templates, getTemplatesByVendor, removeTemplate } = useInvoiceTemplatesStore()
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
 
   const relevantTemplates = currentVendor ? getTemplatesByVendor(currentVendor) : templates
 

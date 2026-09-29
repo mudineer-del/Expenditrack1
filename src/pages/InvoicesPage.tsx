@@ -269,12 +269,12 @@ export default function InvoicesPage() {
     const selectedInvoices = invoices.filter((r) => selected.has(r.id))
     const updates = selectedInvoices.map((inv) => ({ ...inv, status }))
 
-    return new Promise<void>((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       bulkUpsert.mutate(updates, {
         onSuccess: () => {
           setSelected(new Set())
           setBatchStatusUpdateOpen(false)
-          resolve()
+          resolve(null)
         },
         onError: (e) => {
           reject(e)

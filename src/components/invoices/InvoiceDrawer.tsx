@@ -1,5 +1,3 @@
-import "./invoice-dialog-designs.css"
-import { useDialogPrefsStore } from "@/store/useDialogPrefsStore"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -182,13 +180,9 @@ export function InvoiceDrawer({
   onSubmit: (values: Invoice) => void
   onSwitchToEdit: () => void
 }) {
-  const design = useDialogPrefsStore((s) => s.design)
-  const [section, setSection] = useState(0)
-  const [maximized, setMaximized] = useState(false)
-  const paged = design === "guided" || design === "tabbed"
   const readOnly = mode === "view"
   const invoicesQuery = useInvoicesQuery()
-  const [showDupWarning] = useState(true)
+  const [showDupWarning, setShowDupWarning] = useState(true)
   const [ignoredDups, setIgnoredDups] = useState<Set<string>>(new Set())
   const { push: pushHistory } = useInvoiceUndoRedoStore()
 
@@ -207,8 +201,6 @@ export function InvoiceDrawer({
     const key = invoice ? `edit:${invoice.id}` : `add:${nextSrNo ?? 0}`
     if (lastKeyRef.current === key) return
     lastKeyRef.current = key
-    setSection(0)
-    setMaximized(false)
     form.reset(toValues(invoice ?? blankInvoice(), nextSrNo, defaultDept))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, invoice, nextSrNo])
@@ -221,15 +213,7 @@ export function InvoiceDrawer({
   const contractNoValue = form.watch("contractNo")
   const invoiceNoValue = form.watch("invoiceNo")
   const invoiceDateValue = form.watch("invoiceDate")
-  const amountExclTax = form.watch("amountExclTax")
-  const gstPst = form.watch("gstPst")
-  const { tax, total } = useMemo(() => {
-    const a = Number(amountExclTax) || 0
-    const g = Number(gstPst) || 0
-    const t = a * g
-    return { tax: t, total: a + t }
-  }, [amountExclTax, gstPst])
-  const amountInclTaxValue = total
+  const amountInclTaxValue = form.watch("amountExclTax")
 
   const vendorContractNumbers = useMemo(() => {
     if (!vendorValue) return contractNumbers
@@ -250,6 +234,14 @@ export function InvoiceDrawer({
     return matches.filter((m) => !ignoredDups.has(m.invoice.id))
   }, [invoiceNoValue, vendorValue, invoiceDateValue, amountInclTaxValue, invoice?.id, invoicesQuery.data, ignoredDups, showDupWarning, mode])
 
+  const amountExclTax = form.watch("amountExclTax")
+  const gstPst = form.watch("gstPst")
+  const { tax, total } = useMemo(() => {
+    const a = Number(amountExclTax) || 0
+    const g = Number(gstPst) || 0
+    const t = a * g
+    return { tax: t, total: a + t }
+  }, [amountExclTax, gstPst])
 
   function handleSubmit(values: Values) {
     const record: Invoice = {
@@ -303,37 +295,16 @@ export function InvoiceDrawer({
     })
   }
 
-  const financialFields: (keyof FormInput)[] = ["amountExclTax", "gstPst", "amountPaid"]
-  async function advance() {
-    const fields: (keyof FormInput)[] = section === 0 ? ["srNo", "vendor", "invoiceNo", "status", "year"] : financialFields
-    if (readOnly || await form.trigger(fields, { shouldFocus: true })) setSection((v) => Math.min(v + 1, 2))
-  }
-  const submit = form.handleSubmit(handleSubmit, (errors) => {
-    const hasDetailsError = Object.keys(errors).some((key) => !financialFields.includes(key as keyof FormInput))
-    if (paged) setSection(hasDetailsError ? 0 : 1)
-  })
-  const financialSummary = (
-    <aside className="invoice-live-summary" aria-label="Invoice summary">
-      <h3>Invoice summary</h3>
-      <dl>
-        <div><dt>Subtotal (USD)</dt><dd>{fmtMoney(Number(amountExclTax) || 0)}</dd></div>
-        <div><dt>Tax (USD)</dt><dd>{fmtMoney(tax)}</dd></div>
-        <div className="invoice-summary-total"><dt>Total (USD)</dt><dd>{fmtMoney(total)}</dd></div>
-      </dl>
-      <p className="mt-3 text-xs text-muted-foreground">Calculated from the invoice amount and tax rate.</p>
-    </aside>
-  )
-
   const title = mode === "add" ? "New Invoice Entry" : mode === "edit" ? "Edit Invoice" : "Invoice Details"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="invoice-design-dialog max-h-[90dvh] w-full overflow-y-auto sm:max-w-4xl" data-design={design} maximizable={design === "tabbed"} maximized={maximized} onMaximizedChange={setMaximized}>
+      <DialogContent className="max-h-[85vh] w-full overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1">
               <DialogTitle>{title}</DialogTitle>
-              <DialogDescription className="invoice-design-description">Invoice entry and financial details</DialogDescription>
+              <DialogDescription className="sr-only">Invoice entry form</DialogDescription>
               {invoice?.createdByName && (
                 <p className="text-xs text-muted-foreground">
                   Entered by <b>{invoice.createdByName}</b>
@@ -360,22 +331,14 @@ export function InvoiceDrawer({
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={(e) => { if (design === "guided" && section < 2) { e.preventDefault(); void advance() } else { void submit(e) } }}
+            onSubmit={form.handleSubmit(handleSubmit)}
             onKeyDown={(e) => {
               // Enter inside any text/number/date field would otherwise silently submit
               // the whole 21-field form via the Save button — require an explicit click.
               if (e.key === "Enter" && e.target instanceof HTMLInputElement) e.preventDefault()
             }}
-            className="invoice-design-form flex flex-col gap-4"
+            className="flex flex-col gap-4"
           >
-            {paged && <nav className="invoice-section-nav" aria-label={design === "guided" ? "Invoice steps" : "Invoice sections"}>
-              {["Invoice details", "Financials", "Review"].map((label, index) => (
-                <button type="button" key={label} aria-pressed={section === index} disabled={design === "guided" && index > section}
-                  onClick={() => setSection(index)}>
-                  {design === "guided" && <span>{index + 1}</span>}{label}
-                </button>
-              ))}
-            </nav>}
             {duplicateMatches.length > 0 && (
               <DuplicateDetectionWarning
                 matches={duplicateMatches}
@@ -386,11 +349,7 @@ export function InvoiceDrawer({
               />
             )}
 
-            <div className="invoice-design-body">
-            <div className="invoice-edit-sections">
-            <section className="invoice-form-section" hidden={paged && section !== 0}>
-            <h3>Invoice details</h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
               <FormField
                 control={form.control}
                 name="srNo"
@@ -553,10 +512,7 @@ export function InvoiceDrawer({
                 </FormItem>
               )}
             />
-            </section>
-            <section className="invoice-form-section" hidden={paged && section !== 1}>
-            <h3>Amounts &amp; tax</h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-3 gap-3">
               <FormField
                 control={form.control}
                 name="amountExclTax"
@@ -613,21 +569,15 @@ export function InvoiceDrawer({
                 )}
               />
             </div>
-            {design !== "summary" && financialSummary}
-            </section>
-            {paged && section === 2 && <section className="invoice-form-section invoice-review">
-              <h3>Review invoice</h3>
-              <dl>{Object.entries(form.getValues()).filter(([key]) => !financialFields.includes(key as keyof FormInput)).map(([key, value]) => (
-                <div key={key}><dt>{key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase())}</dt><dd>{String(value ?? "") || "—"}</dd></div>
-              ))}</dl>
-              {financialSummary}
-            </section>}
-            </div>
-            {design === "summary" && financialSummary}
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+              <div>
+                Tax (USD): <b>{fmtMoney(tax)}</b>
+              </div>
+              <div>
+                Amount Incl. Tax (USD): <b>{fmtMoney(total)}</b>
+              </div>
             </div>
             <DialogFooter>
-              {design === "guided" && section > 0 && <Button type="button" variant="outline" onClick={() => setSection((v) => v - 1)}>Back</Button>}
-              {design === "guided" && section < 2 && <Button type="button" onClick={() => void advance()}>Continue</Button>}
               {!readOnly ? (
                 <>
                   {/* type="button" + explicit handleSubmit, not type="submit" — the Edit and
@@ -645,7 +595,9 @@ export function InvoiceDrawer({
                     />
                   )}
                   <div className="flex-1" />
-                  {(design !== "guided" || section === 2) && <Button type="button" onClick={() => void submit()}>Save Entry</Button>}
+                  <Button type="button" onClick={form.handleSubmit(handleSubmit)}>
+                    Save Entry
+                  </Button>
                   <DialogClose asChild>
                     <Button type="button" variant="outline">
                       Cancel
