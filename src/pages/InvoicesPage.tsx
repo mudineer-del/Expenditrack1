@@ -1,4 +1,4 @@
-import { CheckCircle2, Copy, Download, List, ListOrdered, Plus, Trash2, Upload, Wallet } from "lucide-react"
+import { CheckCircle2, Copy, Download, List, ListOrdered, Merge, Plus, Trash2, Upload, Wallet } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -24,6 +24,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { BatchStatusUpdateDialog } from "@/components/invoices/BatchStatusUpdateDialog"
 import { DuplicateFinderDialog } from "@/components/invoices/DuplicateFinderDialog"
 import { ImportDialog } from "@/components/invoices/ImportDialog"
+import { BulkDeleteDialog } from "@/components/invoices/BulkDeleteDialog"
+import { DuplicateMergerDialog } from "@/components/invoices/DuplicateMergerDialog"
 import { InvoiceDetailSheet } from "@/components/invoices/InvoiceDetailSheet"
 import { InvoiceDrawer } from "@/components/invoices/InvoiceDrawer"
 import { InvoiceFiltersBar } from "@/components/invoices/InvoiceFiltersBar"
@@ -82,6 +84,8 @@ export default function InvoicesPage() {
   const [batchStatusUpdateOpen, setBatchStatusUpdateOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [dupFinderOpen, setDupFinderOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [mergerOpen, setMergerOpen] = useState(false)
   const [renumberConfirm, setRenumberConfirm] = useState(false)
   const [dupWarning, setDupWarning] = useState<{ record: Invoice; existing: Invoice } | null>(null)
 
@@ -279,6 +283,66 @@ export default function InvoicesPage() {
     })
   }
 
+  async function handleBulkDelete(ids: string[]) {
+    const toDelete = allInvoices.filter((inv) => ids.includes(inv.id))
+    return new Promise<void>((resolve, reject) => {
+      deleteInvoices.mutate(toDelete, {
+        onSuccess: () => {
+          toast.success(`Deleted ${ids.length} invoice(s).`)
+          setBulkDeleteOpen(false)
+          resolve()
+        },
+        onError: (e: any) => {
+          toast.error(errorMessage(e, "Delete failed."))
+          reject(e)
+        },
+      })
+    })
+  }
+
+  async function handleMergeDuplicates(primary: Invoice, secondaryId: string) {
+    const secondary = allInvoices.find((inv) => inv.id === secondaryId)
+    if (!secondary) return
+
+    return new Promise<void>((resolve, reject) => {
+      bulkUpsert.mutate([primary], {
+        onSuccess: () => {
+          deleteInvoices.mutate([secondary], {
+            onSuccess: () => {
+              toast.success("Duplicates merged successfully.")
+              setMergerOpen(false)
+              resolve()
+            },
+            onError: (e: any) => {
+              toast.error(errorMessage(e, "Merge failed."))
+              reject(e)
+            },
+          })
+        },
+        onError: (e: any) => {
+          toast.error(errorMessage(e, "Merge failed."))
+          reject(e)
+        },
+      })
+    })
+  }
+
+  async function handleDeleteSingleInvoice(id: string) {
+    const invoice = allInvoices.find((inv) => inv.id === id)
+    if (!invoice) return
+
+    return new Promise<void>((resolve, reject) => {
+      deleteInvoices.mutate([invoice], {
+        onSuccess: () => {
+          resolve()
+        },
+        onError: (e: any) => {
+          reject(e)
+        },
+      })
+    })
+  }
+
   if (invoicesQuery.isLoading) {
     return (
       <div className="grid grid-cols-1 gap-4">
@@ -389,6 +453,23 @@ export default function InvoicesPage() {
               onClick={() => setDupFinderOpen(true)}
             >
               <Copy /> Find Duplicates
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              title="Detect and merge duplicate invoices automatically"
+              onClick={() => setMergerOpen(true)}
+            >
+              <Merge /> Merge Duplicates
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!can("edit")}
+              title={can("edit") ? "Delete unwanted invoices in bulk" : "Only Editors and Admins can delete"}
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 /> Bulk Delete
             </Button>
             {srNoRenumberPlan.length > 0 && can("edit") && (
               <Button
@@ -521,6 +602,21 @@ export default function InvoicesPage() {
       />
 
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} existingInvoices={allInvoices} onImport={handleImport} />
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        invoices={allInvoices}
+        onDelete={handleBulkDelete}
+      />
+
+      <DuplicateMergerDialog
+        open={mergerOpen}
+        onOpenChange={setMergerOpen}
+        invoices={allInvoices}
+        onMerge={handleMergeDuplicates}
+        onDelete={handleDeleteSingleInvoice}
+      />
 
       <BatchStatusUpdateDialog
         open={batchStatusUpdateOpen}
