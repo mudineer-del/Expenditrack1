@@ -1,4 +1,3 @@
-import "./app-shell-layout.css"
 import { Home, Layers, LogOut, Search, Settings, User, HelpCircle } from "lucide-react"
 import { useEffect, type CSSProperties } from "react"
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
