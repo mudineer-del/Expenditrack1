@@ -6,8 +6,6 @@ import {
   Download,
   History,
   LayoutGrid,
-  PanelLeftClose,
-  PanelLeftOpen,
   List,
   Settings,
   Users,
