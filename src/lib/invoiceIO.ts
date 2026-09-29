@@ -458,7 +458,8 @@ export function findExistingForImport(
     const similarity = vendorSimilarity(vendor, exVendor)
     if (similarity < 0.9) continue
 
-    if (recAmt && !amountSimilar(recAmt, existing.amountExclTax)) continue
+    const existingAmt = existing.amountExclTax === "" ? undefined : existing.amountExclTax
+    if (recAmt && !amountSimilar(recAmt, existingAmt)) continue
 
     return existing
   }

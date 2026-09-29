@@ -265,7 +265,7 @@ export default function InvoicesPage() {
     })
   }
 
-  async function handleBatchStatusUpdate(status: string) {
+  async function handleBatchStatusUpdate(status: string): Promise<void> {
     const selectedInvoices = invoices.filter((r) => selected.has(r.id))
     const updates = selectedInvoices.map((inv) => ({ ...inv, status }))
 
@@ -274,7 +274,7 @@ export default function InvoicesPage() {
         onSuccess: () => {
           setSelected(new Set())
           setBatchStatusUpdateOpen(false)
-          resolve(null)
+          resolve()
         },
         onError: (e) => {
           reject(e)
