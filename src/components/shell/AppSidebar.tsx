@@ -6,8 +6,6 @@ import {
   Download,
   History,
   LayoutGrid,
-  PanelLeftClose,
-  PanelLeftOpen,
   List,
   Settings,
   Users,
@@ -142,9 +140,8 @@ export function AppSidebar() {
   const { user, isAdmin } = useAuth()
   const location = useLocation()
   const { setOpen } = useSidebar()
-  const design = useSidebarPrefsStore((s) => s.design)
-  const showIconBar = useSidebarPrefsStore((s) => s.showIconBar)
-  const setShowIconBar = useSidebarPrefsStore((s) => s.setShowIconBar)
+  const design = "dual" as const
+  const showIconBar = true
   const railVisible = design === "dual" && showIconBar
   const [wellCostExpanded, setWellCostExpanded] = useState(location.pathname.startsWith("/well-cost"))
   const sidebarTitle = useLabelsStore((s) => s.sidebarTitle)
@@ -233,7 +230,6 @@ export function AppSidebar() {
             <p className="app-sidebar-brand-title truncate text-[0.9375rem] font-extrabold tracking-tight">{sidebarTitle}</p>
             <p className="app-sidebar-subtitle truncate text-[0.6875rem]">{sidebarSubtitle}</p>
           </div>
-          {design === "dual" && <button type="button" className="ml-auto shrink-0 rounded-md p-1.5 hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden" aria-label={showIconBar ? "Hide icon bar" : "Show icon bar"} aria-pressed={showIconBar} title={showIconBar ? "Hide icon bar" : "Show icon bar"} onClick={() => { setOpen(true); setShowIconBar(!showIconBar) }}>{showIconBar ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}</button>}
         </div>
       </SidebarHeader>
       <SidebarContent>

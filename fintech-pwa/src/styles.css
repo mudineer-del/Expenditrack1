@@ -1,0 +1,437 @@
+:root {
+  --primary: #0d6b3f;
+  --primary-light: #e5f3ec;
+  --background: #f6f8f7;
+  --card: #ffffff;
+  --border: #e2e8e4;
+  --text: #14201a;
+  --muted: #6b7c74;
+  --danger: #c0392b;
+  --warning: #b8860b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--background);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+input {
+  font-family: inherit;
+}
+
+/* ---------- Login ---------- */
+
+.login-screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(160deg, var(--primary) 0%, #0a4f2f 100%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.login-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.login-title {
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.login-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 15px;
+  color: var(--text);
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.login-error {
+  font-size: 13px;
+  color: var(--danger);
+  background: #fdecea;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---------- App shell ---------- */
+
+.app-loading {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+}
+
+.app-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--primary);
+  color: white;
+}
+
+.app-header-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.icon-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  cursor: pointer;
+}
+
+.app-main {
+  flex: 1;
+  padding-bottom: 72px;
+}
+
+.view-pad {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading-banner,
+.error-banner {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.loading-banner {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.error-banner {
+  background: #fdecea;
+  color: var(--danger);
+}
+
+/* ---------- Nav bar ---------- */
+
+.nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  z-index: 10;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 6px 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.nav-item-active {
+  color: var(--primary);
+}
+
+/* ---------- KPI tiles ---------- */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.kpi-tile {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.kpi-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+/* ---------- Charts ---------- */
+
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ---------- Search + lists ---------- */
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--muted);
+}
+
+.search-bar input {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.search-bar input:focus {
+  outline: none;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.list-row-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.list-row-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.list-row-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.list-row-amount {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  padding: 32px 0;
+  font-size: 14px;
+}
+
+/* ---------- Badges ---------- */
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.badge-cleared {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.badge-under {
+  background: #fdf3d9;
+  color: var(--warning);
+}
+
+.badge-returned {
+  background: #fdecea;
+  color: var(--danger);
+}
+
+.badge-other {
+  background: #eef1ef;
+  color: var(--muted);
+}
+
+/* ---------- Report tables ---------- */
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.report-table td {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-table tr:last-child td {
+  border-bottom: none;
+}
+
+.report-table-count {
+  color: var(--muted);
+  text-align: right;
+  width: 50px;
+}
+
+.report-table-amount {
+  text-align: right;
+  font-weight: 600;
+  white-space: nowrap;
+}

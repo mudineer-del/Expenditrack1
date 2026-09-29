@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw, Upload, ChevronDown, ChevronRight } from "lucide-react"
+import { AlertTriangle, RefreshCw, Upload, ChevronRight } from "lucide-react"
 import { useMemo, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   collapseImportedDuplicates,
   finalizeImportedRecord,
@@ -86,6 +85,7 @@ export function ImportDialog({
   const [headerMap, setHeaderMap] = useState<ImportHeaderMapping[]>([])
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
+  const [showUpdates, setShowUpdates] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const existingByKey = useMemo(() => {
@@ -261,26 +261,31 @@ export function ImportDialog({
             </div>
 
             {plan.updates.length > 0 && (
-              <Collapsible>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" size="sm" className="justify-self-start gap-2">
-                    <ChevronRight className="size-4" />
-                    View {plan.updates.length} invoice{plan.updates.length !== 1 ? "s" : ""} that will be updated
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2 space-y-2 rounded-lg border bg-muted/20 p-3">
-                  {plan.updates.map((u, idx) => (
-                    <div key={idx} className="grid gap-1 rounded bg-background/50 p-2 text-xs">
-                      <div className="font-semibold">
-                        {u.invoice.vendor} — {u.invoice.invoiceNo}
+              <div className="grid gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-self-start gap-2"
+                  onClick={() => setShowUpdates(!showUpdates)}
+                >
+                  <ChevronRight className={`size-4 transition-transform ${showUpdates ? "rotate-90" : ""}`} />
+                  View {plan.updates.length} invoice{plan.updates.length !== 1 ? "s" : ""} that will be updated
+                </Button>
+                {showUpdates && (
+                  <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+                    {plan.updates.map((u, idx) => (
+                      <div key={idx} className="grid gap-1 rounded bg-background/50 p-2 text-xs">
+                        <div className="font-semibold">
+                          {u.invoice.vendor} — {u.invoice.invoiceNo}
+                        </div>
+                        <div className="text-muted-foreground">
+                          Will add/update: {u.filledFields.join(", ")}
+                        </div>
                       </div>
-                      <div className="text-muted-foreground">
-                        Will add/update: {u.filledFields.join(", ")}
-                      </div>
-                    </div>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
 
             {headerMap.length > 0 && <HeaderMapTable headerMap={headerMap} />}
