@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { useReferenceLists } from "@/lib/referenceLists"
 import type { Invoice } from "@/types/invoice"
 
 export function BatchStatusUpdateDialog({
@@ -28,7 +27,6 @@ export function BatchStatusUpdateDialog({
 }) {
   const [selectedStatus, setSelectedStatus] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
-  const { ref: refLists } = useReferenceLists()
 
   useEffect(() => {
     if (open) {

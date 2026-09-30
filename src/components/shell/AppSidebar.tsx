@@ -1,3 +1,5 @@
+import "./sidebar-dual.css"
+import "./sidebar-stacked.css"
 import { useState } from "react"
 import {
   BarChart3,
@@ -6,6 +8,8 @@ import {
   Download,
   History,
   LayoutGrid,
+  PanelLeftClose,
+  PanelLeftOpen,
   List,
   Settings,
   Users,
@@ -140,7 +144,10 @@ export function AppSidebar() {
   const { user, isAdmin } = useAuth()
   const location = useLocation()
   const { setOpen } = useSidebar()
-  const railVisible = false
+  const design = useSidebarPrefsStore((s) => s.design)
+  const showIconBar = useSidebarPrefsStore((s) => s.showIconBar)
+  const setShowIconBar = useSidebarPrefsStore((s) => s.setShowIconBar)
+  const railVisible = design === "dual" && showIconBar
   const [wellCostExpanded, setWellCostExpanded] = useState(location.pathname.startsWith("/well-cost"))
   const sidebarTitle = useLabelsStore((s) => s.sidebarTitle)
   const sidebarSubtitle = useLabelsStore((s) => s.sidebarSubtitle)
@@ -191,7 +198,7 @@ export function AppSidebar() {
   }))
 
   return (
-    <Sidebar collapsible="icon" className="app-sidebar border-r-0" data-density={density} data-icon-bar={railVisible}>
+    <Sidebar collapsible="icon" className={`app-sidebar ${design === "dual" ? "app-sidebar-dual" : design === "stacked" ? "app-sidebar-stacked" : ""} border-r-0`} data-density={density} data-icon-bar={railVisible}>
       {railVisible && <nav className="dual-icon-rail" aria-label="Quick navigation">
         <NavLink to="/settings" className="dual-rail-brand" aria-label="Your profile" title={user?.name || "Your profile"}><Avatar className="size-9">{user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}<AvatarFallback>{user?.initials || "?"}</AvatarFallback></Avatar></NavLink>
         <div className="dual-rail-scroll">
@@ -219,7 +226,7 @@ export function AppSidebar() {
           <Avatar className="size-8"><AvatarFallback>{user?.initials || "?"}</AvatarFallback></Avatar>
         </NavLink>
       </nav>}
-      <div className="contents">
+      <div className={design === "dual" ? "dual-navigation-panel" : "contents"}>
 
       <SidebarHeader className="app-sidebar-header">
         <div className="flex items-center gap-2.5 px-2 py-2">
@@ -228,6 +235,7 @@ export function AppSidebar() {
             <p className="app-sidebar-brand-title truncate text-[0.9375rem] font-extrabold tracking-tight">{sidebarTitle}</p>
             <p className="app-sidebar-subtitle truncate text-[0.6875rem]">{sidebarSubtitle}</p>
           </div>
+          {design === "dual" && <button type="button" className="ml-auto shrink-0 rounded-md p-1.5 hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden" aria-label={showIconBar ? "Hide icon bar" : "Show icon bar"} aria-pressed={showIconBar} title={showIconBar ? "Hide icon bar" : "Show icon bar"} onClick={() => { setOpen(true); setShowIconBar(!showIconBar) }}>{showIconBar ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}</button>}
         </div>
       </SidebarHeader>
       <SidebarContent>

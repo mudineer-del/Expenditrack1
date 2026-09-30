@@ -1,0 +1,20 @@
+/* One viewport-sized shell: browser zoom resizes both columns together.
+   Keep native browser zoom; do not intercept Ctrl+wheel or scale either pane. */
+.app-shell-layout[data-slot="sidebar-wrapper"] {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.app-shell-layout > [data-slot="sidebar-inset"] {
+  width: 0;
+  min-width: 0;
+  min-height: 0;
+}
+.app-shell-layout > [data-slot="sidebar"] { flex-shrink: 0; height: 100%; }
+.app-shell-layout [data-slot="sidebar-gap"] { display: none; }
+.app-shell-layout [data-slot="sidebar-container"] {
+  position: relative;
+  inset: auto;
+  height: 100%;
+}
+.app-shell-layout #main-content { min-height: 0; max-height: none; }

@@ -1,3 +1,5 @@
+import "./app-shell-layout.css"
+import { useSidebarPrefsStore } from "@/store/useSidebarPrefsStore"
 import { Home, Layers, LogOut, Search, Settings, User, HelpCircle } from "lucide-react"
 import { useEffect, type CSSProperties } from "react"
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
@@ -62,6 +64,10 @@ function isDeptScoped(pathname: string): boolean {
 }
 
 export function AppShell() {
+  const sidebarDesign = useSidebarPrefsStore((s) => s.design)
+  const showIconBar = useSidebarPrefsStore((s) => s.showIconBar)
+  const sidebarWidth = sidebarDesign === "original" ? "16rem" : sidebarDesign === "dual" && showIconBar ? "23rem" : "19rem"
+  const iconWidth = sidebarDesign === "original" ? "3rem" : sidebarDesign === "dual" && showIconBar ? "5rem" : "4.5rem"
   const location = useLocation()
   const navigate = useNavigate()
   const { setTheme, resolvedTheme } = useTheme()
@@ -89,7 +95,7 @@ export function AppShell() {
 
   return (
     <>
-      <SidebarProvider className="app-shell-layout" style={{ "--sidebar-width": "16rem", "--sidebar-width-icon": "3rem" } as CSSProperties}>
+      <SidebarProvider className="app-shell-layout" style={{ "--sidebar-width": sidebarWidth, "--sidebar-width-icon": iconWidth } as CSSProperties}>
         <a href="#main-content" className="sr-only z-50 rounded-md bg-background p-3 text-foreground shadow-md focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to content</a>
         <AppSidebar />
         <SidebarInset className="min-h-0 min-w-0">

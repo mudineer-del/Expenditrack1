@@ -1,3 +1,4 @@
+import { DIALOG_DESIGNS, useDialogPrefsStore } from "@/store/useDialogPrefsStore"
 import { ArrowLeftRight, Building2, Check, LockKeyhole, PanelLeft, Pencil, Pin, PinOff, Plus, RotateCcw, ShieldAlert, Star, Trash2, X } from "lucide-react"
 import { lazy, Suspense, useState } from "react"
 import { toast } from "sonner"
@@ -29,7 +30,7 @@ import { useReferenceLists } from "@/lib/referenceLists"
 import { cn } from "@/lib/utils"
 import { useLabelsStore, type AppLabels } from "@/store/useLabelsStore"
 import { useProminentContractsStore } from "@/store/useProminentContractsStore"
-import { useSidebarPrefsStore, type SidebarActiveColorMode, type SidebarDensity, type SidebarIconStyle } from "@/store/useSidebarPrefsStore"
+import { useSidebarPrefsStore, type SidebarDesign, type SidebarActiveColorMode, type SidebarDensity, type SidebarIconStyle } from "@/store/useSidebarPrefsStore"
 import { useTickerStore, type TickerStyle } from "@/store/useTickerStore"
 
 const IconPickerDialog = lazy(() => import("@/components/settings/IconPickerDialog").then((m) => ({ default: m.IconPickerDialog })))
@@ -56,6 +57,8 @@ const FIELDS: { key: keyof AppLabels; label: string; hint: string }[] = [
  */
 export function LabelsTab() {
   const labels = useLabelsStore()
+  const dialogDesign = useDialogPrefsStore((s) => s.design)
+  const setDialogDesign = useDialogPrefsStore((s) => s.setDesign)
 
   return (
     <div className="grid gap-4">
@@ -80,6 +83,11 @@ export function LabelsTab() {
         </div>
       </div>
 
+      <section className="rounded-lg border bg-card p-4">
+        <h3 className="mb-1 text-sm font-semibold">Invoice dialog design</h3>
+        <p className="mb-4 text-xs text-muted-foreground">Choose how invoice entry, editing and viewing appear. Saved on this device; uses your selected color theme.</p>
+        <PrefOptionRow label="Dialog layout" value={dialogDesign} onChange={setDialogDesign} options={[...DIALOG_DESIGNS]} />
+      </section>
       <SidebarCustomizationSection />
       <DepartmentManagementSection />
       <SpendingTickerSection />
@@ -110,6 +118,7 @@ function PrefOptionRow<T extends string>({
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
+            aria-pressed={value === o.value}
             className={cn(
               "rounded-lg border p-3 text-left transition-colors",
               value === o.value ? "border-primary bg-primary/5" : "hover:bg-muted"
@@ -131,6 +140,10 @@ function PrefOptionRow<T extends string>({
  *  nav — Dashboard and Settings are excluded since AppSidebar always keeps them shown
  *  (the former as a landing spot, the latter as the only way back to this panel). */
 function SidebarCustomizationSection() {
+  const design = useSidebarPrefsStore((s) => s.design)
+  const setDesign = useSidebarPrefsStore((s) => s.setDesign)
+  const showIconBar = useSidebarPrefsStore((s) => s.showIconBar)
+  const setShowIconBar = useSidebarPrefsStore((s) => s.setShowIconBar)
   const iconStyle = useSidebarPrefsStore((s) => s.iconStyle)
   const setIconStyle = useSidebarPrefsStore((s) => s.setIconStyle)
   const activeColorMode = useSidebarPrefsStore((s) => s.activeColorMode)
@@ -165,6 +178,18 @@ function SidebarCustomizationSection() {
       </div>
 
       <div className="grid gap-4">
+        <PrefOptionRow<SidebarDesign>
+          label="Sidebar design" value={design} onChange={setDesign}
+          options={[
+            { value: "original", label: "Original sidebar", hint: "The project's earlier single-panel navigation." },
+            { value: "stacked", label: "03 · Stacked cards", hint: "Raised cards for each navigation group." },
+            { value: "dual", label: "05 · Dual navigation", hint: "An icon rail beside a raised navigation panel." },
+          ]}
+        />
+        {design === "dual" && <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+          <input type="checkbox" className="size-4 accent-primary" checked={showIconBar} onChange={(e) => setShowIconBar(e.target.checked)} />
+          Show icon bar
+        </label>}
         <PrefOptionRow<SidebarIconStyle>
           label="Icon style"
           value={iconStyle}

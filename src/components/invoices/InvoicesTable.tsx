@@ -5,7 +5,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { Copy, Eye, Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ContractorLogo } from "@/components/shared/ContractorLogo"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"

@@ -3,6 +3,7 @@ import { storeGet, storeSet } from "@/lib/localCache"
 
 export type SidebarIconStyle = "chip" | "flat"
 export type SidebarActiveColorMode = "theme" | "perItem"
+export type SidebarDesign = "original" | "stacked" | "dual"
 export type SidebarDensity = "comfortable" | "compact"
 
 /** A chosen icon for one sidebar slot — either a lucide icon by its (kebab-case) name,
@@ -13,6 +14,8 @@ export type IconRef = { kind: "lucide"; name: string } | { kind: "3d"; id: strin
 const PREFS_KEY = "sidebarPrefs"
 
 interface SidebarPrefs {
+  design: SidebarDesign
+  showIconBar: boolean
   iconStyle: SidebarIconStyle
   activeColorMode: SidebarActiveColorMode
   density: SidebarDensity
@@ -26,6 +29,8 @@ interface SidebarPrefs {
 }
 
 const DEFAULT_PREFS: SidebarPrefs = {
+  design: "dual",
+  showIconBar: true,
   iconStyle: "chip",
   activeColorMode: "theme",
   density: "comfortable",
@@ -34,6 +39,8 @@ const DEFAULT_PREFS: SidebarPrefs = {
 }
 
 interface SidebarPrefsState extends SidebarPrefs {
+  setDesign: (design: SidebarDesign) => void
+  setShowIconBar: (showIconBar: boolean) => void
   setIconStyle: (v: SidebarIconStyle) => void
   setActiveColorMode: (v: SidebarActiveColorMode) => void
   setDensity: (v: SidebarDensity) => void
@@ -49,8 +56,8 @@ function loadPrefs(): SidebarPrefs {
 }
 
 function persist(state: SidebarPrefs): void {
-  const { iconStyle, activeColorMode, density, hiddenItems, iconOverrides } = state
-  storeSet(PREFS_KEY, { iconStyle, activeColorMode, density, hiddenItems, iconOverrides })
+  const { design, showIconBar, iconStyle, activeColorMode, density, hiddenItems, iconOverrides } = state
+  storeSet(PREFS_KEY, { design, showIconBar, iconStyle, activeColorMode, density, hiddenItems, iconOverrides })
 }
 
 /**
@@ -60,6 +67,8 @@ function persist(state: SidebarPrefs): void {
  */
 export const useSidebarPrefsStore = create<SidebarPrefsState>((set, get) => ({
   ...loadPrefs(),
+  setDesign: (design) => { set({ design }); persist(get()) },
+  setShowIconBar: (showIconBar) => { set({ showIconBar }); persist(get()) },
 
   setIconStyle: (iconStyle) => {
     set({ iconStyle })
