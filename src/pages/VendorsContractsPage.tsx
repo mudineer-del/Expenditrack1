@@ -16,6 +16,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet"
 import { ContractDrawer } from "@/components/contracts/ContractDrawer"
 import { ContractRow } from "@/components/contracts/ContractRow"
@@ -57,6 +64,7 @@ export default function VendorsContractsPage() {
   const [viewingVendor, setViewingVendor] = useState<string | null>(null)
 
   const activeDept = useAppStore((s) => s.activeDept)
+  const setActiveDept = useAppStore((s) => s.setActiveDept)
   const allInvoices = invoicesQuery.data ?? []
   const allContracts = contractsQuery.data ?? []
   // Scoped to the sidebar/dashboard's active department, same pattern as the Dashboard.
@@ -214,6 +222,19 @@ export default function VendorsContractsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
           <h3 className="text-base font-bold md:text-sm md:font-semibold">Contracts</h3>
           <div className="flex flex-1 items-center justify-end gap-2">
+            <Select value={activeDept} onValueChange={(value) => setActiveDept(value)}>
+              <SelectTrigger size="sm" className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Departments</SelectItem>
+                {refLists.departments.map((dept) => (
+                  <SelectItem key={dept} value={dept}>
+                    {dept}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="relative w-full max-w-xs">
               <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
