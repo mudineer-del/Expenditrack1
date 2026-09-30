@@ -1,4 +1,4 @@
-import { Building2, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { Building2, Layers, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -223,14 +223,29 @@ export default function VendorsContractsPage() {
           <h3 className="text-base font-bold md:text-sm md:font-semibold">Contracts</h3>
           <div className="flex flex-1 items-center justify-end gap-2">
             <Select value={activeDept} onValueChange={(value) => setActiveDept(value)}>
-              <SelectTrigger size="sm" className="w-48">
-                <SelectValue />
+              <SelectTrigger className="flex items-center gap-2.5 border border-input rounded-lg px-3 py-2 bg-transparent hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-2 min-w-0">
+                  {activeDept === "ALL" ? (
+                    <Layers className="size-5 shrink-0 text-blue-500" />
+                  ) : (
+                    <Building2 className="size-5 shrink-0 text-amber-600" />
+                  )}
+                  <SelectValue className="text-sm font-medium" />
+                </div>
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Departments</SelectItem>
+              <SelectContent className="min-w-56">
+                <SelectItem value="ALL" className="flex items-center gap-3 py-2.5">
+                  <div className="flex items-center gap-3 w-full">
+                    <Layers className="size-5 text-blue-500 shrink-0" />
+                    <span className="font-medium">All Departments</span>
+                  </div>
+                </SelectItem>
                 {refLists.departments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>
-                    {dept}
+                  <SelectItem key={dept} value={dept} className="flex items-center gap-3 py-2.5">
+                    <div className="flex items-center gap-3 w-full">
+                      <Building2 className="size-5 shrink-0 text-amber-600" />
+                      <span className="font-medium">{dept}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
