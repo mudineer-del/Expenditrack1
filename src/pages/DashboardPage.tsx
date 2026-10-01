@@ -163,6 +163,9 @@ export default function DashboardPage() {
   const invoices = invoicesQuery.data ?? []
   const contracts = contractsQuery.data ?? []
 
+  const [contractorDeckZoom, setContractorDeckZoom] = useState(1)
+  const contractorDeckRef = useRef<HTMLDivElement>(null)
+
   const notifiedThisSession = useRef(false)
   useEffect(() => {
     if (notifiedThisSession.current) return
@@ -173,6 +176,24 @@ export default function DashboardPage() {
     void checkContractNotifications(cfg, prefs, contractsQuery.data, invoicesQuery.data)
     void maybeSendWeeklyDigest(cfg, prefs, invoicesQuery.data)
   }, [invoicesQuery.data, contractsQuery.data])
+
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return
+      e.preventDefault()
+      setContractorDeckZoom((prev) => {
+        const delta = e.deltaY > 0 ? 0.9 : 1.1
+        const newZoom = Math.min(Math.max(prev * delta, 0.5), 2)
+        return newZoom
+      })
+    }
+
+    const container = contractorDeckRef.current
+    if (!container) return
+
+    container.addEventListener("wheel", handleWheel, { passive: false })
+    return () => container.removeEventListener("wheel", handleWheel)
+  }, [])
 
   // Department scoping happens first (the "universal dashboard" tab strip), contractor
   // scoping second (the existing pills) — both client-side filters over the same
@@ -522,12 +543,19 @@ export default function DashboardPage() {
             <h3 className="flex items-center gap-2 text-base font-bold md:text-base md:font-semibold">
               <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
               Contractor Expenditure Overview
+              <span className="ml-auto text-xs font-normal text-muted-foreground">
+                (Ctrl + scroll to zoom)
+              </span>
             </h3>
             <Button size="sm" variant="ghost" asChild>
               <Link to="/vendors">Manage contracts</Link>
             </Button>
           </div>
-          <div className="contractor-deck grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+          <div
+            ref={contractorDeckRef}
+            className="contractor-deck grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-5 transition-transform duration-200 origin-top-left"
+            style={{ transform: `scale(${contractorDeckZoom})` }}
+          >
             {dataVendors.map((v, contractorIndex) => {
               const vRows = deptInvoices.filter((r) => r.vendor === v)
               const total = vRows.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0)
