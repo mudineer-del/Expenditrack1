@@ -346,7 +346,8 @@
     .contractor-deck:hover .contractor-card--overflow,
     .contractor-deck:focus-within .contractor-card--overflow {
         min-height: 196px !important;
-        max-height: 230px;
+        /* Let labels, amounts and both bottom metrics determine the expanded height. */
+        max-height: none;
         padding-top: 1rem;
         padding-bottom: 1rem;
         border-width: var(--ogdcl-border-width, 1px);

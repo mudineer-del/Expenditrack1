@@ -1,0 +1,15 @@
+.invoice-detail-dialog { grid-template-columns: minmax(0, 1fr); }
+.invoice-detail-dialog > * { min-width: 0; }
+.invoice-detail-body { container-type: inline-size; overflow-wrap: anywhere; }
+.invoice-detail-heading { overflow-wrap: anywhere; }
+.invoice-detail-metrics > * { min-width: 0; }
+.invoice-detail-charts { grid-template-columns: minmax(0, 1fr); }
+.invoice-detail-charts .chart-card-titlebar > :first-child { max-width: 100%; }
+.invoice-detail-charts .chart-card-titlebar > :last-child,
+.invoice-detail-charts .chart-card-titlebar > :last-child > div { flex-wrap: wrap; }
+@container (min-width: 38rem) {
+  .invoice-detail-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@container (min-width: 52rem) {
+  .invoice-detail-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -84,8 +84,8 @@ export function LabelsTab() {
       </div>
 
       <section className="rounded-lg border bg-card p-4">
-        <h3 className="mb-1 text-sm font-semibold">Invoice dialog design</h3>
-        <p className="mb-4 text-xs text-muted-foreground">Choose how invoice entry, editing and viewing appear. Saved on this device; uses your selected color theme.</p>
+        <h3 className="mb-1 text-sm font-semibold">App dialog design</h3>
+        <p className="mb-4 text-xs text-muted-foreground">Apply one design to forms, previews and confirmation dialogs across the app. Invoice entry also includes its specialized summary, steps or tabs. Saved on this device; uses your selected color theme.</p>
         <PrefOptionRow label="Dialog layout" value={dialogDesign} onChange={setDialogDesign} options={[...DIALOG_DESIGNS]} />
       </section>
       <SidebarCustomizationSection />

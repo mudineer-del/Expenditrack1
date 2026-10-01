@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { useDialogPrefsStore } from "@/store/useDialogPrefsStore"
+import "./dialog-designs.css"
 import { useEffect, useRef, useState } from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
@@ -168,6 +170,7 @@ function DialogContent({
   maximized?: boolean
   onMaximizedChange?: (v: boolean) => void
 }) {
+  const design = useDialogPrefsStore((s) => s.design)
   const contentRef = useRef<HTMLDivElement>(null)
   const floatingEnabled = maximizable && !maximized
   const { rect, resetRect, begin } = useFloatingDialog(contentRef, floatingEnabled)
@@ -206,6 +209,7 @@ function DialogContent({
       <DialogPrimitive.Content
         ref={contentRef}
         data-slot="dialog-content"
+        data-dialog-design={design}
         data-draggable={floatingEnabled || undefined}
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground shadow-2xl ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",

@@ -1,3 +1,4 @@
+import "./invoice-detail-layout.css"
 import { useState } from "react"
 import { CheckCircle2, Circle, PenSquare } from "lucide-react"
 import {
@@ -119,17 +120,17 @@ export function InvoiceDetailSheet({
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="max-h-[88vh] w-full overflow-x-hidden overflow-y-auto sm:max-w-3xl"
+          className="invoice-detail-dialog max-h-[88dvh] w-full overflow-x-hidden overflow-y-auto sm:max-w-5xl"
           maximizable
           maximized={maximized}
           onMaximizedChange={setMaximized}
         >
           <DialogHeader>
-            <div className="flex items-start gap-3">
+            <div className="invoice-detail-heading flex min-w-0 flex-wrap items-start gap-3">
               <ContractorLogo vendor={vendor} logo={contractorLogos[vendor]} color={color} size="lg" />
-              <div className="min-w-0">
-                <DialogTitle className="truncate">{invoice.invoiceNo || `Invoice #${invoice.srNo}`}</DialogTitle>
-                <DialogDescription className="truncate">
+              <div className="min-w-0 flex-1 basis-40">
+                <DialogTitle className="break-words">{invoice.invoiceNo || `Invoice #${invoice.srNo}`}</DialogTitle>
+                <DialogDescription className="break-words">
                   {vendor} · {invoice.contractNo || "No contract"} · {invoice.service || "Unspecified"}
                 </DialogDescription>
               </div>
@@ -137,8 +138,8 @@ export function InvoiceDetailSheet({
             </div>
           </DialogHeader>
 
-          <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3 text-sm sm:grid-cols-4">
+          <div className="invoice-detail-body grid min-w-0 gap-4">
+            <div className="invoice-detail-metrics grid min-w-0 grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
               <div>
                 <div className="text-xs text-muted-foreground">Amount incl. tax</div>
                 <div className="font-semibold tabular-nums" style={{ color }}>{fmtMoney(amount)}</div>
@@ -163,9 +164,9 @@ export function InvoiceDetailSheet({
 
             <div>
               <h4 className="mb-2 text-sm font-semibold">Timeline</h4>
-              <div className="flex items-center gap-2 rounded-lg border p-3">
-                {timeline.map((step, i) => (
-                  <div key={step.label} className="flex flex-1 items-center gap-2">
+              <div className="invoice-detail-timeline grid grid-cols-3 gap-2 rounded-lg border p-3">
+                {timeline.map((step) => (
+                  <div key={step.label} className="flex min-w-0 justify-center">
                     <div className="flex flex-col items-center gap-1 text-center">
                       {step.date ? (
                         <CheckCircle2 className="size-4 text-status-cleared" />
@@ -175,19 +176,15 @@ export function InvoiceDetailSheet({
                       <div className="text-[11px] font-medium">{step.label}</div>
                       <div className="text-[10px] text-muted-foreground">{step.date ? fmtDate(step.date) : "Pending"}</div>
                     </div>
-                    {i < timeline.length - 1 && <div className="h-px flex-1 bg-border" />}
+
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* dashboard-chart-grid (not a lg:/sm: breakpoint) reflows off this DIALOG's own
-                width, not the viewport's — a viewport breakpoint stays 2-column even when
-                this sheet is its normal ~48rem width on any reasonably wide monitor, which is
-                what let a chart's own content force it (and the dialog around it) wider than
-                the dialog's box instead of reflowing to one column. */}
+            {/* Chart columns follow the dialog body width, including resize and maximize. */}
             {rows.length > 1 && (!trendCfg.hidden || !serviceCfg.hidden) && (
-              <div className="dashboard-chart-grid gap-4">
+              <div className="invoice-detail-charts grid min-w-0 gap-4">
                 {!trendCfg.hidden && (
                 <ChartCard
                   id="vendorSheetTrend"

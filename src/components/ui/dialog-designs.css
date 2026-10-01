@@ -1,0 +1,75 @@
+/* Shared appearance only: each dialog retains its content, sizing and workflow.
+   Invoice entry supplies its own specialized layouts. */
+[data-dialog-design]:not(.invoice-design-dialog) {
+  --dialog-accent: var(--primary);
+  border: 1px solid var(--border);
+  box-shadow: 0 22px 65px -24px color-mix(in oklch, var(--foreground) 45%, transparent);
+}
+[data-dialog-design]:not(.invoice-design-dialog) :is([data-slot="dialog-header"], [data-slot="alert-dialog-header"]) {
+  border-radius: .7rem .7rem 0 0;
+}
+[data-dialog-design]:not(.invoice-design-dialog) [data-slot="dialog-header"] {
+  padding-right: 5rem;
+}
+[data-dialog-design="executive"]:not(.invoice-design-dialog) :is([data-slot="dialog-header"], [data-slot="alert-dialog-header"]) {
+  background: linear-gradient(120deg, var(--primary), color-mix(in oklch, var(--primary) 85%, black)) !important;
+  color: var(--primary-foreground);
+  border-bottom-color: var(--primary);
+}
+[data-dialog-design="executive"]:not(.invoice-design-dialog) [data-slot="alert-dialog-header"] {
+  margin: -1rem -1rem 0;
+  padding: 1.25rem;
+}
+[data-dialog-design="executive"]:not(.invoice-design-dialog) :is([data-slot="dialog-description"], [data-slot="alert-dialog-description"]) {
+  color: inherit;
+  opacity: .85;
+}
+[data-dialog-design="executive"]:not(.invoice-design-dialog) > .absolute [data-slot="dialog-close"] {
+  color: var(--primary-foreground);
+}
+[data-dialog-design="summary"]:not(.invoice-design-dialog) {
+  background: color-mix(in oklch, var(--primary) 5%, var(--popover));
+}
+[data-dialog-design="summary"]:not(.invoice-design-dialog) :is([data-slot="dialog-header"], [data-slot="alert-dialog-header"]) {
+  background: var(--card) !important;
+  border-left: 4px solid var(--primary);
+  border-bottom: 1px solid var(--border);
+  padding-left: 1rem;
+  box-shadow: none !important;
+}
+[data-dialog-design="guided"]:not(.invoice-design-dialog) {
+  border-top: 4px solid var(--primary);
+}
+[data-dialog-design="guided"]:not(.invoice-design-dialog) :is([data-slot="dialog-header"], [data-slot="alert-dialog-header"]) {
+  background: var(--popover) !important;
+  border-bottom: 2px solid color-mix(in oklch, var(--primary) 25%, var(--border));
+  box-shadow: none !important;
+  padding-bottom: 1rem;
+}
+[data-dialog-design="tabbed"]:not(.invoice-design-dialog) {
+  border-radius: .5rem;
+}
+[data-dialog-design="tabbed"]:not(.invoice-design-dialog) :is([data-slot="dialog-header"], [data-slot="alert-dialog-header"]) {
+  background: color-mix(in oklch, var(--primary) 12%, var(--card)) !important;
+  border-bottom: 2px solid var(--primary);
+  border-radius: .4rem .4rem 0 0;
+  box-shadow: none !important;
+  padding-top: .8rem;
+  padding-bottom: .8rem;
+}
+[data-dialog-design="cards"]:not(.invoice-design-dialog) {
+  background: var(--muted);
+  border-radius: 1.25rem;
+  box-shadow: inset 0 1px 0 color-mix(in oklch, white 35%, transparent), 0 24px 60px -20px color-mix(in oklch, var(--foreground) 40%, transparent);
+}
+[data-dialog-design="cards"]:not(.invoice-design-dialog) :is([data-slot="dialog-header"], [data-slot="alert-dialog-header"]) {
+  background: var(--card) !important;
+  border-bottom: 3px solid color-mix(in oklch, var(--primary) 55%, var(--card));
+  border-radius: 1rem 1rem .65rem .65rem;
+  box-shadow: 0 5px 12px -8px var(--foreground) !important;
+  padding-bottom: 1rem;
+}
+[data-dialog-design="cards"]:not(.invoice-design-dialog) :is([data-slot="dialog-footer"], [data-slot="alert-dialog-footer"]) {
+  background: var(--card);
+  border-radius: .65rem .65rem 1rem 1rem;
+}
