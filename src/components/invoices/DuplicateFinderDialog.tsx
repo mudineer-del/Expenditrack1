@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react"
-import { Ban, CheckCircle2, Eye, Trash2 } from "lucide-react"
+import { Ban, CheckCircle2, Eye, Search, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -31,9 +32,18 @@ export function DuplicateFinderDialog({
   onDelete: (inv: Invoice) => void
 }) {
   const [ignoredIds, setIgnoredIds] = useState<Set<string>>(() => loadIgnoredDuplicateIds())
+  const [searchTerm, setSearchTerm] = useState("")
 
   const visibleInvoices = useMemo(() => invoices.filter((inv) => !ignoredIds.has(inv.id)), [invoices, ignoredIds])
   const groups = useMemo(() => findDuplicateGroups(visibleInvoices), [visibleInvoices])
+  const filteredGroups = useMemo(() => {
+    if (!searchTerm.trim()) return groups
+    const q = searchTerm.toLowerCase()
+    return groups.filter((g) =>
+      (g.rows[0].vendor || "").toLowerCase().includes(q) ||
+      (g.rows[0].invoiceNo || "").toLowerCase().includes(q)
+    )
+  }, [groups, searchTerm])
   const totalRows = groups.reduce((s, g) => s + g.rows.length, 0)
   const exactCount = groups.filter((g) => g.exact).length
 
@@ -63,7 +73,18 @@ export function DuplicateFinderDialog({
 
         {groups.length ? (
           <div className="grid gap-3">
-            {groups.map((g, i) => (
+            <div className="relative">
+              <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by vendor name or invoice number..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            {filteredGroups.length ? (
+              <div className="grid gap-3">
+                {filteredGroups.map((g, i) => (
               <div key={i} className="rounded-lg border p-3">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <div className="text-sm">
@@ -108,7 +129,15 @@ export function DuplicateFinderDialog({
                   ))}
                 </div>
               </div>
-            ))}
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-10 text-center text-muted-foreground">
+                <CheckCircle2 className="size-8" />
+                <p className="font-medium text-foreground">No matches found</p>
+                <p className="text-sm">Try adjusting your search terms.</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 py-10 text-center text-muted-foreground">
