@@ -537,8 +537,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      {dashVendor === "ALL" && dataVendors.length > 0 && (
-        <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none">
+      {dataVendors.length > 0 && (
+        <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none overflow-visible">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-base font-bold md:text-base md:font-semibold">
               <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
@@ -553,7 +553,7 @@ export default function DashboardPage() {
           </div>
           <div
             ref={contractorDeckRef}
-            className="contractor-deck grid gap-3 transition-all duration-200"
+            className="contractor-deck grid gap-3 transition-all duration-200 overflow-visible"
             style={{
               gridTemplateColumns: `repeat(auto-fit, minmax(${Math.max(120, 200 * contractorDeckZoom)}px, 1fr))`,
               gap: `${Math.max(8, 12 * contractorDeckZoom)}px`,
@@ -573,7 +573,8 @@ export default function DashboardPage() {
                   key={v}
                   className={cn(
                     "contractor-card group relative min-h-[190px] overflow-hidden rounded-2xl border p-4 text-left shadow-[0_5px_0_var(--contractor-shadow),0_12px_20px_-16px_var(--contractor-glow)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] active:translate-y-1 active:scale-[0.985] active:shadow-[0_2px_0_var(--contractor-shadow),0_7px_12px_-10px_var(--contractor-glow)] active:duration-100 md:min-h-[200px] md:rounded-2xl md:p-4 md:hover:-translate-y-1 md:hover:shadow-[0_7px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] md:active:translate-y-1 xl:min-h-[196px]",
-                    contractorIndex >= 5 && "contractor-card--overflow"
+                    dashVendor === v && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                    contractorIndex >= 5 && contractorDeckZoom === 1 && "contractor-card--overflow"
                   )}
                   style={
                     {
