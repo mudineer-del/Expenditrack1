@@ -104,11 +104,11 @@ export function IconPickerDialog({
                   title={icon.label}
                   onClick={() => pick({ kind: "3d", id: icon.id })}
                   className={cn(
-                    "flex flex-col items-center gap-1 rounded-md border p-1.5 transition-colors hover:border-primary hover:bg-primary/10",
+                    "flex min-h-20 flex-col items-center gap-1.5 rounded-md border p-2 transition-colors hover:border-primary hover:bg-primary/10",
                     value?.kind === "3d" && value.id === icon.id && "border-primary bg-primary/10"
                   )}
                 >
-                  <img src={icon.src} alt="" className="size-7 object-contain" />
+                  <img src={icon.src} alt="" className="size-11 object-contain" />
                   <span className="w-full truncate text-center text-[9px] text-muted-foreground">{icon.label}</span>
                 </button>
               ))}

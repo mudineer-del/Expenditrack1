@@ -7,9 +7,11 @@ import type { ChipColor } from "@/lib/navColors"
  *  drops straight into NavIconChip/NavIcon/SidebarIcon — and anywhere else in the app
  *  that expects an "icon" component — with no changes to any of them. */
 export function imgIcon(src: string) {
-  return function ImgIcon({ className, style }: { className?: string; style?: CSSProperties }) {
-    return <img src={src} alt="" className={className} style={style} />
+  function ImgIcon({ className, style }: { className?: string; style?: CSSProperties }) {
+    return <img src={src} alt="" className={`${className ?? ""} object-contain scale-[1.3]`} style={style} />
   }
+  ;(ImgIcon as typeof ImgIcon & { isImageIcon?: boolean }).isImageIcon = true
+  return ImgIcon
 }
 
 /** Flat sidebar nav glyph — the alternative to NavIconChip's gradient badge, picked
