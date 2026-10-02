@@ -1,4 +1,5 @@
 import { Calendar, DollarSign, FileText } from "lucide-react"
+import "./contract-detail-layout.css"
 import { useState } from "react"
 import {
   Dialog,
@@ -106,7 +107,7 @@ export function ContractDetailSheet({
     <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="max-h-[88vh] w-full overflow-x-hidden overflow-y-auto sm:max-w-2xl"
+        className="contract-detail-dialog max-h-[min(47.5rem,88dvh)] w-full overflow-x-hidden overflow-y-auto sm:max-w-[37.5rem]"
         maximizable
         maximized={maximized}
         onMaximizedChange={setMaximized}
@@ -126,7 +127,7 @@ export function ContractDetailSheet({
           </div>
         </DialogHeader>
 
-        <div className="grid gap-4">
+        <div className="contract-detail-body grid min-w-0 gap-4">
           <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
             <div className="flex items-center gap-2">
               <ContractorLogo vendor={primaryVendor || contract.vendor} logo={logo} color={color} size="sm" />
@@ -189,7 +190,7 @@ export function ContractDetailSheet({
           </p>
 
           {rows.length > 0 && (!trendCfg.hidden || !serviceCfg.hidden) && (
-            <div className="dashboard-chart-grid gap-4">
+            <div className="contract-detail-charts grid min-w-0 gap-4">
               {!trendCfg.hidden && (
               <ChartCard
                 id="contractSheetTrend"

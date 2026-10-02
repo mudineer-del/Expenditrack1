@@ -1,0 +1,16 @@
+.contract-detail-dialog > * { min-width: 0; }
+.contract-detail-body { container-type: inline-size; overflow-wrap: anywhere; }
+.contract-detail-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.contract-detail-charts > * { min-width: 0; }
+.contract-detail-charts .chart-card-titlebar > :first-child { max-width: 100%; }
+.contract-detail-charts .chart-card-titlebar > :last-child,
+.contract-detail-charts .chart-card-titlebar > :last-child > div { flex-wrap: wrap; }
+@container (max-width: 29rem) {
+  .contract-detail-charts { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 46rem) {
+  .contract-detail-charts .chart-card-titlebar { gap: .35rem; padding-inline: .7rem; }
+  .contract-detail-charts .chart-card-titlebar > :last-child { transform: scale(.86); transform-origin: right center; margin-left: -.7rem; }
+  .contract-detail-charts .chart-card-titlebar > :first-child { font-size: .78rem; }
+  .contract-detail-charts > * > div:last-child { padding: .65rem; }
+}
