@@ -553,8 +553,11 @@ export default function DashboardPage() {
           </div>
           <div
             ref={contractorDeckRef}
-            className="contractor-deck grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-5 transition-transform duration-200 origin-top-left"
-            style={{ transform: `scale(${contractorDeckZoom})` }}
+            className="contractor-deck grid gap-3 transition-all duration-200"
+            style={{
+              gridTemplateColumns: `repeat(auto-fit, minmax(${Math.max(120, 200 * contractorDeckZoom)}px, 1fr))`,
+              gap: `${Math.max(8, 12 * contractorDeckZoom)}px`,
+            }}
           >
             {dataVendors.map((v, contractorIndex) => {
               const vRows = deptInvoices.filter((r) => r.vendor === v)
