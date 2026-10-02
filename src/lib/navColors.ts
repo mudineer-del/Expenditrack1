@@ -28,7 +28,7 @@ export const NAV_ITEM_COLORS: Record<string, ChipColor> = {
   "/well-cost/wells": { from: "#45C5C2", to: "#087E86", shadow: "rgba(8,126,134,0.5)" },
   "/well-cost/structure": { from: "#A587F1", to: "#6845C7", shadow: "rgba(104,69,199,0.48)" },
   "/reports": { from: "#4DC4B5", to: "#0D9488", shadow: "rgba(13,148,136,0.42)" },
-  "/messages": { from: "#E8659B", to: "#BE185D", shadow: "rgba(190,24,93,0.42)" },
+  "/messages": { from: "color-mix(in oklch, var(--primary) 72%, white)", to: "color-mix(in oklch, var(--primary) 92%, black)", shadow: "color-mix(in oklch, var(--primary) 45%, transparent)" },
   "/activity": { from: "#7B8CA3", to: "#475569", shadow: "rgba(71,85,105,0.4)" },
   "/users": { from: "#8983F0", to: "#4F46E5", shadow: "rgba(79,70,229,0.42)" },
   "/install": { from: "#4FCB9C", to: "#059669", shadow: "rgba(5,150,105,0.42)" },

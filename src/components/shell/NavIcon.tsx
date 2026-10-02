@@ -8,7 +8,7 @@ import type { ChipColor } from "@/lib/navColors"
  *  that expects an "icon" component — with no changes to any of them. */
 export function imgIcon(src: string) {
   function ImgIcon({ className, style }: { className?: string; style?: CSSProperties }) {
-    return <img src={src} alt="" className={`${className ?? ""} object-contain scale-[1.3]`} style={style} />
+    return <img src={src} alt="" className={`${className ?? ""} object-contain scale-[1.4]`} style={style} />
   }
   ;(ImgIcon as typeof ImgIcon & { isImageIcon?: boolean }).isImageIcon = true
   return ImgIcon

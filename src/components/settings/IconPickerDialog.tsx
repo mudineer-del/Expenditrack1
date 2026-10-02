@@ -1,11 +1,13 @@
 import { DynamicIcon, iconNames, type IconName } from "lucide-react/dynamic"
-import { useMemo, useState } from "react"
+import { useRef, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Upload } from "lucide-react"
 import { ICONS_3D } from "@/lib/iconLibrary3d"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 import type { IconRef } from "@/store/useSidebarPrefsStore"
 
 // Full lucide set is ~1500 icons — mounting every one of those as a DynamicIcon at
