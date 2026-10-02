@@ -5,6 +5,7 @@ export type SidebarIconStyle = "chip" | "flat"
 export type SidebarActiveColorMode = "theme" | "perItem"
 export type SidebarDesign = "original" | "stacked" | "dual"
 export type SidebarDensity = "comfortable" | "compact"
+export type SidebarZoom = "80" | "90" | "100" | "110" | "120"
 
 /** A chosen icon for one sidebar slot — either a lucide icon by its (kebab-case) name,
  *  resolved via lucide-react's DynamicIcon so picking one never pulls the other ~1500
@@ -19,6 +20,7 @@ interface SidebarPrefs {
   iconStyle: SidebarIconStyle
   activeColorMode: SidebarActiveColorMode
   density: SidebarDensity
+  sidebarZoom: SidebarZoom
   /** Nav item `to` paths hidden from the sidebar — Dashboard is excluded from the
    *  hideable set in the UI so the nav can never be emptied out entirely. */
   hiddenItems: string[]
@@ -34,6 +36,7 @@ const DEFAULT_PREFS: SidebarPrefs = {
   iconStyle: "chip",
   activeColorMode: "theme",
   density: "comfortable",
+  sidebarZoom: "100",
   hiddenItems: [],
   iconOverrides: {},
 }
@@ -44,6 +47,7 @@ interface SidebarPrefsState extends SidebarPrefs {
   setIconStyle: (v: SidebarIconStyle) => void
   setActiveColorMode: (v: SidebarActiveColorMode) => void
   setDensity: (v: SidebarDensity) => void
+  setSidebarZoom: (v: SidebarZoom) => void
   toggleItem: (to: string) => void
   /** Pass null to clear back to that slot's default icon. */
   setIconOverride: (key: string, ref: IconRef | null) => void
@@ -56,8 +60,8 @@ function loadPrefs(): SidebarPrefs {
 }
 
 function persist(state: SidebarPrefs): void {
-  const { design, showIconBar, iconStyle, activeColorMode, density, hiddenItems, iconOverrides } = state
-  storeSet(PREFS_KEY, { design, showIconBar, iconStyle, activeColorMode, density, hiddenItems, iconOverrides })
+  const { design, showIconBar, iconStyle, activeColorMode, density, sidebarZoom, hiddenItems, iconOverrides } = state
+  storeSet(PREFS_KEY, { design, showIconBar, iconStyle, activeColorMode, density, sidebarZoom, hiddenItems, iconOverrides })
 }
 
 /**
@@ -82,6 +86,7 @@ export const useSidebarPrefsStore = create<SidebarPrefsState>((set, get) => ({
     set({ density })
     persist(get())
   },
+  setSidebarZoom: (sidebarZoom) => { set({ sidebarZoom }); persist(get()) },
   toggleItem: (to) => {
     const current = get().hiddenItems
     const hiddenItems = current.includes(to) ? current.filter((x) => x !== to) : [...current, to]

@@ -30,7 +30,7 @@ import { useReferenceLists } from "@/lib/referenceLists"
 import { cn } from "@/lib/utils"
 import { useLabelsStore, type AppLabels } from "@/store/useLabelsStore"
 import { useProminentContractsStore } from "@/store/useProminentContractsStore"
-import { useSidebarPrefsStore, type SidebarDesign, type SidebarActiveColorMode, type SidebarDensity, type SidebarIconStyle } from "@/store/useSidebarPrefsStore"
+import { useSidebarPrefsStore, type SidebarDesign, type SidebarActiveColorMode, type SidebarDensity, type SidebarIconStyle, type SidebarZoom } from "@/store/useSidebarPrefsStore"
 import { useTickerStore, type TickerStyle } from "@/store/useTickerStore"
 
 const IconPickerDialog = lazy(() => import("@/components/settings/IconPickerDialog").then((m) => ({ default: m.IconPickerDialog })))
@@ -150,6 +150,8 @@ function SidebarCustomizationSection() {
   const setActiveColorMode = useSidebarPrefsStore((s) => s.setActiveColorMode)
   const density = useSidebarPrefsStore((s) => s.density)
   const setDensity = useSidebarPrefsStore((s) => s.setDensity)
+  const sidebarZoom = useSidebarPrefsStore((s) => s.sidebarZoom)
+  const setSidebarZoom = useSidebarPrefsStore((s) => s.setSidebarZoom)
   const hiddenItems = useSidebarPrefsStore((s) => s.hiddenItems)
   const toggleItem = useSidebarPrefsStore((s) => s.toggleItem)
   const iconOverrides = useSidebarPrefsStore((s) => s.iconOverrides)
@@ -215,6 +217,18 @@ function SidebarCustomizationSection() {
           options={[
             { value: "comfortable", label: "Comfortable", hint: "Larger rows — easier to scan and tap." },
             { value: "compact", label: "Compact", hint: "Smaller rows — more items fit without scrolling." },
+          ]}
+        />
+        <PrefOptionRow<SidebarZoom>
+          label="Sidebar zoom"
+          value={sidebarZoom}
+          onChange={setSidebarZoom}
+          options={[
+            { value: "80", label: "80%", hint: "Smaller sidebar controls." },
+            { value: "90", label: "90%", hint: "Slightly smaller sidebar controls." },
+            { value: "100", label: "100%", hint: "Default sidebar size." },
+            { value: "110", label: "110%", hint: "Slightly larger sidebar controls." },
+            { value: "120", label: "120%", hint: "Larger sidebar controls." },
           ]}
         />
       </div>

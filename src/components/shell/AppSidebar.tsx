@@ -1,5 +1,6 @@
 import "./sidebar-dual.css"
 import "./sidebar-stacked.css"
+import "./sidebar-zoom.css"
 import { useState } from "react"
 import {
   BarChart3,
@@ -155,6 +156,7 @@ export function AppSidebar() {
   const iconStyle = useSidebarPrefsStore((s) => s.iconStyle)
   const activeColorMode = useSidebarPrefsStore((s) => s.activeColorMode)
   const density = useSidebarPrefsStore((s) => s.density)
+  const sidebarZoom = useSidebarPrefsStore((s) => s.sidebarZoom)
   const hiddenItems = useSidebarPrefsStore((s) => s.hiddenItems)
   const iconOverrides = useSidebarPrefsStore((s) => s.iconOverrides)
   const flatIcons = iconStyle === "flat"
@@ -199,7 +201,7 @@ export function AppSidebar() {
   }))
 
   return (
-    <Sidebar collapsible="icon" className={`app-sidebar ${design === "dual" ? "app-sidebar-dual" : design === "stacked" ? "app-sidebar-stacked" : ""} border-r-0`} data-density={density} data-icon-bar={railVisible}>
+    <Sidebar collapsible="icon" className={`app-sidebar ${design === "dual" ? "app-sidebar-dual" : design === "stacked" ? "app-sidebar-stacked" : ""} border-r-0`} data-density={density} data-icon-bar={railVisible} style={{ "--sidebar-zoom": `${Number(sidebarZoom) / 100}` } as React.CSSProperties}>
       {railVisible && <nav className="dual-icon-rail" aria-label="Quick navigation">
         <NavLink to="/settings" className="dual-rail-brand" aria-label="Your profile" title={user?.name || "Your profile"}><Avatar className="size-9">{user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}<AvatarFallback>{user?.initials || "?"}</AvatarFallback></Avatar></NavLink>
         <div className="dual-rail-scroll">
