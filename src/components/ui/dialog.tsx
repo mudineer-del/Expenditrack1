@@ -159,6 +159,9 @@ function DialogContent({
   maximizable = false,
   maximized = false,
   onMaximizedChange,
+  resetOnOpen = false,
+  open = false,
+  style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -169,6 +172,9 @@ function DialogContent({
   maximizable?: boolean
   maximized?: boolean
   onMaximizedChange?: (v: boolean) => void
+  /** Reset any drag/resize dimensions when the owning dialog opens. */
+  resetOnOpen?: boolean
+  open?: boolean
 }) {
   const design = useDialogPrefsStore((s) => s.design)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -182,6 +188,10 @@ function DialogContent({
     if (maximized) resetRect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maximized])
+
+  useEffect(() => {
+    if (resetOnOpen && open) resetRect()
+  }, [open, resetOnOpen, resetRect])
 
   const floatStyle: React.CSSProperties | undefined =
     rect && floatingEnabled
@@ -217,7 +227,7 @@ function DialogContent({
           maximized &&
             "inset-2 top-2 left-2 h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100dvw-1rem)] max-w-[calc(100dvw-1rem)] translate-x-0 translate-y-0 sm:max-w-[calc(100dvw-1rem)]"
         )}
-        style={floatStyle}
+        style={{ ...style, ...floatStyle }}
         onPointerDownCapture={(e) => {
           // Routed through this ONE capture-phase handler on the content root for both
           // move and resize (rather than each resize handle also carrying its own
@@ -241,7 +251,7 @@ function DialogContent({
         {children}
         {floatingEnabled &&
           RESIZE_HANDLES.map(({ dir, className }) => (
-            <div key={dir} data-resize-handle={dir} className={cn("absolute touch-none", className)} />
+            <div key={dir} data-resize-handle={dir} className={cn("absolute z-50 touch-none", className)} />
           ))}
         {/* z-30 — above DialogHeader's own z-20 sticky layer, which now paints a solid
             (not translucent) background and would otherwise cover these buttons since the

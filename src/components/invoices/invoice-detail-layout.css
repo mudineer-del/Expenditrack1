@@ -3,7 +3,15 @@
 .invoice-detail-body { container-type: inline-size; overflow-wrap: anywhere; }
 .invoice-detail-heading { overflow-wrap: anywhere; }
 .invoice-detail-metrics > * { min-width: 0; }
-.invoice-detail-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.invoice-detail-charts {
+  /* Keep both charts in the dialog's initial desktop layout. The tracks may shrink
+     below the chart-card preference width so a mouse resize/zoom never pushes the
+     second chart out of the paint area or makes it appear only after hover. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  contain: inline-size;
+}
+.invoice-detail-charts > * { min-width: 0; }
 .invoice-detail-charts .chart-card-titlebar > :first-child { max-width: 100%; }
 .invoice-detail-charts .chart-card-titlebar > :last-child,
 .invoice-detail-charts .chart-card-titlebar > :last-child > div { flex-wrap: wrap; }

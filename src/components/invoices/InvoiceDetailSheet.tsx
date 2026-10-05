@@ -120,10 +120,19 @@ export function InvoiceDetailSheet({
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="invoice-detail-dialog max-h-[min(46.5rem,88dvh)] w-full overflow-x-hidden overflow-y-auto sm:max-w-[42.5rem]"
+          key={open ? "invoice-dialog-open" : "invoice-dialog-closed"}
+          className="invoice-detail-dialog h-[1000px] max-h-[calc(100dvh-2rem)] w-[800px] max-w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto"
           maximizable
           maximized={maximized}
           onMaximizedChange={setMaximized}
+          resetOnOpen
+          open={open}
+          style={{
+            width: "800px",
+            height: "1000px",
+            maxWidth: "calc(100vw - 2rem)",
+            maxHeight: "calc(100dvh - 2rem)",
+          }}
         >
           <DialogHeader>
             <div className="invoice-detail-heading flex min-w-0 flex-wrap items-start gap-3">
