@@ -21,6 +21,23 @@ interface Migration {
 
 const migrations: Migration[] = [
   {
+    key: "migration_inclusiveTaxFromComponents",
+    run: (invoices) => {
+      let changed = false
+      const next = invoices.map((inv) => {
+        const excl = Number(inv.amountExclTax) || 0
+        const tax = Number(inv.tax) || 0
+        const derived = excl + tax
+        if (Number(inv.amountInclTax) !== derived) {
+          changed = true
+          return { ...inv, amountInclTax: derived }
+        }
+        return inv
+      })
+      return { invoices: next, changed }
+    },
+  },
+  {
     key: "migration_paidFromExcl",
     run: (invoices) => {
       let changed = false

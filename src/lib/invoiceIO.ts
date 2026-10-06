@@ -473,7 +473,10 @@ export function finalizeImportedRecord(rec: ImportedRecord, nextSrNo: () => numb
   let g = rec.gstPst !== undefined && rec.gstPst !== "" ? Number(rec.gstPst) : 0.15
   if (g > 1) g = g / 100
   const tax = rec.tax !== undefined && rec.tax !== "" ? Number(rec.tax) : a * g
-  const incl = rec.amountInclTax !== undefined && rec.amountInclTax !== "" ? Number(rec.amountInclTax) : a + tax
+  // Policy: inclusive tax is always derived from the authoritative components.
+  // Ignore a supplied/imported inclusive value because legacy spreadsheets may
+  // contain shifted or stale values (for example, inclusive tax below subtotal).
+  const incl = a + tax
   if (!rec.wellName) {
     if (rec.location) rec.wellName = rec.location
     else if (rec.description && !/\bto\b/i.test(String(rec.description)) && !/\[src/i.test(String(rec.description)))
