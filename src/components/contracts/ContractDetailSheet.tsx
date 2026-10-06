@@ -107,10 +107,14 @@ export function ContractDetailSheet({
     <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="contract-detail-dialog max-h-[min(47.5rem,88dvh)] w-full overflow-x-hidden overflow-y-auto sm:max-w-[37.5rem]"
+        key={open ? "contract-dialog-open" : "contract-dialog-closed"}
+        className="contract-detail-dialog h-[1000px] max-h-[calc(100dvh-2rem)] w-[800px] max-w-[calc(100vw-2rem)] overflow-x-hidden overflow-y-auto"
         maximizable
         maximized={maximized}
         onMaximizedChange={setMaximized}
+        resetOnOpen
+        open={open}
+        style={{ width: "800px", height: "1000px", maxWidth: "calc(100vw - 2rem)", maxHeight: "calc(100dvh - 2rem)" }}
       >
         <DialogHeader>
           <div className="flex items-start gap-3">
