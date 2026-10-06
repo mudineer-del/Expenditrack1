@@ -1,6 +1,7 @@
 import { Calendar, DollarSign, FileText } from "lucide-react"
 import "./contract-detail-layout.css"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   Dialog,
   DialogClose,
@@ -51,6 +52,7 @@ export function ContractDetailSheet({
   canEdit: boolean
   logo?: string
 }) {
+  const navigate = useNavigate()
   const trendChartType = useDisplayStore((s) => s.trendChartType)
   const serviceChartType = useDisplayStore((s) => s.serviceChartType)
   const setChartType = useDisplayStore((s) => s.setChartType)
@@ -281,6 +283,15 @@ export function ContractDetailSheet({
         </div>
 
         <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              onOpenChange(false)
+              navigate("/invoices", { state: { vendorFilter: primaryVendor || contract.vendor } })
+            }}
+          >
+            View invoices
+          </Button>
           <Button
             onClick={onEdit}
             disabled={!canEdit}
