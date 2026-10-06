@@ -12,7 +12,18 @@ export function contractorLogoKey(vendor: string): string {
 
 export function getContractorLogo(logos: ContractorLogos, vendor: string | null | undefined): string | undefined {
   if (!vendor) return undefined
-  return logos[contractorLogoKey(vendor)]
+  const key = contractorLogoKey(vendor)
+  if (logos[key]) return logos[key]
+
+  // Logo settings are commonly saved against the short contractor label
+  // (for example `Sprint`) while imported invoices use the legal/full name
+  // (`M/s Sprint Oil & Gas Services FZ-Pakistan`). Match either direction and
+  // prefer the longest matching saved key so similarly named contractors do
+  // not steal each other's logo.
+  return Object.entries(logos)
+    .filter(([savedKey]) => key.includes(savedKey) || savedKey.includes(key))
+    .sort(([a], [b]) => b.length - a.length)
+    .map(([, value]) => value)[0]
 }
 
 async function fetchContractorLogos(): Promise<ContractorLogos> {
