@@ -287,7 +287,7 @@ export function ContractDetailSheet({
             variant="outline"
             onClick={() => {
               onOpenChange(false)
-              navigate("/invoices", { state: { vendorFilter: primaryVendor || contract.vendor } })
+              navigate("/invoices", { state: { contractFilter: contract.contractNo } })
             }}
           >
             View invoices

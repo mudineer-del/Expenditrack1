@@ -2,6 +2,7 @@ import { DynamicIcon, iconNames, type IconName } from "lucide-react/dynamic"
 import type { ComponentType, CSSProperties } from "react"
 import { imgIcon } from "@/components/shell/NavIcon"
 import { ICONS_3D_BY_ID } from "@/lib/iconLibrary3d"
+import { getCustomIcon } from "@/lib/customIcons"
 import type { IconRef } from "@/store/useSidebarPrefsStore"
 
 const LUCIDE_NAME_SET = new Set<string>(iconNames)
@@ -28,6 +29,10 @@ export function resolveIcon(
   const ref = overrides[key]
   if (!ref) return fallback
   if (ref.kind === "lucide") return LUCIDE_NAME_SET.has(ref.name) ? lucideIcon(ref.name as IconName) : fallback
+  // Check built-in 3D icons first
   const icon3d = ICONS_3D_BY_ID[ref.id]
-  return icon3d ? imgIcon(icon3d.src) : fallback
+  if (icon3d) return imgIcon(icon3d.src)
+  // Check custom imported icons
+  const customIcon = getCustomIcon(ref.id)
+  return customIcon ? imgIcon(customIcon.src) : fallback
 }

@@ -1,10 +1,13 @@
 import { DynamicIcon, iconNames, type IconName } from "lucide-react/dynamic"
-import { useMemo, useState } from "react"
+import { Upload } from "lucide-react"
+import { useMemo, useRef, useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ICONS_3D } from "@/lib/iconLibrary3d"
+import { getCustomIcons, saveCustomIcon } from "@/lib/customIcons"
 import { cn } from "@/lib/utils"
 import type { IconRef } from "@/store/useSidebarPrefsStore"
 
@@ -30,6 +33,45 @@ export function IconPickerDialog({
 }) {
   const [tab, setTab] = useState<"2d" | "3d">(value?.kind === "3d" ? "3d" : "2d")
   const [search, setSearch] = useState("")
+  const [customIcons, setCustomIcons] = useState(() => getCustomIcons())
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImportIcon = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const validTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"]
+    if (!validTypes.includes(file.type)) {
+      toast.error("Please upload PNG, JPEG, GIF, WebP, or SVG format only")
+      return
+    }
+
+    // Validate file size (max 500KB)
+    const maxSize = 500 * 1024
+    if (file.size > maxSize) {
+      toast.error("File size must be less than 500KB")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const src = reader.result as string
+      const id = `custom-${Date.now()}`
+      const label = file.name.replace(/\.[^/.]+$/, "") // Remove extension
+
+      const newIcon = { id, src, label }
+      saveCustomIcon(newIcon)
+      setCustomIcons((prev) => [...prev, newIcon])
+      toast.success(`"${label}" imported successfully`)
+    }
+    reader.readAsDataURL(file)
+
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const allIcons3d = useMemo(() => [...ICONS_3D, ...customIcons], [customIcons])
 
   const filtered2d = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -39,9 +81,9 @@ export function IconPickerDialog({
 
   const filtered3d = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return ICONS_3D
-    return ICONS_3D.filter((i) => i.label.toLowerCase().includes(q) || i.id.includes(q))
-  }, [search])
+    if (!q) return allIcons3d
+    return allIcons3d.filter((i) => i.label.toLowerCase().includes(q) || i.id.includes(q))
+  }, [search, allIcons3d])
 
   function pick(ref: IconRef) {
     onPick(ref)
@@ -96,6 +138,27 @@ export function IconPickerDialog({
           </TabsContent>
 
           <TabsContent value="3d" className="mt-3">
+            <div className="mb-3 flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+                onChange={handleImportIcon}
+                className="hidden"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-2"
+              >
+                <Upload className="size-4" />
+                Import 3D icon
+              </Button>
+              {customIcons.length > 0 && (
+                <span className="text-xs text-muted-foreground">{customIcons.length} custom icon{customIcons.length !== 1 ? "s" : ""}</span>
+              )}
+            </div>
             <div className="grid max-h-72 grid-cols-5 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-6">
               {filtered3d.map((icon) => (
                 <button

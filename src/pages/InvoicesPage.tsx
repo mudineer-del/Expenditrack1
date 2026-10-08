@@ -162,11 +162,17 @@ export default function InvoicesPage() {
   // here with { openInvoiceId } in router state to jump straight to that invoice; the
   // header's quick-add button navigates here with { openAdd: true } to open a blank one;
   // VendorDetailSheet's "View all invoices" navigates here with { vendorFilter } to land
-  // pre-filtered to that contractor.
+  // pre-filtered to that contractor; ContractDetailSheet navigates here with { contractFilter }
+  // to show only invoices for that specific contract.
   useEffect(() => {
-    const state = location.state as { openInvoiceId?: string; openAdd?: boolean; vendorFilter?: string } | null
+    const state = location.state as { openInvoiceId?: string; openAdd?: boolean; vendorFilter?: string; contractFilter?: string } | null
     if (state?.openAdd) {
       openAdd()
+      navigate(location.pathname, { replace: true, state: null })
+      return
+    }
+    if (state?.contractFilter) {
+      setFilters((f) => ({ ...f, contract: state.contractFilter! }))
       navigate(location.pathname, { replace: true, state: null })
       return
     }
