@@ -45,8 +45,9 @@ const countLabel = (v: unknown) => String(Math.round(Number(v)))
 /** Number of invoices on file per contractor — shown for the "All" contractor view.
  *  Once a specific contractor is picked on the Dashboard, this slot swaps to
  *  ServiceCountChart instead (see DashboardPage). */
-export function ContractorInvoicesChart({ data, onDrill }: { data: VendorCount[]; onDrill: (title: string, invoices: VendorCount["invoices"]) => void }) {
-  const chartType = useDisplayStore((s) => s.breakdownChartType)
+export function ContractorInvoicesChart({ data, onDrill, chartType: chartTypeProp }: { data: VendorCount[]; onDrill: (title: string, invoices: VendorCount["invoices"]) => void; chartType?: string }) {
+  const breakdownChartType = useDisplayStore((s) => s.breakdownChartType)
+  const chartType = chartTypeProp ?? breakdownChartType
   const animate = useDisplayStore((s) => s.animationsEnabled)
   const globalLabelsEnabled = useDisplayStore((s) => s.chartLabelsEnabled)
   const globalLabelPosition = useDisplayStore((s) => s.chartLabelPosition)

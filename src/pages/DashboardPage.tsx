@@ -14,10 +14,12 @@ import {
   Timer,
   TrendingUp,
   Wallet,
+  X,
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CHART_OPTIONS, ChartTypeMenu } from "@/components/dashboard/ChartTypeMenu"
@@ -141,6 +143,21 @@ function PctSub({ pct, label }: { pct: number | null; label: string }) {
   )
 }
 
+function formatChartTitle(baseTitle: string, dateFrom?: string, dateTo?: string): string {
+  if (!dateFrom && !dateTo) return baseTitle
+  const parts = [baseTitle]
+  if (dateFrom || dateTo) {
+    const period = `${dateFrom || "—"} to ${dateTo || "—"}`
+    parts.push(`(${period})`)
+  }
+  return parts.join(" ")
+}
+
+function formatPeriodText(dateFrom?: string, dateTo?: string): string {
+  if (!dateFrom && !dateTo) return "All data"
+  return `Period: ${dateFrom || "Start"} — ${dateTo || "Now"}`
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate()
   const invoicesQuery = useInvoicesQuery()
@@ -165,6 +182,8 @@ export default function DashboardPage() {
 
   const [contractorDeckZoom, setContractorDeckZoom] = useState(1)
   const contractorDeckRef = useRef<HTMLDivElement>(null)
+  const [dateFromFilter, setDateFromFilter] = useState("")
+  const [dateToFilter, setDateToFilter] = useState("")
 
   const notifiedThisSession = useRef(false)
   useEffect(() => {
@@ -206,10 +225,18 @@ export default function DashboardPage() {
     () => (activeDept === "ALL" ? contracts : contracts.filter((c) => c.department === activeDept)),
     [contracts, activeDept]
   )
-  const rows = useMemo(
-    () => (dashVendor === "ALL" ? deptInvoices : deptInvoices.filter((r) => r.vendor === dashVendor)),
-    [deptInvoices, dashVendor]
-  )
+  const rows = useMemo(() => {
+    let filtered = dashVendor === "ALL" ? deptInvoices : deptInvoices.filter((r) => r.vendor === dashVendor)
+
+    if (dateFromFilter) {
+      filtered = filtered.filter((r) => r.invoiceDate && r.invoiceDate >= dateFromFilter)
+    }
+    if (dateToFilter) {
+      filtered = filtered.filter((r) => r.invoiceDate && r.invoiceDate <= dateToFilter)
+    }
+
+    return filtered
+  }, [deptInvoices, dashVendor, dateFromFilter, dateToFilter])
   const stats = useMemo(() => computeDashboardStats(rows, deptContracts), [rows, deptContracts])
   const dataVendors = useMemo(
     () => Array.from(new Set(deptInvoices.map((r) => r.vendor).filter(Boolean))).sort(),
@@ -631,14 +658,50 @@ export default function DashboardPage() {
       )}
 
       <div className="min-w-0">
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="flex items-center gap-2 text-base font-bold md:text-base md:font-semibold">
-            <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
-            Expenditure Analysis
-          </h3>
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
-            <SaveLayoutButton />
+        <div className="mb-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="flex items-center gap-2 text-base font-bold md:text-base md:font-semibold">
+              <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
+              Expenditure Analysis
+            </h3>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
+              <SaveLayoutButton />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-muted-foreground">Period:</label>
+              <Input
+                type="date"
+                value={dateFromFilter}
+                onChange={(e) => setDateFromFilter(e.target.value)}
+                className="h-8 w-32 text-xs"
+                placeholder="From"
+              />
+              <span className="text-xs text-muted-foreground">—</span>
+              <Input
+                type="date"
+                value={dateToFilter}
+                onChange={(e) => setDateToFilter(e.target.value)}
+                className="h-8 w-32 text-xs"
+                placeholder="To"
+              />
+            </div>
+            {(dateFromFilter || dateToFilter) && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setDateFromFilter("")
+                  setDateToFilter("")
+                }}
+                title="Clear date filters"
+              >
+                <X className="size-3.5" />
+              </Button>
+            )}
           </div>
         </div>
         <div className="dashboard-chart-grid gap-4 md:gap-6">
@@ -646,9 +709,14 @@ export default function DashboardPage() {
           <ChartCard
             id="dashTrend"
             accent="var(--dataviz-1)"
-            title={(chartSlots.dashTrend.dimension && chartSlots.dashTrend.dimension !== "month") || chartSlots.dashTrend.measure !== "incl"
-              ? `${chartMeasureLabel(chartSlots.dashTrend.measure)} by ${reportGroupLabel(chartSlots.dashTrend.dimension ?? "month")}`
-              : "Monthly Expenditure Trend"}
+            title={formatChartTitle(
+              (chartSlots.dashTrend.dimension && chartSlots.dashTrend.dimension !== "month") || chartSlots.dashTrend.measure !== "incl"
+                ? `${chartMeasureLabel(chartSlots.dashTrend.measure)} by ${reportGroupLabel(chartSlots.dashTrend.dimension ?? "month")}`
+                : "Monthly Expenditure Trend",
+              dateFromFilter,
+              dateToFilter
+            )}
+            period={formatPeriodText(dateFromFilter, dateToFilter)}
             action={
               <div className="flex items-center gap-0.5">
                 <ChartZoomStepper id="dashTrend" />
@@ -684,9 +752,14 @@ export default function DashboardPage() {
           <ChartCard
             id="dashService"
             accent="var(--dataviz-3)"
-            title={chartSlots.dashService.dimension && (chartSlots.dashService.dimension !== "service" || chartSlots.dashService.measure !== "incl")
-              ? `${chartMeasureLabel(chartSlots.dashService.measure)} by ${reportGroupLabel(chartSlots.dashService.dimension)}`
-              : "Expenditure by Service"}
+            title={formatChartTitle(
+              chartSlots.dashService.dimension && (chartSlots.dashService.dimension !== "service" || chartSlots.dashService.measure !== "incl")
+                ? `${chartMeasureLabel(chartSlots.dashService.measure)} by ${reportGroupLabel(chartSlots.dashService.dimension)}`
+                : "Expenditure by Service",
+              dateFromFilter,
+              dateToFilter
+            )}
+            period={formatPeriodText(dateFromFilter, dateToFilter)}
             action={
               <div className="flex items-center gap-0.5">
                 <ChartZoomStepper id="dashService" />
@@ -720,9 +793,14 @@ export default function DashboardPage() {
           <ChartCard
             id="dashVendor"
             accent="var(--dataviz-4)"
-            title={dashVendorSeries
-              ? `${chartMeasureLabel(chartSlots.dashVendor.measure)} by ${reportGroupLabel(dashVendorDim)}`
-              : (dashVendor === "ALL" ? "Invoice Value by Contractor" : `Invoice Value — ${dashVendor}`)}
+            title={formatChartTitle(
+              dashVendorSeries
+                ? `${chartMeasureLabel(chartSlots.dashVendor.measure)} by ${reportGroupLabel(dashVendorDim)}`
+                : (dashVendor === "ALL" ? "Invoice Value by Contractor" : `Invoice Value — ${dashVendor}`),
+              dateFromFilter,
+              dateToFilter
+            )}
+            period={formatPeriodText(dateFromFilter, dateToFilter)}
             action={
               <div className="flex items-center gap-0.5">
                 <ChartZoomStepper id="dashVendor" />
@@ -744,6 +822,7 @@ export default function DashboardPage() {
                 <ContractorInvoicesChart
                   data={dashVendorSeries.map((p) => ({ vendor: formatGroupKey(dashVendorDim, p.key), count: p.value, invoices: p.invoices }))}
                   onDrill={onDrill}
+                  chartType={vendorChartType}
                 />
               ) : (
                 <VendorChart data={byVendor} serviceBreakdown={byVendorService} typeBreakdown={byVendorType} onDrill={onDrill} />
@@ -755,9 +834,14 @@ export default function DashboardPage() {
           <ChartCard
             id="dashBreakdown"
             accent="var(--dataviz-2)"
-            title={chartSlots.dashBreakdown.dimension || chartSlots.dashBreakdown.measure !== "count"
-              ? `${chartMeasureLabel(chartSlots.dashBreakdown.measure)} by ${reportGroupLabel(dashBreakdownDim)}`
-              : (dashVendor === "ALL" ? "Invoices by Contractor" : `Invoices by Type — ${dashVendor}`)}
+            title={formatChartTitle(
+              chartSlots.dashBreakdown.dimension || chartSlots.dashBreakdown.measure !== "count"
+                ? `${chartMeasureLabel(chartSlots.dashBreakdown.measure)} by ${reportGroupLabel(dashBreakdownDim)}`
+                : (dashVendor === "ALL" ? "Invoices by Contractor" : `Invoices by Type — ${dashVendor}`),
+              dateFromFilter,
+              dateToFilter
+            )}
+            period={formatPeriodText(dateFromFilter, dateToFilter)}
             action={
               <div className="flex items-center gap-0.5">
                 <ChartZoomStepper id="dashBreakdown" />
@@ -778,6 +862,7 @@ export default function DashboardPage() {
               <ContractorInvoicesChart
                 data={byBreakdown.map((p) => ({ vendor: formatGroupKey(dashBreakdownDim, p.key), count: p.value, invoices: p.invoices }))}
                 onDrill={onDrill}
+                chartType={breakdownChartType}
               />
             </ChartSlotContextMenu>
           </ChartCard>
@@ -786,9 +871,14 @@ export default function DashboardPage() {
           <ChartCard
             id="dashStatus"
             accent="var(--dataviz-5)"
-            title={chartSlots.dashStatus.dimension && (chartSlots.dashStatus.dimension !== "status" || chartSlots.dashStatus.measure !== "incl")
-              ? `${chartMeasureLabel(chartSlots.dashStatus.measure)} by ${reportGroupLabel(chartSlots.dashStatus.dimension)}`
-              : "Expenditure by Status"}
+            title={formatChartTitle(
+              chartSlots.dashStatus.dimension && (chartSlots.dashStatus.dimension !== "status" || chartSlots.dashStatus.measure !== "incl")
+                ? `${chartMeasureLabel(chartSlots.dashStatus.measure)} by ${reportGroupLabel(chartSlots.dashStatus.dimension)}`
+                : "Expenditure by Status",
+              dateFromFilter,
+              dateToFilter
+            )}
+            period={formatPeriodText(dateFromFilter, dateToFilter)}
             action={
               <div className="flex items-center gap-0.5">
                 <ChartZoomStepper id="dashStatus" />
