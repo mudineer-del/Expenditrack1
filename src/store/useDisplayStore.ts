@@ -149,6 +149,8 @@ interface DisplayPrefs {
   colorTheme: string
   customColors: PaletteVars | null
   cardScale: CardScale
+  /** Overall workspace zoom; dialogs rendered through body remain at 100%. */
+  appZoom: number
   radius: Radius
   borderWidth: BorderWidth
   borderStyle: BorderStyle
@@ -200,6 +202,7 @@ interface DisplayState extends DisplayPrefs {
   setColorTheme: (id: string) => void
   setCustomColor: (key: keyof PaletteVars, value: string) => void
   setCardScale: (scale: CardScale) => void
+  setAppZoom: (zoom: number) => void
   setRadius: (radius: Radius) => void
   setBorderWidth: (w: BorderWidth) => void
   setBorderStyle: (s: BorderStyle) => void
@@ -321,6 +324,7 @@ function loadPrefs(): DisplayPrefs {
     colorTheme: saved?.colorTheme || DEFAULT_PALETTE_ID,
     customColors: saved?.customColors ?? null,
     cardScale: saved?.cardScale || "comfortable",
+    appZoom: Math.max(55, Math.min(100, saved?.appZoom ?? 100)),
     radius: saved?.radius || "md",
     borderWidth: saved?.borderWidth || "thin",
     borderStyle: saved?.borderStyle || "solid",
@@ -467,6 +471,12 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
   setCardScale: (scale) => {
     applyScale(scale)
     set({ cardScale: scale })
+    persist(get())
+  },
+
+  setAppZoom: (zoom) => {
+    const next = Math.max(55, Math.min(100, Math.round(zoom)))
+    set({ appZoom: next })
     persist(get())
   },
 
@@ -631,6 +641,7 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
       contractorLogoShape: prefs.contractorLogoShape ?? "round",
       chartDesignVersion: CHART_DESIGN_VERSION,
       chartSlots: { ...DEFAULT_CHART_SLOTS, ...prefs.chartSlots },
+      appZoom: Math.max(55, Math.min(100, prefs.appZoom ?? 100)),
     }
     applyPalette(next.colorTheme, next.customColors ?? undefined)
     applyScale(next.cardScale)
