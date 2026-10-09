@@ -6,6 +6,10 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { useDisplayStore, type ChartBackground, type ChartBackgroundDirection, type ChartSlotId, type ChartDimension, type ChartMeasure } from "@/store/useDisplayStore"
 
+// The maximize window has its own presentation scale. It must not inherit the
+// chart card's zoom, so every chart opens consistently at the same readable size.
+const MAXIMIZED_CHART_DEFAULT_ZOOM = 0.8
+
 /** Settings ▸ Format ▸ Charts ▸ "Chart background" controls this — from a plain solid
  *  card ("flat", Office's "No fill") up through today's soft accent wash ("subtle") to a
  *  bolder sweep ("gradient"), in any of the direction presets Office's own gradient-fill
@@ -55,7 +59,7 @@ export function ChartCard({
   const [showLegend, setShowLegend] = useState(true)
   const [showGrid, setShowGrid] = useState(true)
   const [showAxes, setShowAxes] = useState(true)
-  const [popupZoom, setPopupZoom] = useState(1)
+  const [popupZoom, setPopupZoom] = useState(MAXIMIZED_CHART_DEFAULT_ZOOM)
 
   return (
     <>
@@ -175,7 +179,7 @@ export function ChartCard({
             <Button size="sm" variant={showAxes ? "secondary" : "outline"} className="h-7 px-2 text-xs" onClick={() => setShowAxes((v) => !v)}>Axis labels</Button>
             <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setPopupZoom((z) => Math.min(2, +(z + 0.1).toFixed(1)))}>Zoom +</Button>
             <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setPopupZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(1)))}>Zoom −</Button>
-            <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setPopupZoom(1)}>Reset</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setPopupZoom(MAXIMIZED_CHART_DEFAULT_ZOOM)}>Reset</Button>
             <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => window.print()}>Print</Button>
             <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => document.documentElement.requestFullscreen?.()}>Fullscreen</Button>
             <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setIsMaximized(false)}>Close</Button>
