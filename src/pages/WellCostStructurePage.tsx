@@ -458,7 +458,11 @@ export default function WellCostStructurePage() {
                                 <TableBody>
                                   {items.map((item) => {
                                     const totals = costCentreTotals[item.id] ?? ZERO_TOTALS
-                                    const available = availableAmount(Number(item.plannedBudget) || 0, totals)
+                                    const budget = Number(item.plannedBudget) || 0
+                                    const difference = budget - totals.actual
+                                    const available = Math.max(0, difference)
+                                    const overspend = Math.max(0, -difference)
+                                    const displayedCommitment = totals.commitment + overspend
                                     return (
                                       <HoverPreview key={item.id} preview={<CostCentrePreview item={item} totals={costCentreTotals[item.id]} transactions={transactions} />}>
                                       <TableRow>
@@ -467,7 +471,7 @@ export default function WellCostStructurePage() {
                                         <TableCell className="max-w-48 truncate text-muted-foreground">{item.description || "—"}</TableCell>
                                         <TableCell className="text-right tabular-nums">{fmtCurrency(item.plannedBudget, item.currency)}</TableCell>
                                         <TableCell className="text-right tabular-nums">{fmtCurrency(totals.actual, item.currency)}</TableCell>
-                                        <TableCell className="text-right tabular-nums">{fmtCurrency(totals.commitment, item.currency)}</TableCell>
+                                        <TableCell className="text-right tabular-nums">{fmtCurrency(displayedCommitment, item.currency)}</TableCell>
                                         <TableCell className="text-right tabular-nums">{fmtCurrency(available, item.currency)}</TableCell>
                                         <TableCell>
                                           <div className="flex justify-end gap-1">

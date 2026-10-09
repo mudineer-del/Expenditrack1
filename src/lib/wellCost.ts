@@ -62,10 +62,11 @@ export function buildCostCentreTotals(transactions: WellCostTransaction[]): Reco
   return totals
 }
 
-/** Budget − Actual − Commitments — the "how much is left" figure shown on every cost
- *  centre row and rolled up at the department/well level. */
+/** If Budget - Actual is positive, shows remaining budget as available.
+ *  If Budget - Actual is negative (overspent), shows 0 available. */
 export function availableAmount(plannedBudget: number, totals: CostCentreTotals): number {
-  return (Number(plannedBudget) || 0) - totals.actual - totals.commitment
+  const budget = Number(plannedBudget) || 0
+  return Math.max(0, budget - totals.actual)
 }
 
 export interface CostRollup {
@@ -85,12 +86,15 @@ export interface CostRollup {
 export function rollup(items: WellCostCentre[], totals: Record<string, CostCentreTotals>): CostRollup {
   const budget = items.reduce((s, i) => s + (Number(i.plannedBudget) || 0), 0)
   const actual = items.reduce((s, i) => s + (totals[i.id] ?? ZERO_TOTALS).actual, 0)
-  const commitments = items.reduce((s, i) => s + (totals[i.id] ?? ZERO_TOTALS).commitment, 0)
+  const baseCommitments = items.reduce((s, i) => s + (totals[i.id] ?? ZERO_TOTALS).commitment, 0)
+  const overspend = Math.max(0, actual - budget)
+  const commitments = baseCommitments + overspend
+  const available = Math.max(0, budget - actual)
   return {
     budget,
     actual,
     commitments,
-    available: budget - actual - commitments,
+    available,
     utilizationPct: budget > 0 ? ((actual + commitments) / budget) * 100 : 0,
   }
 }
@@ -278,6 +282,9 @@ export function buildServiceCatalogSummary(
     .map((svc) => {
       const dept = deptById.get(svc.departmentId)
       const sums = byServiceId.get(svc.id) ?? { budget: 0, actual: 0, commitment: 0 }
+      const overspend = Math.max(0, sums.actual - sums.budget)
+      const displayedCommitment = sums.commitment + overspend
+      const available = Math.max(0, sums.budget - sums.actual)
       return {
         id: svc.id,
         name: svc.name,
@@ -286,13 +293,13 @@ export function buildServiceCatalogSummary(
         svcSortOrder: svc.sortOrder,
         budget: sums.budget,
         actual: sums.actual,
-        commitment: sums.commitment,
+        commitment: displayedCommitment,
         // Not needed for the catalog summary table this feeds (no per-row drill-down
         // there) — populated by breakdownBy() for the chart-facing department/service
         // breakdowns instead, where a click needs to know which cost centres to show.
         costCentres: [] as WellCostCentre[],
-        available: sums.budget - sums.actual - sums.commitment,
-        utilizationPct: sums.budget > 0 ? ((sums.actual + sums.commitment) / sums.budget) * 100 : 0,
+        available,
+        utilizationPct: sums.budget > 0 ? ((sums.actual + displayedCommitment) / sums.budget) * 100 : 0,
       }
     })
     .sort((a, b) => a.deptSortOrder - b.deptSortOrder || a.svcSortOrder - b.svcSortOrder)
