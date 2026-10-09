@@ -3,6 +3,7 @@ import { applyPalette, CUSTOM_PALETTE_ID, DEFAULT_PALETTE_ID, getPalette, type P
 import { storeGet, storeSet } from "@/lib/localCache"
 import type { ChartMeasure, GroupBy } from "@/lib/reports"
 
+export type { ChartMeasure }
 export type CardScale = "compact" | "comfortable" | "spacious"
 export type Radius = "none" | "sm" | "md" | "lg"
 export type BorderWidth = "thin" | "medium" | "thick"

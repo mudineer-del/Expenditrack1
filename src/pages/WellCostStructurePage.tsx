@@ -27,7 +27,7 @@ import { WellCostCentreDrawer } from "@/components/wells/WellCostCentreDrawer"
 import { WellDataDialog } from "@/components/wells/WellDataDialog"
 import { WellDrawer } from "@/components/wells/WellDrawer"
 import { WellSelector } from "@/components/wells/WellSelector"
-import { availableAmount, buildCostCentreTotals, fmtCurrency, groupByServiceCategory, rollup, ZERO_TOTALS } from "@/lib/wellCost"
+import { buildCostCentreTotals, fmtCurrency, groupByServiceCategory, rollup, ZERO_TOTALS } from "@/lib/wellCost"
 import { errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import {
