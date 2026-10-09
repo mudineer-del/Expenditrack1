@@ -27,6 +27,7 @@ Your part-Supabase.docx
 # Folders
 Ikram New/
 Ikram-Previous/
+Invoices/
 
 # Vite / React build (react-rewrite)
 dist/
@@ -41,24 +42,6 @@ dist-ssr/
 singlefile-dist/
 public/ogdcl-singlefile.html
 
-Save and close.
-
-3. Confirm what git will track now
-
-cmd
-git status
-
-You should see only .gitignore and index.html (plus maybe node_modules/ line, harmless).
-
-4. Commit and push
-
-cmd
-git add .
-git commit -m "Initial commit - latest invoice tracker as index.html"
-git push -u origin main
-
-Once pushed, go set up Netlify (Part 2 from earlier) pointing at this repo, publish directory . — it'll auto-serve index.html.
-
-One flag: that file's ~2.5MB, which is large for a single HTML file (likely embedded data/images/base64). That's fine for git and Netlify, just slower to load in browser — not something to fix now, just worth knowing.
+# Environment
 .env.*
 !.env.example

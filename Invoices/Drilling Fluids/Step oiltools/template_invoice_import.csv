@@ -1,4 +1,0 @@
-srNo,vendor,invoiceNo,contractNo,wellName,invoiceDate,receivingDate,clearanceDate,loginDate,yr,receivingMonth,serviceMonth,qtr,service,type,department,region,rig,location,amountInclTax,status
-1,Step Oiltools,SOPK-001,OGDCL-OBM-2025-2028,Well Name,2025-09-01,2025-09-05,2025-09-10,2025-10-07,2025,September,September,Q3,Drilling Fluids,Contractor Services,Drilling Fluids,South,Rig Name,Location,50000,Pending
-2,Step Oiltools,SOPK-002,OGDCL-OBM-2025-2028,Well Name,2025-09-15,2025-09-18,2025-09-25,2025-10-07,2025,September,September,Q3,Drilling Fluids,Contractor Services,Drilling Fluids,South,Rig Name,Location,75000,Pending
-3,Step Oiltools,SOPK-003,OGDCL-OBM-2025-2028,Well Name,2025-10-01,2025-10-05,2025-10-12,2025-10-07,2025,October,October,Q4,Drilling Fluids,Contractor Services,Drilling Fluids,South,Rig Name,Location,60000,Pending
