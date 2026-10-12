@@ -69,7 +69,9 @@ test('rollups and monthly charts retain actuals, commitments, and credits', () =
   const entries = [{ costCentreId: 'c1', amount: 80, kind: 'actual', entryDate: '2026-09-01' },
     { costCentreId: 'c1', amount: -10, kind: 'actual', entryDate: '2026-09-02' },
     { costCentreId: 'c1', amount: 20, kind: 'commitment', entryDate: '2026-09-03' }]
-  assert.equal(rollup([{ id: 'c1', plannedBudget: 100 }], buildCostCentreTotals(entries)).available, 10)
+  const summary = rollup([{ id: 'c1', plannedBudget: 100 }], buildCostCentreTotals(entries))
+  assert.equal(summary.available, 30)
+  assert.equal(summary.commitments, 20)
   assert.equal(buildMonthlySpendSeries(entries)[0].actual, 70)
 })
 

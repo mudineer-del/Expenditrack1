@@ -218,8 +218,8 @@ function extractThreeWayCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: E
     let cc = -1
     for (let c = 0; c < row.length; c++) {
       const v = String(row[c] ?? "").trim().toLowerCase()
-      if (v === "daily cost") dc = c
-      if (v === "cumulative cost") cc = c
+      if (/^daily\s*cost$/.test(v)) dc = c
+      if (/^cum(ulative)?\s*cost$/.test(v)) cc = c
     }
     if (dc >= 0 && cc >= 0) {
       headerRow = r
@@ -228,9 +228,10 @@ function extractThreeWayCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: E
       break
     }
   }
-  if (headerRow < 0) return { error: 'Could not find the "Daily cost / Cumulative Cost" breakdown on the WBM sheet.' }
+  if (headerRow < 0) return extractVerticalCost(rows)
 
   const gaps: ExtractedGap[] = []
+  const mudExtras: { amount: number; cumulative: number | null }[] = []
 
   const mudContractorRow = rows[headerRow + 1]
   const mudDailyCell = String(mudContractorRow?.[dailyCol] ?? "").trim()
@@ -309,9 +310,10 @@ function extractThreeWayCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: E
       .join(" ")
       .trim()
     if (rawLabel.length < 3) continue
-    const label = rawLabel.toLowerCase()
-    if (/cumm?ulative/.test(label)) continue
-    const contractor: DmrContractor = /ogdcl/.test(label) ? "OGDCL" : "SECOND_CONTRACTOR"
+    if (/cumm?ulative/i.test(rawLabel)) continue
+    const owner = classifyCostOwner(rawLabel)
+    if (owner === "TOTAL") continue
+    const contractor: DmrContractor = owner === "OGDCL" ? "OGDCL" : owner === "SECOND" ? "SECOND_CONTRACTOR" : "MUD_CONTRACTOR"
     const amountCell = String(row[dailyCol] ?? "").trim()
     const cumCell = String(row[cumCol] ?? "").trim()
     if (!amountCell) {
@@ -324,6 +326,8 @@ function extractThreeWayCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: E
     if (contractor === "OGDCL") {
       ogdclAmount = amt
       ogdclCumulative = cum
+    } else if (contractor === "MUD_CONTRACTOR") {
+      mudExtras.push({ amount: amt, cumulative: cum })
     } else {
       secondAmount = amt
       secondCumulative = cum
@@ -331,10 +335,75 @@ function extractThreeWayCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: E
     }
   }
 
-  const result: ExtractedRow[] = [{ contractor: "MUD_CONTRACTOR", sourceLabel: mudLabel, amount: mudAmount, cumulative: mudCumulative }]
+  let mudTotal = mudAmount
+  let mudTotalCumulative = mudCumulative
+  for (const x of mudExtras) {
+    mudTotal += x.amount
+    mudTotalCumulative = mudTotalCumulative !== null && x.cumulative !== null ? mudTotalCumulative + x.cumulative : null
+  }
+  const result: ExtractedRow[] = [{ contractor: "MUD_CONTRACTOR", sourceLabel: mudLabel, amount: mudTotal, cumulative: mudTotalCumulative }]
   if (ogdclAmount !== null) result.push({ contractor: "OGDCL", sourceLabel: "OGDCL", amount: ogdclAmount, cumulative: ogdclCumulative })
   if (secondAmount !== null) result.push({ contractor: "SECOND_CONTRACTOR", sourceLabel: secondLabel, amount: secondAmount, cumulative: secondCumulative })
   return { rows: result, gaps }
+}
+
+type CostOwner = "OGDCL" | "MUD" | "SECOND" | "TOTAL"
+
+function classifyCostOwner(label: string): CostOwner {
+  if (/total/i.test(label)) return "TOTAL"
+  if (/ogdc/i.test(label)) return "OGDCL"
+  if (!/[a-z]/i.test(label) || /slb|sc?hlumberger|swaco|saeco/i.test(label)) return "MUD"
+  return "SECOND"
+}
+
+/** Vertical layout used by some WBM templates instead of a single "Daily cost / Cumulative
+ *  Cost" column pair: each cost is its own labelled line ("Daily SLB Cost", "Cumulative OGDC
+ *  Cost", "Dialy Cost ogdcl", …) with the amount in the cell to the right of the label.
+ *  Only the mud contractor and OGDCL appear in this layout. */
+function extractVerticalCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: ExtractedGap[] } | { error: string } {
+  const headerRow = rows.findIndex((row) => row.some((c) => /^m-i engineer$/i.test(String(c ?? "").trim())))
+  if (headerRow < 0) return { error: 'Could not find the "Daily cost / Cumulative Cost" breakdown on the WBM sheet.' }
+
+  const daily: Partial<Record<"MUD_CONTRACTOR" | "OGDCL", number>> = {}
+  const cumulative: Partial<Record<"MUD_CONTRACTOR" | "OGDCL", number>> = {}
+  for (let r = headerRow + 1; r < Math.min(rows.length, headerRow + 12); r++) {
+    const row = rows[r] ?? []
+    let labelCol = -1
+    for (let c = 5; c <= 7; c++) {
+      if (/[a-z]/i.test(String(row[c] ?? ""))) {
+        labelCol = c
+        break
+      }
+    }
+    if (labelCol < 0) continue
+    const label = String(row[labelCol]).trim()
+    if (/total/i.test(label)) continue
+    const kind = /cumm?ulative/i.test(label) ? "cumulative" : /daily|dialy/i.test(label) ? "daily" : null
+    if (!kind) continue
+    let amount: number | null = null
+    for (let c = labelCol + 1; c < row.length; c++) {
+      const text = String(row[c] ?? "").trim()
+      if (text) {
+        amount = parseAmount(text)
+        break
+      }
+    }
+    if (amount === null) continue
+    const owner = /ogdc/i.test(label) ? "OGDCL" : "MUD_CONTRACTOR"
+    if (kind === "daily") daily[owner] = amount
+    else cumulative[owner] = amount
+  }
+
+  if (daily.MUD_CONTRACTOR === undefined && daily.OGDCL === undefined) {
+    return { error: "Could not read the daily cost lines on the WBM sheet." }
+  }
+  return {
+    rows: [
+      { contractor: "MUD_CONTRACTOR", sourceLabel: "SLB", amount: daily.MUD_CONTRACTOR ?? 0, cumulative: cumulative.MUD_CONTRACTOR ?? null },
+      { contractor: "OGDCL", sourceLabel: "OGDCL", amount: daily.OGDCL ?? 0, cumulative: cumulative.OGDCL ?? null },
+    ],
+    gaps: [],
+  }
 }
 
 /** The WBM sheet carries two free-text narrative blocks, one row apart from their own
