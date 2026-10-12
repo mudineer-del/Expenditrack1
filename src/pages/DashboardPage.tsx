@@ -15,6 +15,9 @@ import {
   TrendingUp,
   Wallet,
   X,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
@@ -71,6 +74,20 @@ import { cn } from "@/lib/utils"
 import { checkContractNotifications, loadNotifyConfig, loadNotifyPrefs, maybeSendWeeklyDigest } from "@/lib/notifications"
 
 const PICKER_NEUTRAL = "var(--muted-foreground)"
+function sectionZoomWidth(zoom: number): string {
+  return `${100 / Math.max(1, zoom)}%`
+}
+
+function SectionZoomBar({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  return (
+    <div className="flex h-8 items-center gap-0.5 rounded-md border bg-background/90 px-1 py-0.5 text-muted-foreground shadow-sm" title="Resize this section">
+      <button type="button" className="rounded p-1 hover:bg-muted" onClick={() => onChange(Math.max(0.55, +(value - 0.05).toFixed(2)))} aria-label="Zoom section out"><ZoomOut className="size-3.5" /></button>
+      <span className="min-w-9 text-center text-[11px] font-semibold tabular-nums">{Math.round(value * 100)}%</span>
+      <button type="button" className="rounded p-1 hover:bg-muted" onClick={() => onChange(Math.min(1.5, +(value + 0.05).toFixed(2)))} aria-label="Zoom section in"><ZoomIn className="size-3.5" /></button>
+      <button type="button" className="rounded p-1 hover:bg-muted" onClick={() => onChange(1)} aria-label="Reset section zoom"><RotateCcw className="size-3.5" /></button>
+    </div>
+  )
+}
 
 /** Mobile-only department/vendor picker card. A flat gray box with a color
  *  only on the active one read as lifeless — every card now carries its own
@@ -180,7 +197,10 @@ export default function DashboardPage() {
   const invoices = invoicesQuery.data ?? []
   const contracts = contractsQuery.data ?? []
 
-  const [contractorDeckZoom, setContractorDeckZoom] = useState(1)
+  const contractorDeckZoom = useDisplayStore((s) => s.contractorSectionZoom)
+  const analysisZoom = useDisplayStore((s) => s.analysisSectionZoom)
+  const recentZoom = useDisplayStore((s) => s.recentInvoicesZoom)
+  const setSectionZoom = useDisplayStore((s) => s.setSectionZoom)
   const contractorDeckRef = useRef<HTMLDivElement>(null)
   const [dateFromFilter, setDateFromFilter] = useState("")
   const [dateToFilter, setDateToFilter] = useState("")
@@ -200,11 +220,11 @@ export default function DashboardPage() {
     const handleWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return
       e.preventDefault()
-      setContractorDeckZoom((prev) => {
+      setSectionZoom("contractor", (() => {
         const delta = e.deltaY > 0 ? 0.9 : 1.1
-        const newZoom = Math.min(Math.max(prev * delta, 0.5), 2)
+        const newZoom = Math.min(Math.max(contractorDeckZoom * delta, 0.55), 1.5)
         return newZoom
-      })
+      })())
     }
 
     const container = contractorDeckRef.current
@@ -212,7 +232,7 @@ export default function DashboardPage() {
 
     container.addEventListener("wheel", handleWheel, { passive: false })
     return () => container.removeEventListener("wheel", handleWheel)
-  }, [])
+  }, [contractorDeckZoom, setSectionZoom])
 
   // Department scoping happens first (the "universal dashboard" tab strip), contractor
   // scoping second (the existing pills) — both client-side filters over the same
@@ -384,8 +404,12 @@ export default function DashboardPage() {
         {/* Names which department these contractor pills belong to — dataVendors is
             already scoped to activeDept (see its own useMemo above), so this just makes
             that scoping visible instead of a bare pill row that looks global. */}
-        <div className="mb-2 text-sm font-medium text-muted-foreground">
-          {activeDept === "ALL" ? "Contractors" : `Contractors — ${activeDept}`}
+        <div className="section-titlebar app-fixed-titlebar mb-2 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-base font-semibold">
+            <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
+            {activeDept === "ALL" ? "Contractors" : `Contractors — ${activeDept}`}
+          </h3>
+          <SectionZoomBar value={contractorDeckZoom} onChange={(value) => setSectionZoom("contractor", value)} />
         </div>
         <div className="grid grid-cols-3 gap-3 md:hidden">
           <PickerCard
@@ -566,7 +590,7 @@ export default function DashboardPage() {
 
       {dataVendors.length > 0 && (
         <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none overflow-visible">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="section-titlebar app-fixed-titlebar mb-3 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-base font-bold md:text-base md:font-semibold">
               <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
               Contractor Expenditure Overview
@@ -574,13 +598,19 @@ export default function DashboardPage() {
                 (Ctrl + scroll to zoom)
               </span>
             </h3>
-            <Button size="sm" variant="ghost" asChild>
-              <Link to="/vendors">Manage contracts</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <SectionZoomBar value={contractorDeckZoom} onChange={(value) => setSectionZoom("contractor", value)} />
+              <Button size="sm" variant="ghost" asChild>
+                <Link to="/vendors">Manage contracts</Link>
+              </Button>
+            </div>
           </div>
           <div
             ref={contractorDeckRef}
-            className="contractor-deck grid gap-3 transition-all duration-200 overflow-visible"
+            className={cn(
+              "contractor-deck grid gap-3 transition-all duration-200 overflow-visible",
+              contractorDeckZoom < 1 ? "contractor-deck--compact" : "contractor-deck--expanded",
+            )}
             style={{
               gridTemplateColumns: `repeat(auto-fit, minmax(${Math.max(120, 200 * contractorDeckZoom)}px, 1fr))`,
               gap: `${Math.max(8, 12 * contractorDeckZoom)}px`,
@@ -599,7 +629,7 @@ export default function DashboardPage() {
                 <button
                   key={v}
                   className={cn(
-                    "contractor-card group relative min-h-[190px] overflow-hidden rounded-2xl border p-4 text-left shadow-[0_5px_0_var(--contractor-shadow),0_12px_20px_-16px_var(--contractor-glow)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] active:translate-y-1 active:scale-[0.985] active:shadow-[0_2px_0_var(--contractor-shadow),0_7px_12px_-10px_var(--contractor-glow)] active:duration-100 md:min-h-[200px] md:rounded-2xl md:p-4 md:hover:-translate-y-1 md:hover:shadow-[0_7px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] md:active:translate-y-1 xl:min-h-[196px]",
+                    "contractor-card group relative overflow-hidden rounded-2xl border p-4 text-left shadow-[0_5px_0_var(--contractor-shadow),0_12px_20px_-16px_var(--contractor-glow)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] active:translate-y-1 active:scale-[0.985] active:shadow-[0_2px_0_var(--contractor-shadow),0_7px_12px_-10px_var(--contractor-glow)] active:duration-100 md:rounded-2xl md:p-4 md:hover:-translate-y-1 md:hover:shadow-[0_7px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] md:active:translate-y-1",
                     dashVendor === v && "ring-2 ring-primary ring-offset-2 ring-offset-background",
                     contractorIndex >= 5 && contractorDeckZoom === 1 && "contractor-card--overflow"
                   )}
@@ -619,6 +649,7 @@ export default function DashboardPage() {
                     className="absolute top-0 left-0 h-1 w-full opacity-80 transition-opacity duration-300 group-hover:opacity-100"
                     style={{ backgroundColor: accent }}
                   />
+                  <div className="contractor-card-content">
                   <div className="flex items-center gap-3">
                     <div
                       className={cn(
@@ -650,6 +681,7 @@ export default function DashboardPage() {
                       <dd className="mt-0.5 text-sm font-bold tabular-nums">{lead !== null ? `${lead} days` : "—"}</dd>
                     </div>
                   </dl>
+                  </div>
                 </button>
               )
             })}
@@ -658,14 +690,14 @@ export default function DashboardPage() {
       )}
 
       <div className="min-w-0">
-        <div className="mb-4 flex flex-col gap-3">
+        <div className="section-titlebar analysis-titlebar app-fixed-titlebar mb-4 flex flex-col gap-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="flex items-center gap-2 text-base font-bold md:text-base md:font-semibold">
               <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
               Expenditure Analysis
             </h3>
             <div className="flex flex-wrap items-center gap-3">
-              <p className="text-xs text-muted-foreground">Click a bar, slice, or point to see its invoices</p>
+              <SectionZoomBar value={analysisZoom} onChange={(value) => setSectionZoom("analysis", value)} />
               <SaveLayoutButton />
             </div>
           </div>
@@ -704,7 +736,7 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-        <div className="dashboard-chart-grid gap-4 md:gap-6">
+        <div className="dashboard-chart-grid gap-4 md:gap-6" style={{ zoom: analysisZoom, width: sectionZoomWidth(analysisZoom) } as React.CSSProperties}>
           {!chartSlots.dashTrend.hidden && (
           <ChartCard
             id="dashTrend"
@@ -912,18 +944,22 @@ export default function DashboardPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm md:rounded-lg md:shadow-none">
-        <div className="flex items-center justify-between border-b p-4">
+        <div className="section-titlebar app-fixed-titlebar flex items-center justify-between border-b p-4">
           <h3 className="flex items-center gap-2 text-base font-bold md:text-base md:font-semibold">
             <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
             Recent Invoices{dashVendor !== "ALL" ? ` — ${dashVendor}` : ""}
           </h3>
-          <Button size="sm" variant="ghost" asChild>
-            <Link to="/invoices">View all</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <SectionZoomBar value={recentZoom} onChange={(value) => setSectionZoom("recent", value)} />
+            <Button size="sm" variant="ghost" asChild>
+              <Link to="/invoices">View all</Link>
+            </Button>
+          </div>
         </div>
         {/* Card list below md — a 7-column table forces horizontal scroll on a
             phone; this shows the same rows and the same drill-down navigation
             as a tap-friendly list instead. Table (unchanged) takes over at md+. */}
+        <div style={{ zoom: recentZoom, width: sectionZoomWidth(recentZoom) } as React.CSSProperties}>
         {recent.length ? (
           <div className="divide-y md:hidden">
             {recent.map((r) => (
@@ -1000,6 +1036,7 @@ export default function DashboardPage() {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <InvoiceListDialog

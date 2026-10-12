@@ -151,6 +151,9 @@ interface DisplayPrefs {
   cardScale: CardScale
   /** Overall workspace zoom; dialogs rendered through body remain at 100%. */
   appZoom: number
+  contractorSectionZoom: number
+  analysisSectionZoom: number
+  recentInvoicesZoom: number
   radius: Radius
   borderWidth: BorderWidth
   borderStyle: BorderStyle
@@ -203,6 +206,7 @@ interface DisplayState extends DisplayPrefs {
   setCustomColor: (key: keyof PaletteVars, value: string) => void
   setCardScale: (scale: CardScale) => void
   setAppZoom: (zoom: number) => void
+  setSectionZoom: (section: "contractor" | "analysis" | "recent", zoom: number) => void
   setRadius: (radius: Radius) => void
   setBorderWidth: (w: BorderWidth) => void
   setBorderStyle: (s: BorderStyle) => void
@@ -325,6 +329,9 @@ function loadPrefs(): DisplayPrefs {
     customColors: saved?.customColors ?? null,
     cardScale: saved?.cardScale || "comfortable",
     appZoom: Math.max(55, Math.min(100, saved?.appZoom ?? 100)),
+    contractorSectionZoom: Math.max(0.55, Math.min(1.5, saved?.contractorSectionZoom ?? 1)),
+    analysisSectionZoom: Math.max(0.55, Math.min(1.5, saved?.analysisSectionZoom ?? 1)),
+    recentInvoicesZoom: Math.max(0.55, Math.min(1.5, saved?.recentInvoicesZoom ?? 1)),
     radius: saved?.radius || "md",
     borderWidth: saved?.borderWidth || "thin",
     borderStyle: saved?.borderStyle || "solid",
@@ -477,6 +484,13 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
   setAppZoom: (zoom) => {
     const next = Math.max(55, Math.min(100, Math.round(zoom)))
     set({ appZoom: next })
+    persist(get())
+  },
+
+  setSectionZoom: (section, zoom) => {
+    const next = Math.max(0.55, Math.min(1.5, Number(zoom.toFixed(2))))
+    const key = section === "contractor" ? "contractorSectionZoom" : section === "analysis" ? "analysisSectionZoom" : "recentInvoicesZoom"
+    set({ [key]: next } as Pick<DisplayState, typeof key>)
     persist(get())
   },
 
@@ -642,6 +656,9 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
       chartDesignVersion: CHART_DESIGN_VERSION,
       chartSlots: { ...DEFAULT_CHART_SLOTS, ...prefs.chartSlots },
       appZoom: Math.max(55, Math.min(100, prefs.appZoom ?? 100)),
+      contractorSectionZoom: Math.max(0.55, Math.min(1.5, prefs.contractorSectionZoom ?? 1)),
+      analysisSectionZoom: Math.max(0.55, Math.min(1.5, prefs.analysisSectionZoom ?? 1)),
+      recentInvoicesZoom: Math.max(0.55, Math.min(1.5, prefs.recentInvoicesZoom ?? 1)),
     }
     applyPalette(next.colorTheme, next.customColors ?? undefined)
     applyScale(next.cardScale)

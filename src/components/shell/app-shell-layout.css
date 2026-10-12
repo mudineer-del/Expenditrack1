@@ -4,7 +4,7 @@
   height: 100dvh;
   min-height: 0;
   overflow: auto;
-  transform: scale(calc(var(--app-zoom, 100) / 100));
+  transform: scale(var(--app-zoom, 1));
   transform-origin: top left;
 }
 .app-shell-layout > [data-slot="sidebar-inset"] {
@@ -20,3 +20,24 @@
   height: 100%;
 }
 .app-shell-layout #main-content { min-height: 0; max-height: none; }
+
+/* Keep dashboard section title bars at the normal 100% presentation size
+   while the section contents respond to app zoom. */
+.app-fixed-titlebar {
+  transform: scale(calc(1 / var(--app-zoom, 1)));
+  transform-origin: top left;
+  width: calc(100% * var(--app-zoom, 1));
+  min-height: 3.5rem;
+  font-size: 1.125rem;
+}
+.section-titlebar {
+  border: 1px solid color-mix(in oklch, var(--primary) 30%, var(--border));
+  border-radius: 0.75rem;
+  background: color-mix(in oklch, var(--primary) 9%, var(--card));
+  padding: 0.7rem 0.9rem;
+}
+.analysis-titlebar {
+  min-height: 3rem;
+  padding: 0.45rem 0.75rem;
+  gap: 0.5rem;
+}

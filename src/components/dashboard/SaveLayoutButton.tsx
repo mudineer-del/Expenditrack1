@@ -31,9 +31,6 @@ export function SaveLayoutButton() {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span role="status" className="text-xs text-muted-foreground">
-        {layoutQuery.isError ? "Account layout unavailable" : layoutQuery.isLoading ? "Checking saved layout…" : isDirty ? "Changes not saved to account" : "Saved to account"}
-      </span>
       <Button
         size="sm"
         variant={isDirty ? "default" : "outline"}
