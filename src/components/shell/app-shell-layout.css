@@ -3,7 +3,9 @@
 .app-shell-layout[data-slot="sidebar-wrapper"] {
   height: 100dvh;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
+  transform: scale(calc(var(--app-zoom, 100) / 100));
+  transform-origin: top left;
 }
 .app-shell-layout > [data-slot="sidebar-inset"] {
   width: 0;

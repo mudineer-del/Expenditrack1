@@ -26,12 +26,14 @@ import { QuickAddButton } from "@/components/shell/QuickAddButton"
 import { ThemeToggle } from "@/components/shell/ThemeToggle"
 import { MobileBottomNav } from "@/components/shell/MobileBottomNav"
 import { InstallPrompt } from "@/components/shell/InstallPrompt"
+import { AppZoomBar } from "@/components/shell/AppZoomBar"
 import { OgdclLogoFull } from "@/components/shared/OgdclMark"
 import { useAuth } from "@/hooks/useAuth"
 import { NAV_ITEM_COLORS } from "@/lib/navColors"
 import { useAppStore } from "@/store/useAppStore"
 import { useCommandPaletteStore } from "@/store/useCommandPaletteStore"
 import { useHelpDialogStore } from "@/store/useHelpDialogStore"
+import { useDisplayStore } from "@/store/useDisplayStore"
 
 const TITLES: Record<string, string> = {
   "/": "Dashboard",
@@ -75,6 +77,7 @@ export function AppShell() {
   const activeDept = useAppStore((s) => s.activeDept)
   const openPalette = useCommandPaletteStore((s) => s.setOpen)
   const openHelp = useHelpDialogStore((s) => s.setOpen)
+  const appZoom = useDisplayStore((s) => s.appZoom)
 
   // Keyboard shortcuts: Cmd+N for new invoice, Cmd+D for dark mode
   useEffect(() => {
@@ -95,7 +98,7 @@ export function AppShell() {
 
   return (
     <>
-      <SidebarProvider className="app-shell-layout" style={{ "--sidebar-width": sidebarWidth, "--sidebar-width-icon": iconWidth } as CSSProperties}>
+      <SidebarProvider className="app-shell-layout" style={{ "--sidebar-width": sidebarWidth, "--sidebar-width-icon": iconWidth, "--app-zoom": `${appZoom / 100}` } as CSSProperties}>
         <a href="#main-content" className="sr-only z-50 rounded-md bg-background p-3 text-foreground shadow-md focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to content</a>
         <AppSidebar />
         <SidebarInset className="min-h-0 min-w-0">
@@ -213,6 +216,7 @@ export function AppShell() {
       </SidebarProvider>
       <MobileBottomNav />
       <InstallPrompt />
+      <AppZoomBar />
     </>
   )
 }

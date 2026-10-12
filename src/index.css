@@ -1014,3 +1014,4 @@ body {
 .chart-label-scope[style*="--chart-label-color:"] .recharts-surface text {
   fill: var(--chart-label-color);
 }
+

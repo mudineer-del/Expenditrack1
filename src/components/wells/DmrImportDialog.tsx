@@ -296,10 +296,10 @@ export function DmrImportDialog({
               <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Which cost centre is each figure billed to?
               </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 {CONTRACTORS.map((c) => (
-                  <div key={c} className="grid gap-1.5">
-                    <Label>{CONTRACTOR_LABELS[c]}</Label>
+                  <div key={c} className="grid gap-1.5 min-w-0">
+                    <Label className="text-xs sm:text-sm truncate">{CONTRACTOR_LABELS[c]}</Label>
                     <Select
                       value={mapping[c] || SKIP}
                       onValueChange={(v) => setMapping((prev) => ({ ...prev, [c]: v === SKIP ? "" : v }))}

@@ -8,7 +8,7 @@ import { useDisplayStore, type ChartBackground, type ChartBackgroundDirection, t
 
 // The maximize window has its own presentation scale. It must not inherit the
 // chart card's zoom, so every chart opens consistently at the same readable size.
-const MAXIMIZED_CHART_DEFAULT_ZOOM = 0.8
+const MAXIMIZED_CHART_DEFAULT_ZOOM = 1
 
 /** Settings ▸ Format ▸ Charts ▸ "Chart background" controls this — from a plain solid
  *  card ("flat", Office's "No fill") up through today's soft accent wash ("subtle") to a
@@ -190,7 +190,7 @@ export function ChartCard({
             <div className="flex-1 flex items-center justify-center overflow-auto p-6 md:p-8" style={accentBackgroundStyle(effectiveAccent, chartBackground, chartBackgroundDirection)}>
               <div
                 className={cn(
-                  "w-full min-h-[24rem] flex items-center justify-center",
+                  "maximized-chart-content w-full min-h-[24rem] flex items-center justify-center",
                   !showLabels && "[&_.recharts-label-list]:hidden [&_.recharts-label]:hidden",
                   !showLegend && "[&_.recharts-legend-wrapper]:hidden",
                   !showGrid && "[&_.recharts-cartesian-grid]:hidden [&_.recharts-polar-grid]:hidden",
