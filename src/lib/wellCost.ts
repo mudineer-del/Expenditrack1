@@ -43,43 +43,71 @@ export interface CostCentreTotals {
 export const ZERO_TOTALS: CostCentreTotals = { actual: 0, commitment: 0 }
 
 export const MUD_ENGINEERING_DAY_RATE = 550
-const MUD_ENGINEERING_CODES = new Set(["DRFD02", "DRFC02"])
 export const AUTO_ENTRY_PREFIX = "auto:"
 
+/** Each mud engineering centre accrues its day rate between two of the well's milestones.
+ *  DRFD02 runs from Spud to End of drilling; DRFC02 runs from Well on testing to End of well.
+ *  A missing end milestone means the accrual runs to today. */
+export const MUD_ENGINEERING_SCHEDULES: Record<
+  string,
+  { start: { label: string; pattern: RegExp }; end: { label: string; pattern: RegExp } }
+> = {
+  DRFD02: { start: { label: "Spud", pattern: /spud/i }, end: { label: "End of drilling", pattern: /end of drilling/i } },
+  DRFC02: { start: { label: "Well on testing", pattern: /well on test/i }, end: { label: "End of well", pattern: /end of well/i } },
+}
+
+export function mudEngineeringScheduleFor(costCentre: string) {
+  return MUD_ENGINEERING_SCHEDULES[costCentre.trim().toUpperCase()] ?? null
+}
+
 export function isMudEngineeringCode(costCentre: string): boolean {
-  return MUD_ENGINEERING_CODES.has(costCentre.trim().toUpperCase())
+  return mudEngineeringScheduleFor(costCentre) !== null
 }
 
 export function isAutoEntry(t: WellCostTransaction): boolean {
   return t.id.startsWith(AUTO_ENTRY_PREFIX)
 }
 
-/** The well's Spud milestone date — its actual date, falling back to the planned one. Matches
- *  any label containing "spud" ("Spud", "Spud Date", "Spud (rig)") and takes the earliest
- *  one that has a date. */
-export function spudDateForWell(wellId: string, milestones: WellMilestone[]): string | null {
+/** A well milestone's date for a label pattern: the earliest matching row's actual date,
+ *  falling back to its planned date. */
+export function milestoneDateForWell(wellId: string, milestones: WellMilestone[], pattern: RegExp): string | null {
   const dates = milestones
-    .filter((m) => m.wellId === wellId && /spud/i.test(m.label))
+    .filter((m) => m.wellId === wellId && pattern.test(m.label))
     .map((m) => m.actualDate || m.plannedDate)
     .filter((d): d is string => !!d)
     .sort()
   return dates[0] ?? null
 }
 
+/** Every schedule milestone date for a well, keyed by milestone label. */
+export function mudEngineeringDatesForWell(wellId: string, milestones: WellMilestone[]): Record<string, string> {
+  const dates: Record<string, string> = {}
+  for (const schedule of Object.values(MUD_ENGINEERING_SCHEDULES)) {
+    for (const side of [schedule.start, schedule.end]) {
+      const date = milestoneDateForWell(wellId, milestones, side.pattern)
+      if (date) dates[side.label] = date
+    }
+  }
+  return dates
+}
+
+export function spudDateForWell(wellId: string, milestones: WellMilestone[]): string | null {
+  return milestoneDateForWell(wellId, milestones, /spud/i)
+}
+
 function addDays(date: string, delta: number): string {
   return new Date(Date.parse(`${date}T00:00:00Z`) + delta * 86400000).toISOString().slice(0, 10)
 }
 
-/** Calendar days from spud through today, both ends counted. */
-export function mudEngineeringDays(spudDate: string, today: string): number {
-  const diff = Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${spudDate}T00:00:00Z`)) / 86400000)
+/** Calendar days from start through end, both ends counted; 0 when end is before start. */
+export function mudEngineeringDays(start: string, end: string): number {
+  const diff = Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86400000)
   return diff < 0 ? 0 : diff + 1
 }
 
-/** Mud engineering centres (DRFD02/DRFC02) accrue MUD_ENGINEERING_DAY_RATE per day from the
- *  well's Spud. An override amount replaces the accrual with one lump entry. Generated, not
- *  stored: ids are deterministic and prefixed with AUTO_ENTRY_PREFIX so the Daily Log can
- *  show them read-only and they never reach the database. */
+/** Generated, not stored: ids are deterministic and carry AUTO_ENTRY_PREFIX so the Daily Log
+ *  shows them read-only and they never reach the database. An override replaces the accrual
+ *  with one lump entry. */
 export function buildMudEngineeringEntries(
   centres: WellCostCentre[],
   milestones: WellMilestone[],
@@ -87,13 +115,14 @@ export function buildMudEngineeringEntries(
 ): WellCostTransaction[] {
   const entries: WellCostTransaction[] = []
   for (const c of centres) {
-    if (!isMudEngineeringCode(c.costCentre)) continue
-    const spud = spudDateForWell(c.wellId, milestones)
+    const schedule = mudEngineeringScheduleFor(c.costCentre)
+    if (!schedule) continue
+    const start = milestoneDateForWell(c.wellId, milestones, schedule.start.pattern)
     if (c.overrideAmount !== "") {
       entries.push({
         id: `${AUTO_ENTRY_PREFIX}${c.id}:override`,
         costCentreId: c.id,
-        entryDate: spud ?? today,
+        entryDate: start ?? today,
         kind: "actual",
         amount: c.overrideAmount,
         notes: "Override cost entered in the cost centre (replaces the day-rate accrual)",
@@ -102,17 +131,19 @@ export function buildMudEngineeringEntries(
       })
       continue
     }
-    if (!spud) continue
-    const days = mudEngineeringDays(spud, today)
+    if (!start) continue
+    const end = milestoneDateForWell(c.wellId, milestones, schedule.end.pattern)
+    const effectiveEnd = end && end < today ? end : today
+    const days = mudEngineeringDays(start, effectiveEnd)
     for (let i = 0; i < days; i++) {
-      const date = addDays(spud, i)
+      const date = addDays(start, i)
       entries.push({
         id: `${AUTO_ENTRY_PREFIX}${c.id}:${date}`,
         costCentreId: c.id,
         entryDate: date,
         kind: "actual",
         amount: MUD_ENGINEERING_DAY_RATE,
-        notes: `Mud engineering day rate (USD ${MUD_ENGINEERING_DAY_RATE}/day from spud)`,
+        notes: `Mud engineering day rate (USD ${MUD_ENGINEERING_DAY_RATE}/day, ${schedule.start.label} to ${schedule.end.label})`,
         remarks: "",
         createdByName: "Auto",
       })

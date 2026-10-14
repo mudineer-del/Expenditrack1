@@ -27,7 +27,17 @@ import { WellCostCentreDrawer } from "@/components/wells/WellCostCentreDrawer"
 import { WellDataDialog } from "@/components/wells/WellDataDialog"
 import { WellDrawer } from "@/components/wells/WellDrawer"
 import { WellSelector } from "@/components/wells/WellSelector"
-import { buildCostCentreTotals, fmtCurrency, groupByServiceCategory, rollup, spudDateForWell, ZERO_TOTALS } from "@/lib/wellCost"
+import {
+  buildCostCentreTotals,
+  fmtCurrency,
+  groupByServiceCategory,
+  MUD_ENGINEERING_SCHEDULES,
+  milestoneDateForWell,
+  mudEngineeringDatesForWell,
+  rollup,
+  ZERO_TOTALS,
+} from "@/lib/wellCost"
+import type { MudEngineeringEdit } from "@/components/wells/WellCostCentreDrawer"
 import { errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import {
@@ -187,18 +197,26 @@ export default function WellCostStructurePage() {
     setCentreDrawer({ open: true, item, departmentId: item.departmentId, serviceCategoryId: item.serviceCategoryId, readOnly: true })
   }
 
-  function handleSaveCostCentre(record: WellCostCentre, spudDate: string | null) {
+  function saveWellMilestoneDate(wellId: string, side: { label: string; pattern: RegExp }, date: string) {
+    if (date === (milestoneDateForWell(wellId, milestones, side.pattern) ?? "")) return
+    const existing = milestones.find((m) => m.wellId === wellId && side.pattern.test(m.label))
+    if (!date && !existing) return
+    upsertMilestone.mutate(
+      existing
+        ? { ...existing, actualDate: date }
+        : { ...blankWellMilestone(wellId, milestones.length), label: side.label, actualDate: date }
+    )
+  }
+
+  function handleSaveCostCentre(record: WellCostCentre, edit: MudEngineeringEdit | null) {
     const dupe = wellCostCentres.some(
       (c) => c.id !== record.id && c.costCentre.trim().toLowerCase() === record.costCentre.trim().toLowerCase()
     )
     if (dupe) toast.warning(`Heads up: Cost Centre "${record.costCentre}" is already used elsewhere on this well.`)
-    if (spudDate && spudDate !== spudDateForWell(record.wellId, milestones)) {
-      const existing = milestones.find((m) => m.wellId === record.wellId && /spud/i.test(m.label))
-      upsertMilestone.mutate(
-        existing
-          ? { ...existing, actualDate: spudDate }
-          : { ...blankWellMilestone(record.wellId, milestones.length), label: "Spud", actualDate: spudDate }
-      )
+    if (edit && MUD_ENGINEERING_SCHEDULES[edit.code]) {
+      const schedule = MUD_ENGINEERING_SCHEDULES[edit.code]
+      saveWellMilestoneDate(record.wellId, schedule.start, edit.startDate)
+      saveWellMilestoneDate(record.wellId, schedule.end, edit.endDate)
     }
     upsertCostCentre.mutate(record, {
       onSuccess: () => {
@@ -602,7 +620,7 @@ export default function WellCostStructurePage() {
           departmentId={centreDrawer.departmentId}
           serviceCategoryId={centreDrawer.serviceCategoryId}
           readOnly={centreDrawer.readOnly}
-          spudDate={spudDateForWell(selectedWell.id, milestones)}
+          wellDates={mudEngineeringDatesForWell(selectedWell.id, milestones)}
           onOpenChange={(v) => !v && setCentreDrawer(BLANK_DRAWER_STATE)}
           onSubmit={handleSaveCostCentre}
         />

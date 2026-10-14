@@ -88,7 +88,11 @@ test('mud engineering accrues USD 550 per day from spud (both ends counted) unle
   const { buildMudEngineeringEntries, mudEngineeringDays } = await import('../src/lib/wellCost.ts')
   assert.equal(mudEngineeringDays('2026-10-01', '2026-10-03'), 3)
   assert.equal(mudEngineeringDays('2026-10-05', '2026-10-03'), 0)
-  const milestones = [{ wellId: 'w1', label: 'Spud', actualDate: '2026-10-01', plannedDate: '' }]
+  const milestones = [
+    { wellId: 'w1', label: 'Spud', actualDate: '2026-10-01', plannedDate: '' },
+    { wellId: 'w1', label: 'End of drilling', actualDate: '2026-10-02', plannedDate: '' },
+    { wellId: 'w1', label: 'Well on testing', actualDate: '2026-10-02', plannedDate: '' },
+  ]
   const centres = [
     { id: 'c1', wellId: 'w1', costCentre: 'DRFD02', overrideAmount: '' },
     { id: 'c2', wellId: 'w1', costCentre: 'drfc02', overrideAmount: '' },
@@ -97,9 +101,9 @@ test('mud engineering accrues USD 550 per day from spud (both ends counted) unle
   ]
   const entries = buildMudEngineeringEntries(centres, milestones, '2026-10-03')
   const byCentre = (id) => entries.filter((e) => e.costCentreId === id)
-  assert.equal(byCentre('c1').length, 3)
-  assert.equal(byCentre('c1').reduce((s, e) => s + e.amount, 0), 1650)
-  assert.equal(byCentre('c2').length, 3)
+  assert.equal(byCentre('c1').length, 2)
+  assert.equal(byCentre('c1').reduce((s, e) => s + e.amount, 0), 1100)
+  assert.equal(byCentre('c2').length, 2)
   assert.equal(byCentre('c3').length, 0)
   assert.deepEqual(byCentre('c4').map((e) => e.amount), [2000])
   assert.deepEqual(buildMudEngineeringEntries([centres[0]], [], '2026-10-03'), [])

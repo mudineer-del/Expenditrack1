@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { CURRENCY_OPTIONS, MUD_ENGINEERING_DAY_RATE, fmtCurrency, isMudEngineeringCode, mudEngineeringDays } from "@/lib/wellCost"
+import { CURRENCY_OPTIONS, MUD_ENGINEERING_DAY_RATE, MUD_ENGINEERING_SCHEDULES, fmtCurrency, mudEngineeringDays, mudEngineeringScheduleFor } from "@/lib/wellCost"
 import { blankWellCostCentre, type WellCostCentre } from "@/types/wellCost"
 
 const schema = z.object({
@@ -29,7 +29,8 @@ const schema = z.object({
     .string()
     .refine((v) => !v.trim() || (Number.isFinite(Number(v)) && Number(v) >= 0), "Enter a valid amount")
     .optional(),
-  spudDate: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   vendor: z.string().optional(),
   notes: z.string().optional(),
 })
@@ -37,7 +38,10 @@ const schema = z.object({
 type FormInput = z.input<typeof schema>
 type Values = z.output<typeof schema>
 
-function toValues(item: WellCostCentre, spudDate: string | null): FormInput {
+export type MudEngineeringEdit = { code: string; startDate: string; endDate: string }
+
+function toValues(item: WellCostCentre, wellDates: Record<string, string>): FormInput {
+  const schedule = mudEngineeringScheduleFor(item.costCentre)
   return {
     costCentre: item.costCentre,
     fundCentre: item.fundCentre,
@@ -45,7 +49,8 @@ function toValues(item: WellCostCentre, spudDate: string | null): FormInput {
     plannedBudget: item.plannedBudget === "" ? undefined : Number(item.plannedBudget),
     currency: item.currency || "USD",
     overrideAmount: item.overrideAmount === "" ? "" : String(item.overrideAmount),
-    spudDate: spudDate ?? "",
+    startDate: schedule ? (wellDates[schedule.start.label] ?? "") : "",
+    endDate: schedule ? (wellDates[schedule.end.label] ?? "") : "",
     vendor: item.vendor,
     notes: item.notes,
   }
@@ -59,7 +64,7 @@ export function WellCostCentreDrawer({
   serviceCategoryId,
   /** Non-Admins get the same form disabled, read-only, no Save — the "View" action. */
   readOnly = false,
-  spudDate = null,
+  wellDates = {},
   onOpenChange,
   onSubmit,
 }: {
@@ -69,21 +74,25 @@ export function WellCostCentreDrawer({
   departmentId: string
   serviceCategoryId: string
   readOnly?: boolean
-  /** The well's Spud date, used to show the day-rate estimate for mud engineering centres. */
-  spudDate?: string | null
+  /** The well's milestone dates keyed by milestone label (Spud, End of drilling, Well on
+   *  testing, End of well) — prefills and drives the day-rate fields for mud engineering centres. */
+  wellDates?: Record<string, string>
   onOpenChange: (open: boolean) => void
-  onSubmit: (values: WellCostCentre, spudDate: string | null) => void
+  onSubmit: (values: WellCostCentre, edit: MudEngineeringEdit | null) => void
 }) {
   const isEdit = !!item
   const form = useForm<FormInput, unknown, Values>({
     resolver: zodResolver(schema),
-    defaultValues: toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId), spudDate),
+    defaultValues: toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId), wellDates),
   })
   const watchedCentre = form.watch("costCentre") ?? ""
-  const showOverride = isMudEngineeringCode(watchedCentre)
-  const watchedSpud = form.watch("spudDate")?.trim() ?? ""
+  const schedule = mudEngineeringScheduleFor(watchedCentre)
+  const scheduleCode = schedule ? watchedCentre.trim().toUpperCase() : ""
+  const watchedStart = form.watch("startDate")?.trim() ?? ""
+  const watchedEnd = form.watch("endDate")?.trim() ?? ""
   const today = new Date().toISOString().slice(0, 10)
-  const autoDays = watchedSpud ? mudEngineeringDays(watchedSpud, today) : 0
+  const accrualEnd = watchedEnd && watchedEnd < today ? watchedEnd : today
+  const autoDays = watchedStart ? mudEngineeringDays(watchedStart, accrualEnd) : 0
 
   // Re-initialize only when a *different* item (or well/department/category) is being
   // opened — not on every open/close toggle, so an accidental close (Escape, click outside)
@@ -94,9 +103,18 @@ export function WellCostCentreDrawer({
     const key = item ? `edit:${item.id}` : `add:${wellId}:${departmentId}:${serviceCategoryId}`
     if (lastKeyRef.current === key) return
     lastKeyRef.current = key
-    form.reset(toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId), spudDate))
+    form.reset(toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId), wellDates))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item, wellId, departmentId, serviceCategoryId])
+
+  // Switching between DRFD02 and DRFC02 swaps which well milestones the date fields show.
+  useEffect(() => {
+    if (!scheduleCode) return
+    const s = MUD_ENGINEERING_SCHEDULES[scheduleCode]
+    form.setValue("startDate", wellDates[s.start.label] ?? "")
+    form.setValue("endDate", wellDates[s.end.label] ?? "")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheduleCode])
 
   function handleSubmit(values: Values) {
     const record: WellCostCentre = {
@@ -113,7 +131,10 @@ export function WellCostCentreDrawer({
       vendor: values.vendor || "",
       notes: values.notes || "",
     }
-    onSubmit(record, values.spudDate?.trim() || null)
+    onSubmit(
+      record,
+      schedule ? { code: scheduleCode, startDate: values.startDate?.trim() || "", endDate: values.endDate?.trim() || "" } : null
+    )
   }
 
   return (
@@ -209,24 +230,42 @@ export function WellCostCentreDrawer({
                   )}
                 />
               </div>
-              {showOverride && (
-                <FormField
-                  control={form.control}
-                  name="spudDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Spud date (this well)</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} value={field.value ?? ""} />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        The day rate accrues from this date through today. Saved to this well&apos;s Spud milestone.
-                      </p>
-                    </FormItem>
-                  )}
-                />
+              {schedule && (
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{schedule.start.label} date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} value={field.value ?? ""} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{schedule.end.label} date (optional)</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} value={field.value ?? ""} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
               )}
-              {showOverride && (
+              {schedule && (
+                <p className="-mt-2 text-xs text-muted-foreground">
+                  {watchedStart
+                    ? `Auto: ${autoDays} day${autoDays !== 1 ? "s" : ""} from ${watchedStart} to ${watchedEnd && accrualEnd === watchedEnd ? watchedEnd : `${today} (today)`} × ${fmtCurrency(MUD_ENGINEERING_DAY_RATE, "USD")} = ${fmtCurrency(autoDays * MUD_ENGINEERING_DAY_RATE, "USD")}. ${watchedEnd ? `Accrual stops on ${schedule.end.label.toLowerCase()}.` : `Leave ${schedule.end.label.toLowerCase()} blank to keep accruing to today.`}`
+                    : `Enter the ${schedule.start.label} date to start the day-rate calculation.`}
+                </p>
+              )}
+              {schedule && (
                 <FormField
                   control={form.control}
                   name="overrideAmount"
@@ -236,11 +275,7 @@ export function WellCostCentreDrawer({
                       <FormControl>
                         <Input type="number" step="0.01" min="0" placeholder="Leave blank to use day rate" {...field} value={field.value ?? ""} />
                       </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        {watchedSpud
-                          ? `Auto: ${autoDays} day${autoDays !== 1 ? "s" : ""} from spud (${watchedSpud}) × ${fmtCurrency(MUD_ENGINEERING_DAY_RATE, "USD")} = ${fmtCurrency(autoDays * MUD_ENGINEERING_DAY_RATE, "USD")}. An override replaces this.`
-                          : "Enter the spud date above to start the day-rate calculation."}
-                      </p>
+                      <p className="text-xs text-muted-foreground">An override replaces the day-rate accrual.</p>
                       <FormMessage />
                     </FormItem>
                   )}
