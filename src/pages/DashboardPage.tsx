@@ -202,8 +202,9 @@ export default function DashboardPage() {
   const recentZoom = useDisplayStore((s) => s.recentInvoicesZoom)
   const setSectionZoom = useDisplayStore((s) => s.setSectionZoom)
   const contractorDeckRef = useRef<HTMLDivElement>(null)
-  const [dateFromFilter, setDateFromFilter] = useState("")
-  const [dateToFilter, setDateToFilter] = useState("")
+  const dateFromFilter = useDisplayStore((s) => s.dashboardPeriod.from)
+  const dateToFilter = useDisplayStore((s) => s.dashboardPeriod.to)
+  const setDashboardPeriod = useDisplayStore((s) => s.setDashboardPeriod)
 
   const notifiedThisSession = useRef(false)
   useEffect(() => {
@@ -707,7 +708,7 @@ export default function DashboardPage() {
               <Input
                 type="date"
                 value={dateFromFilter}
-                onChange={(e) => setDateFromFilter(e.target.value)}
+                onChange={(e) => setDashboardPeriod({ from: e.target.value, to: dateToFilter })}
                 className="h-8 w-32 text-xs"
                 placeholder="From"
               />
@@ -715,7 +716,7 @@ export default function DashboardPage() {
               <Input
                 type="date"
                 value={dateToFilter}
-                onChange={(e) => setDateToFilter(e.target.value)}
+                onChange={(e) => setDashboardPeriod({ from: dateFromFilter, to: e.target.value })}
                 className="h-8 w-32 text-xs"
                 placeholder="To"
               />
@@ -726,8 +727,7 @@ export default function DashboardPage() {
                 variant="ghost"
                 className="h-8 px-2 text-muted-foreground hover:text-foreground"
                 onClick={() => {
-                  setDateFromFilter("")
-                  setDateToFilter("")
+                  setDashboardPeriod({ from: "", to: "" })
                 }}
                 title="Clear date filters"
               >

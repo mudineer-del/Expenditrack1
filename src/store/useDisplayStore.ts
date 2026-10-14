@@ -137,6 +137,12 @@ const CHART_DESIGN_VERSION = 3
 /** Everything that's meaningful to save/sync as a "layout" — the whole DisplayPrefs minus
  *  chartDesignVersion, which is a local migration marker for this browser's own old saved
  *  data and has no meaning carried into another account/device. */
+/** Expenditure Analysis period on the dashboard (empty string = open-ended). */
+export interface DashboardPeriod {
+  from: string
+  to: string
+}
+
 export type SyncableDisplayPrefs = Omit<DisplayPrefs, "chartDesignVersion">
 
 export function getSyncablePrefs(state: DisplayPrefs): SyncableDisplayPrefs {
@@ -153,6 +159,7 @@ interface DisplayPrefs {
   appZoom: number
   contractorSectionZoom: number
   analysisSectionZoom: number
+  dashboardPeriod: DashboardPeriod
   recentInvoicesZoom: number
   radius: Radius
   borderWidth: BorderWidth
@@ -207,6 +214,7 @@ interface DisplayState extends DisplayPrefs {
   setCardScale: (scale: CardScale) => void
   setAppZoom: (zoom: number) => void
   setSectionZoom: (section: "contractor" | "analysis" | "recent", zoom: number) => void
+  setDashboardPeriod: (period: DashboardPeriod) => void
   setRadius: (radius: Radius) => void
   setBorderWidth: (w: BorderWidth) => void
   setBorderStyle: (s: BorderStyle) => void
@@ -331,6 +339,7 @@ function loadPrefs(): DisplayPrefs {
     appZoom: Math.max(55, Math.min(100, saved?.appZoom ?? 100)),
     contractorSectionZoom: Math.max(0.55, Math.min(1.5, saved?.contractorSectionZoom ?? 1)),
     analysisSectionZoom: Math.max(0.55, Math.min(1.5, saved?.analysisSectionZoom ?? 1)),
+    dashboardPeriod: { from: saved?.dashboardPeriod?.from ?? "", to: saved?.dashboardPeriod?.to ?? "" },
     recentInvoicesZoom: Math.max(0.55, Math.min(1.5, saved?.recentInvoicesZoom ?? 1)),
     radius: saved?.radius || "md",
     borderWidth: saved?.borderWidth || "thin",
@@ -419,6 +428,7 @@ function persist(state: DisplayPrefs): void {
     tableBanded,
     tableHeaderShaded,
     tableGridLines,
+    dashboardPeriod,
   } = state
   storeSet(PREFS_KEY, {
     chartDesignVersion,
@@ -454,6 +464,7 @@ function persist(state: DisplayPrefs): void {
     tableBanded,
     tableHeaderShaded,
     tableGridLines,
+    dashboardPeriod,
   })
 }
 
@@ -491,6 +502,11 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
     const next = Math.max(0.55, Math.min(1.5, Number(zoom.toFixed(2))))
     const key = section === "contractor" ? "contractorSectionZoom" : section === "analysis" ? "analysisSectionZoom" : "recentInvoicesZoom"
     set({ [key]: next } as Pick<DisplayState, typeof key>)
+    persist(get())
+  },
+
+  setDashboardPeriod: (period) => {
+    set({ dashboardPeriod: period })
     persist(get())
   },
 
@@ -658,6 +674,7 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
       appZoom: Math.max(55, Math.min(100, prefs.appZoom ?? 100)),
       contractorSectionZoom: Math.max(0.55, Math.min(1.5, prefs.contractorSectionZoom ?? 1)),
       analysisSectionZoom: Math.max(0.55, Math.min(1.5, prefs.analysisSectionZoom ?? 1)),
+      dashboardPeriod: { from: prefs.dashboardPeriod?.from ?? "", to: prefs.dashboardPeriod?.to ?? "" },
       recentInvoicesZoom: Math.max(0.55, Math.min(1.5, prefs.recentInvoicesZoom ?? 1)),
     }
     applyPalette(next.colorTheme, next.customColors ?? undefined)
