@@ -27,7 +27,7 @@ import { WellCostCentreDrawer } from "@/components/wells/WellCostCentreDrawer"
 import { WellDataDialog } from "@/components/wells/WellDataDialog"
 import { WellDrawer } from "@/components/wells/WellDrawer"
 import { WellSelector } from "@/components/wells/WellSelector"
-import { buildCostCentreTotals, fmtCurrency, groupByServiceCategory, rollup, ZERO_TOTALS } from "@/lib/wellCost"
+import { buildCostCentreTotals, fmtCurrency, groupByServiceCategory, rollup, spudDateForWell, ZERO_TOTALS } from "@/lib/wellCost"
 import { errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import {
@@ -43,7 +43,7 @@ import { useDeleteWellMilestone, useUpsertWellMilestone, useWellMilestonesQuery 
 import { useUpsertWell, useWellsQuery } from "@/hooks/useWells"
 import type { Well } from "@/types/well"
 import type { WellCostCentre, WellCostTransaction } from "@/types/wellCost"
-import type { WellMilestone } from "@/types/wellMilestone"
+import { blankWellMilestone, type WellMilestone } from "@/types/wellMilestone"
 
 interface CostCentreDrawerState {
   open: boolean
@@ -187,11 +187,19 @@ export default function WellCostStructurePage() {
     setCentreDrawer({ open: true, item, departmentId: item.departmentId, serviceCategoryId: item.serviceCategoryId, readOnly: true })
   }
 
-  function handleSaveCostCentre(record: WellCostCentre) {
+  function handleSaveCostCentre(record: WellCostCentre, spudDate: string | null) {
     const dupe = wellCostCentres.some(
       (c) => c.id !== record.id && c.costCentre.trim().toLowerCase() === record.costCentre.trim().toLowerCase()
     )
     if (dupe) toast.warning(`Heads up: Cost Centre "${record.costCentre}" is already used elsewhere on this well.`)
+    if (spudDate && spudDate !== spudDateForWell(record.wellId, milestones)) {
+      const existing = milestones.find((m) => m.wellId === record.wellId && /spud/i.test(m.label))
+      upsertMilestone.mutate(
+        existing
+          ? { ...existing, actualDate: spudDate }
+          : { ...blankWellMilestone(record.wellId, milestones.length), label: "Spud", actualDate: spudDate }
+      )
+    }
     upsertCostCentre.mutate(record, {
       onSuccess: () => {
         toast.success(centreDrawer.item ? "Cost / Fund Centre updated." : "Cost / Fund Centre added.")
@@ -594,6 +602,7 @@ export default function WellCostStructurePage() {
           departmentId={centreDrawer.departmentId}
           serviceCategoryId={centreDrawer.serviceCategoryId}
           readOnly={centreDrawer.readOnly}
+          spudDate={spudDateForWell(selectedWell.id, milestones)}
           onOpenChange={(v) => !v && setCentreDrawer(BLANK_DRAWER_STATE)}
           onSubmit={handleSaveCostCentre}
         />

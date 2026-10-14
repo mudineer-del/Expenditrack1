@@ -42,6 +42,85 @@ export interface CostCentreTotals {
 
 export const ZERO_TOTALS: CostCentreTotals = { actual: 0, commitment: 0 }
 
+export const MUD_ENGINEERING_DAY_RATE = 550
+const MUD_ENGINEERING_CODES = new Set(["DRFD02", "DRFC02"])
+export const AUTO_ENTRY_PREFIX = "auto:"
+
+export function isMudEngineeringCode(costCentre: string): boolean {
+  return MUD_ENGINEERING_CODES.has(costCentre.trim().toUpperCase())
+}
+
+export function isAutoEntry(t: WellCostTransaction): boolean {
+  return t.id.startsWith(AUTO_ENTRY_PREFIX)
+}
+
+/** The well's Spud milestone date — its actual date, falling back to the planned one. Matches
+ *  any label containing "spud" ("Spud", "Spud Date", "Spud (rig)") and takes the earliest
+ *  one that has a date. */
+export function spudDateForWell(wellId: string, milestones: WellMilestone[]): string | null {
+  const dates = milestones
+    .filter((m) => m.wellId === wellId && /spud/i.test(m.label))
+    .map((m) => m.actualDate || m.plannedDate)
+    .filter((d): d is string => !!d)
+    .sort()
+  return dates[0] ?? null
+}
+
+function addDays(date: string, delta: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + delta * 86400000).toISOString().slice(0, 10)
+}
+
+/** Calendar days from spud through today, both ends counted. */
+export function mudEngineeringDays(spudDate: string, today: string): number {
+  const diff = Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${spudDate}T00:00:00Z`)) / 86400000)
+  return diff < 0 ? 0 : diff + 1
+}
+
+/** Mud engineering centres (DRFD02/DRFC02) accrue MUD_ENGINEERING_DAY_RATE per day from the
+ *  well's Spud. An override amount replaces the accrual with one lump entry. Generated, not
+ *  stored: ids are deterministic and prefixed with AUTO_ENTRY_PREFIX so the Daily Log can
+ *  show them read-only and they never reach the database. */
+export function buildMudEngineeringEntries(
+  centres: WellCostCentre[],
+  milestones: WellMilestone[],
+  today: string
+): WellCostTransaction[] {
+  const entries: WellCostTransaction[] = []
+  for (const c of centres) {
+    if (!isMudEngineeringCode(c.costCentre)) continue
+    const spud = spudDateForWell(c.wellId, milestones)
+    if (c.overrideAmount !== "") {
+      entries.push({
+        id: `${AUTO_ENTRY_PREFIX}${c.id}:override`,
+        costCentreId: c.id,
+        entryDate: spud ?? today,
+        kind: "actual",
+        amount: c.overrideAmount,
+        notes: "Override cost entered in the cost centre (replaces the day-rate accrual)",
+        remarks: "",
+        createdByName: "Auto",
+      })
+      continue
+    }
+    if (!spud) continue
+    const days = mudEngineeringDays(spud, today)
+    for (let i = 0; i < days; i++) {
+      const date = addDays(spud, i)
+      entries.push({
+        id: `${AUTO_ENTRY_PREFIX}${c.id}:${date}`,
+        costCentreId: c.id,
+        entryDate: date,
+        kind: "actual",
+        amount: MUD_ENGINEERING_DAY_RATE,
+        notes: `Mud engineering day rate (USD ${MUD_ENGINEERING_DAY_RATE}/day from spud)`,
+        remarks: "",
+        createdByName: "Auto",
+      })
+    }
+  }
+  return entries
+}
+
 export function budgetStatus(budget: number, spent: number): string {
   if (budget <= 0) return spent > 0 ? "Spend without budget" : "No budget"
   // Compare cents so floating-point addition does not create a false overrun.

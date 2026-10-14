@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { CURRENCY_OPTIONS } from "@/lib/wellCost"
+import { CURRENCY_OPTIONS, MUD_ENGINEERING_DAY_RATE, fmtCurrency, isMudEngineeringCode, mudEngineeringDays } from "@/lib/wellCost"
 import { blankWellCostCentre, type WellCostCentre } from "@/types/wellCost"
 
 const schema = z.object({
@@ -25,6 +25,11 @@ const schema = z.object({
   description: z.string().optional(),
   plannedBudget: z.coerce.number().min(0).optional(),
   currency: z.string().min(1, "Required"),
+  overrideAmount: z
+    .string()
+    .refine((v) => !v.trim() || (Number.isFinite(Number(v)) && Number(v) >= 0), "Enter a valid amount")
+    .optional(),
+  spudDate: z.string().optional(),
   vendor: z.string().optional(),
   notes: z.string().optional(),
 })
@@ -32,13 +37,15 @@ const schema = z.object({
 type FormInput = z.input<typeof schema>
 type Values = z.output<typeof schema>
 
-function toValues(item: WellCostCentre): FormInput {
+function toValues(item: WellCostCentre, spudDate: string | null): FormInput {
   return {
     costCentre: item.costCentre,
     fundCentre: item.fundCentre,
     description: item.description,
     plannedBudget: item.plannedBudget === "" ? undefined : Number(item.plannedBudget),
     currency: item.currency || "USD",
+    overrideAmount: item.overrideAmount === "" ? "" : String(item.overrideAmount),
+    spudDate: spudDate ?? "",
     vendor: item.vendor,
     notes: item.notes,
   }
@@ -52,6 +59,7 @@ export function WellCostCentreDrawer({
   serviceCategoryId,
   /** Non-Admins get the same form disabled, read-only, no Save — the "View" action. */
   readOnly = false,
+  spudDate = null,
   onOpenChange,
   onSubmit,
 }: {
@@ -61,14 +69,21 @@ export function WellCostCentreDrawer({
   departmentId: string
   serviceCategoryId: string
   readOnly?: boolean
+  /** The well's Spud date, used to show the day-rate estimate for mud engineering centres. */
+  spudDate?: string | null
   onOpenChange: (open: boolean) => void
-  onSubmit: (values: WellCostCentre) => void
+  onSubmit: (values: WellCostCentre, spudDate: string | null) => void
 }) {
   const isEdit = !!item
   const form = useForm<FormInput, unknown, Values>({
     resolver: zodResolver(schema),
-    defaultValues: toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId)),
+    defaultValues: toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId), spudDate),
   })
+  const watchedCentre = form.watch("costCentre") ?? ""
+  const showOverride = isMudEngineeringCode(watchedCentre)
+  const watchedSpud = form.watch("spudDate")?.trim() ?? ""
+  const today = new Date().toISOString().slice(0, 10)
+  const autoDays = watchedSpud ? mudEngineeringDays(watchedSpud, today) : 0
 
   // Re-initialize only when a *different* item (or well/department/category) is being
   // opened — not on every open/close toggle, so an accidental close (Escape, click outside)
@@ -79,7 +94,7 @@ export function WellCostCentreDrawer({
     const key = item ? `edit:${item.id}` : `add:${wellId}:${departmentId}:${serviceCategoryId}`
     if (lastKeyRef.current === key) return
     lastKeyRef.current = key
-    form.reset(toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId)))
+    form.reset(toValues(item ?? blankWellCostCentre(wellId, departmentId, serviceCategoryId), spudDate))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item, wellId, departmentId, serviceCategoryId])
 
@@ -93,11 +108,12 @@ export function WellCostCentreDrawer({
       fundCentre: values.fundCentre || "",
       description: values.description || "",
       plannedBudget: values.plannedBudget ?? "",
+      overrideAmount: values.overrideAmount?.trim() ? Number(values.overrideAmount) : "",
       currency: values.currency,
       vendor: values.vendor || "",
       notes: values.notes || "",
     }
-    onSubmit(record)
+    onSubmit(record, values.spudDate?.trim() || null)
   }
 
   return (
@@ -193,6 +209,43 @@ export function WellCostCentreDrawer({
                   )}
                 />
               </div>
+              {showOverride && (
+                <FormField
+                  control={form.control}
+                  name="spudDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Spud date (this well)</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        The day rate accrues from this date through today. Saved to this well&apos;s Spud milestone.
+                      </p>
+                    </FormItem>
+                  )}
+                />
+              )}
+              {showOverride && (
+                <FormField
+                  control={form.control}
+                  name="overrideAmount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Override cost (USD, optional)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" min="0" placeholder="Leave blank to use day rate" {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        {watchedSpud
+                          ? `Auto: ${autoDays} day${autoDays !== 1 ? "s" : ""} from spud (${watchedSpud}) × ${fmtCurrency(MUD_ENGINEERING_DAY_RATE, "USD")} = ${fmtCurrency(autoDays * MUD_ENGINEERING_DAY_RATE, "USD")}. An override replaces this.`
+                          : "Enter the spud date above to start the day-rate calculation."}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="vendor"

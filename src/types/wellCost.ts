@@ -61,6 +61,9 @@ export interface WellCostCentre {
   fundCentre: string
   description: string
   plannedBudget: number | ""
+  /** Mud engineering centres (DRFD02/DRFC02) only: a manually entered cost that replaces the
+   *  automatic day-rate accrual. Blank means "use the day rate". */
+  overrideAmount: number | ""
   currency: string
   vendor: string
   notes: string
@@ -80,6 +83,7 @@ export function toWellCostCentreRow(item: WellCostCentre): WellCostCentreRow {
     fund_centre: item.fundCentre || null,
     description: item.description || null,
     planned_budget: item.plannedBudget === "" ? 0 : Number(item.plannedBudget) || 0,
+    override_amount: item.overrideAmount === "" ? null : Number(item.overrideAmount),
     currency: item.currency || "USD",
     vendor: item.vendor || null,
     notes: item.notes || null,
@@ -96,6 +100,7 @@ export function fromWellCostCentreRow(row: WellCostCentreRow): WellCostCentre {
     fundCentre: (row.fund_centre as string) || "",
     description: (row.description as string) || "",
     plannedBudget: row.planned_budget === null || row.planned_budget === undefined ? "" : Number(row.planned_budget),
+    overrideAmount: row.override_amount === null || row.override_amount === undefined ? "" : Number(row.override_amount),
     currency: (row.currency as string) || "USD",
     vendor: (row.vendor as string) || "",
     notes: (row.notes as string) || "",
@@ -113,6 +118,7 @@ export function blankWellCostCentre(wellId: string, departmentId: string, servic
     fundCentre: "",
     description: "",
     plannedBudget: "",
+    overrideAmount: "",
     currency: "USD",
     vendor: "",
     notes: "",

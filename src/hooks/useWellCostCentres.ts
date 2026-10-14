@@ -81,7 +81,7 @@ export function useCopyWellCostStructure() {
         .getState()
         .pushUndo(`Copy of ${sourceItems.length} cost centre(s) into well`, { wellCostCentres: current })
 
-      const newItems: WellCostCentre[] = sourceItems.map((c) => ({ ...c, id: crypto.randomUUID(), wellId: targetWellId }))
+      const newItems: WellCostCentre[] = sourceItems.map((c) => ({ ...c, id: crypto.randomUUID(), wellId: targetWellId, overrideAmount: "" }))
       const { error } = await supabase.from("well_cost_centres").insert(newItems.map(toWellCostCentreRow))
       if (error) throw error
 

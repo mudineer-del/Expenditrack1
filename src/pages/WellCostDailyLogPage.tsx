@@ -21,7 +21,7 @@ import { HoverPreview } from "@/components/shared/HoverPreview"
 import { TransactionPreview } from "@/components/wells/WellHoverPreviews"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { WellCostTransactionDrawer } from "@/components/wells/WellCostTransactionDrawer"
-import { fmtCurrency } from "@/lib/wellCost"
+import { fmtCurrency, isAutoEntry } from "@/lib/wellCost"
 import { cn, errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
@@ -141,7 +141,8 @@ export default function WellCostDailyLogPage() {
   }
 
   function toggleSelectAll() {
-    setSelected((prev) => (prev.size === filtered.length ? new Set() : new Set(filtered.map((e) => e.id))))
+    const selectable = filtered.filter((e) => !isAutoEntry(e))
+    setSelected((prev) => (prev.size === selectable.length ? new Set() : new Set(selectable.map((e) => e.id))))
   }
 
   function handleBulkDeleteConfirm() {
@@ -303,6 +304,7 @@ export default function WellCostDailyLogPage() {
                     <Checkbox
                       checked={selected.has(entry.id)}
                       onCheckedChange={() => toggleSelect(entry.id)}
+                      disabled={isAutoEntry(entry)}
                       aria-label={`Select entry ${entry.entryDate}`}
                     />
                   </TableCell>
@@ -316,6 +318,7 @@ export default function WellCostDailyLogPage() {
                     >
                       {entry.kind === "actual" ? "Actual" : "Commitment"}
                     </span>
+                    {isAutoEntry(entry) && <span className="ml-1.5 rounded-full border px-2 py-0.5 text-xs text-muted-foreground">Auto</span>}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtCurrency(entry.amount, currency)}</TableCell>
                   <TableCell className="max-w-64 truncate text-muted-foreground">{entry.notes || "—"}</TableCell>
@@ -336,8 +339,8 @@ export default function WellCostDailyLogPage() {
                       <button
                         type="button"
                         className="rounded-full p-2 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-                        title={canEdit ? "Edit" : "Only Admins/Editors can edit"}
-                        disabled={!canEdit}
+                        title={isAutoEntry(entry) ? "Generated from the spud date — set an override in the cost centre" : canEdit ? "Edit" : "Only Admins/Editors can edit"}
+                        disabled={!canEdit || isAutoEntry(entry)}
                         onClick={() => openEdit(entry)}
                       >
                         <Pencil className="size-4" />
@@ -345,8 +348,8 @@ export default function WellCostDailyLogPage() {
                       <button
                         type="button"
                         className="rounded-full p-2 text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
-                        title={canDelete ? "Delete" : "Only Admins can delete"}
-                        disabled={!canDelete}
+                        title={isAutoEntry(entry) ? "Generated from the spud date — set an override in the cost centre" : canDelete ? "Delete" : "Only Admins can delete"}
+                        disabled={!canDelete || isAutoEntry(entry)}
                         onClick={() => setDeleteTarget(entry)}
                       >
                         <Trash2 className="size-4" />

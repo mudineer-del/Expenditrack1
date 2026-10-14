@@ -1,5 +1,9 @@
+import { useMemo } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { getSupabaseClient } from "@/lib/supabase"
+import { buildMudEngineeringEntries } from "@/lib/wellCost"
+import { useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
+import { useWellMilestonesQuery } from "@/hooks/useWellMilestones"
 import {
   fromWellCostTransactionRow,
   toWellCostTransactionRow,
@@ -19,8 +23,20 @@ async function fetchAllWellCostTransactions(): Promise<WellCostTransaction[]> {
   return ((data ?? []) as WellCostTransactionRow[]).map(fromWellCostTransactionRow)
 }
 
+/** Stored entries plus the generated mud engineering day-rate / override entries (see
+ *  buildMudEngineeringEntries) — every consumer sees the same totals. Mutations still work
+ *  off the raw stored list via queryClient.getQueryData, so generated rows are never written. */
 export function useWellCostTransactionsQuery() {
-  return useQuery({ queryKey: WELL_COST_TRANSACTIONS_QUERY_KEY, queryFn: fetchAllWellCostTransactions })
+  const query = useQuery({ queryKey: WELL_COST_TRANSACTIONS_QUERY_KEY, queryFn: fetchAllWellCostTransactions })
+  const centres = useWellCostCentresQuery().data
+  const milestones = useWellMilestonesQuery().data
+  const today = new Date().toISOString().slice(0, 10)
+  const data = useMemo(() => {
+    if (!query.data) return query.data
+    if (!centres || !milestones) return query.data
+    return [...query.data, ...buildMudEngineeringEntries(centres, milestones, today)]
+  }, [query.data, centres, milestones, today])
+  return { ...query, data }
 }
 
 /** Editors as well as Admins can log/edit entries (see can.ts's "wellCostEntry" note) —

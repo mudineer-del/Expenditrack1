@@ -83,3 +83,35 @@ test('phase boundaries assign each transaction once and flag planned dates on bo
   assert.deepEqual(phases.map(p => p.actual), [10, 20, 10])
   assert.deepEqual(phases.map(p => p.usesPlannedDate), [false, true, true])
 })
+
+test('mud engineering accrues USD 550 per day from spud (both ends counted) unless overridden', async () => {
+  const { buildMudEngineeringEntries, mudEngineeringDays } = await import('../src/lib/wellCost.ts')
+  assert.equal(mudEngineeringDays('2026-10-01', '2026-10-03'), 3)
+  assert.equal(mudEngineeringDays('2026-10-05', '2026-10-03'), 0)
+  const milestones = [{ wellId: 'w1', label: 'Spud', actualDate: '2026-10-01', plannedDate: '' }]
+  const centres = [
+    { id: 'c1', wellId: 'w1', costCentre: 'DRFD02', overrideAmount: '' },
+    { id: 'c2', wellId: 'w1', costCentre: 'drfc02', overrideAmount: '' },
+    { id: 'c3', wellId: 'w1', costCentre: 'DRFD01', overrideAmount: '' },
+    { id: 'c4', wellId: 'w1', costCentre: 'DRFD02', overrideAmount: 2000 },
+  ]
+  const entries = buildMudEngineeringEntries(centres, milestones, '2026-10-03')
+  const byCentre = (id) => entries.filter((e) => e.costCentreId === id)
+  assert.equal(byCentre('c1').length, 3)
+  assert.equal(byCentre('c1').reduce((s, e) => s + e.amount, 0), 1650)
+  assert.equal(byCentre('c2').length, 3)
+  assert.equal(byCentre('c3').length, 0)
+  assert.deepEqual(byCentre('c4').map((e) => e.amount), [2000])
+  assert.deepEqual(buildMudEngineeringEntries([centres[0]], [], '2026-10-03'), [])
+})
+
+test('spud date is found under any spud-like milestone label, using actual before planned', async () => {
+  const { spudDateForWell } = await import('../src/lib/wellCost.ts')
+  const milestones = [
+    { wellId: 'w1', label: '20" Casing', actualDate: '2026-09-20', plannedDate: '' },
+    { wellId: 'w1', label: 'Spud Date', actualDate: '', plannedDate: '2026-09-15' },
+    { wellId: 'w2', label: 'Spud', actualDate: '2026-01-01', plannedDate: '' },
+  ]
+  assert.equal(spudDateForWell('w1', milestones), '2026-09-15')
+  assert.equal(spudDateForWell('w3', milestones), null)
+})
