@@ -1,7 +1,8 @@
 /** Bulk-imports daily cost figures out of daily report workbooks into WellCostTransaction
  *  entries. Two source formats are supported, auto-detected per file by which sheet it has:
  *
- *  1. "WBM" sheet (the DMR/mud-cost template vendors deliver one .xlsm/.xlsx per day) —
+ *  1. "WBM" or "OBM" sheet (the DMR/mud-cost template vendors deliver one .xlsm/.xlsx per day;
+ *  OBM is the same cost layout under a different sheet name, and its rows are tagged in remarks) —
  *  carries THREE separate daily cost figures, not one: the "M-I Engineer / Daily cost /
  *  Cumulative Cost" block breaks the day's mud cost down by who it's billed to — the mud
  *  contractor's own line (immediately below that header, e.g. "SLB COST" — Schlumberger),
@@ -518,9 +519,13 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
     const XLSX = await import("xlsx")
     const buf = await file.arrayBuffer()
     const wb = XLSX.read(buf, { type: "array" })
-    const wbmSheetName = wb.SheetNames.find((s) => /^wbm$/i.test(s)) ?? wb.SheetNames.find((s) => /wbm/i.test(s))
+    // "OBM" is the same per-day cost layout as "WBM" (same "Daily cost / Cumulative Cost"
+    // header and "OGDCL Cost" row), just a different sheet name in the OBM-template reports
+    // (seen from 26-Jul onward on Gurgalot X-1).
+    const wbmSheetName = wb.SheetNames.find((s) => /^(wbm|obm)$/i.test(s))
 
     if (wbmSheetName) {
+      const isObm = /^obm$/i.test(wbmSheetName)
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wbmSheetName], { header: 1, raw: false, defval: "" }) as unknown[][]
       const wellName = findLabelValue(rows, /well name/i) ?? ""
 
@@ -530,7 +535,12 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
 
       const extracted = extractThreeWayCost(rows)
       if ("error" in extracted) return { fileName: file.name, error: extracted.error }
-      const remarks = extractRemarks(rows)
+      // Tag OBM-sourced rows so anyone who later needs the individual OBM cost can see where
+      // it came from. The OBM sheet only carries contractor-level totals, not per-product
+      // costs, so the product breakdown has to be read from the source file itself.
+      const obmTag = isObm ? `[Source: OBM sheet in ${file.name} — per-product costs are not itemised here]` : ""
+      const baseRemarks = extractRemarks(rows)
+      const remarks = [obmTag, baseRemarks].filter(Boolean).join("\n\n")
 
       return {
         rows: extracted.rows.map((r) => ({
@@ -611,7 +621,7 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
       return { rows: outRows, gaps: [] }
     }
 
-    return { fileName: file.name, error: 'No "WBM" or "DATE WISE CONSUMPTION" sheet found in this workbook.' }
+    return { fileName: file.name, error: 'No "WBM", "OBM" or "DATE WISE CONSUMPTION" sheet found in this workbook.' }
   } catch (e) {
     return { fileName: file.name, error: e instanceof Error ? e.message : "Could not read this file." }
   }

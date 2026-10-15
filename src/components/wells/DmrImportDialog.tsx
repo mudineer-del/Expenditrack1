@@ -259,8 +259,9 @@ export function DmrImportDialog({
         <DialogHeader>
           <DialogTitle>Import Daily Costs from Excel</DialogTitle>
           <DialogDescription>
-            Select daily report workbook(s) (.xlsx/.xlsm) — either a "WBM" per-day report (three cost figures per
-            day: the mud contractor's own line, OGDCL's, and a second contractor's) or a "DATE WISE CONSUMPTION"
+            Select daily report workbook(s) (.xlsx/.xlsm) — either a "WBM" or "OBM" per-day report (cost figures per
+            day: the mud contractor's own line, OGDCL's, and for WBM a second contractor's; OBM rows are tagged in
+            their remarks as the source template) or a "DATE WISE CONSUMPTION"
             monthly chemical sheet (two figures per day: OGDCL and the mud contractor). Logged as separate Actual
             entries against whichever cost centre you map each one to below.
           </DialogDescription>
