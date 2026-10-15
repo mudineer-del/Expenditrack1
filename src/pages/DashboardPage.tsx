@@ -202,9 +202,22 @@ export default function DashboardPage() {
   const recentZoom = useDisplayStore((s) => s.recentInvoicesZoom)
   const setSectionZoom = useDisplayStore((s) => s.setSectionZoom)
   const contractorDeckRef = useRef<HTMLDivElement>(null)
+  const [contractorRowHeight, setContractorRowHeight] = useState(0)
   const dateFromFilter = useDisplayStore((s) => s.dashboardPeriod.from)
   const dateToFilter = useDisplayStore((s) => s.dashboardPeriod.to)
   const setDashboardPeriod = useDisplayStore((s) => s.setDashboardPeriod)
+
+  // The contractor overview shows one row of square cards; rows past it are hidden until the
+  // overview is hovered. The row height is the first card's height (cards are square).
+  useEffect(() => {
+    const deck = contractorDeckRef.current
+    if (!deck) return
+    const measure = () => setContractorRowHeight((deck.firstElementChild as HTMLElement | null)?.offsetHeight ?? 0)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(deck)
+    return () => observer.disconnect()
+  }, [invoicesQuery.data, invoicesQuery.isLoading])
 
   const notifiedThisSession = useRef(false)
   useEffect(() => {
@@ -607,11 +620,12 @@ export default function DashboardPage() {
             </div>
           </div>
           <div
+            className="contractor-deck-clip"
+            style={contractorRowHeight ? ({ "--row-h": `${contractorRowHeight}px` } as React.CSSProperties) : undefined}
+          >
+          <div
             ref={contractorDeckRef}
-            className={cn(
-              "contractor-deck grid gap-3 transition-all duration-200 overflow-visible",
-              contractorDeckZoom < 1 ? "contractor-deck--compact" : "contractor-deck--expanded",
-            )}
+            className="contractor-deck grid gap-3"
             style={{
               gridTemplateColumns: `repeat(auto-fit, minmax(${Math.max(120, 200 * contractorDeckZoom)}px, 1fr))`,
               gap: `${Math.max(8, 12 * contractorDeckZoom)}px`,
@@ -630,9 +644,8 @@ export default function DashboardPage() {
                 <button
                   key={v}
                   className={cn(
-                    "contractor-card group relative overflow-hidden rounded-2xl border p-4 text-left shadow-[0_5px_0_var(--contractor-shadow),0_12px_20px_-16px_var(--contractor-glow)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] active:translate-y-1 active:scale-[0.985] active:shadow-[0_2px_0_var(--contractor-shadow),0_7px_12px_-10px_var(--contractor-glow)] active:duration-100 md:rounded-2xl md:p-4 md:hover:-translate-y-1 md:hover:shadow-[0_7px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] md:active:translate-y-1",
-                    dashVendor === v && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-                    contractorIndex >= 5 && contractorDeckZoom === 1 && "contractor-card--overflow"
+                    "contractor-card group relative overflow-hidden rounded-2xl border p-0 text-left flex flex-col shadow-[0_5px_0_var(--contractor-shadow),0_12px_20px_-16px_var(--contractor-glow)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] active:translate-y-1 active:scale-[0.985] active:shadow-[0_2px_0_var(--contractor-shadow),0_7px_12px_-10px_var(--contractor-glow)] active:duration-100 md:rounded-2xl md:p-0 md:hover:-translate-y-1 md:hover:shadow-[0_7px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] md:active:translate-y-1",
+                    dashVendor === v && "ring-2 ring-primary ring-offset-2 ring-offset-background"
                   )}
                   style={
                     {
@@ -650,42 +663,43 @@ export default function DashboardPage() {
                     className="absolute top-0 left-0 h-1 w-full opacity-80 transition-opacity duration-300 group-hover:opacity-100"
                     style={{ backgroundColor: accent }}
                   />
-                  <div className="contractor-card-content">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        "p-1.5 shadow-[0_5px_10px_-5px_var(--contractor-glow)] ring-1 ring-black/5 transition-transform duration-300 group-hover:scale-105 group-hover:[transform:rotateY(8deg)]",
-                        contractorLogoShape === "square" ? "rounded-xl" : "rounded-full"
-                      )}
-                      style={{ backgroundColor: `color-mix(in oklch, ${accent} 10%, var(--card))` }}
-                    >
-                      <ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={logoColor} size="lg" />
+                  <div className="flex flex-1 flex-col justify-between" style={{ padding: "7cqw" }}>
+                    <div className="flex items-center" style={{ gap: "4cqw" }}>
+                      <div
+                        className={cn(
+                          "shrink-0 p-1.5 shadow-[0_5px_10px_-5px_var(--contractor-glow)] ring-1 ring-black/5 transition-transform duration-300 group-hover:scale-105 group-hover:[transform:rotateY(8deg)]",
+                          contractorLogoShape === "square" ? "rounded-xl" : "rounded-full"
+                        )}
+                        style={{ backgroundColor: `color-mix(in oklch, ${accent} 10%, var(--card))` }}
+                      >
+                        <ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={logoColor} size="lg" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-bold tracking-tight" style={{ fontSize: "7.5cqw" }}>{v}</div>
+                        <div className="font-medium uppercase tracking-[0.14em] text-muted-foreground" style={{ fontSize: "4.5cqw", marginTop: "1cqw" }}>Contractor</div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <div className="truncate text-[15px] font-bold tracking-tight">{v}</div>
-                      <div className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Contractor</div>
+                    <div className="border-t" style={{ borderColor: `color-mix(in oklch, ${accent} 16%, var(--border))`, paddingTop: "4cqw" }}>
+                      <div className="font-semibold uppercase tracking-[0.14em] text-muted-foreground" style={{ fontSize: "4.5cqw" }}>Expenditure incl. tax</div>
+                      <div className="truncate font-extrabold tracking-tight tabular-nums" style={{ color: accent, fontSize: "9.5cqw", marginTop: "1cqw", lineHeight: 1.15 }}>
+                        {fmtMoney(total)}
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-4 border-t pt-3" style={{ borderColor: `color-mix(in oklch, ${accent} 16%, var(--border))` }}>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Expenditure incl. tax</div>
-                    <div className="mt-0.5 truncate text-xl font-extrabold tracking-tight tabular-nums" style={{ color: accent }}>
-                      {fmtMoney(total)}
-                    </div>
-                  </div>
-                  <dl className="mt-3 grid grid-cols-2 gap-2">
-                    <div className="rounded-xl border bg-background/55 px-2.5 py-2 shadow-inner">
-                      <dt className="text-[10px] font-medium text-muted-foreground">Invoices logged</dt>
-                      <dd className="mt-0.5 text-sm font-bold tabular-nums">{vRows.length}</dd>
-                    </div>
-                    <div className="rounded-xl border bg-background/55 px-2.5 py-2 shadow-inner">
-                      <dt className="text-[10px] font-medium text-muted-foreground">Avg. clearance</dt>
-                      <dd className="mt-0.5 text-sm font-bold tabular-nums">{lead !== null ? `${lead} days` : "—"}</dd>
-                    </div>
-                  </dl>
+                    <dl className="grid grid-cols-2" style={{ gap: "2.5cqw" }}>
+                      <div className="rounded-xl border bg-background/55 shadow-inner" style={{ padding: "3cqw" }}>
+                        <dt className="font-medium text-muted-foreground" style={{ fontSize: "4.2cqw" }}>Invoices logged</dt>
+                        <dd className="font-bold tabular-nums" style={{ fontSize: "6.5cqw", marginTop: "1cqw" }}>{vRows.length}</dd>
+                      </div>
+                      <div className="rounded-xl border bg-background/55 shadow-inner" style={{ padding: "3cqw" }}>
+                        <dt className="font-medium text-muted-foreground" style={{ fontSize: "4.2cqw" }}>Avg. clearance</dt>
+                        <dd className="font-bold tabular-nums" style={{ fontSize: "6.5cqw", marginTop: "1cqw" }}>{lead !== null ? `${lead} days` : "—"}</dd>
+                      </div>
+                    </dl>
                   </div>
                 </button>
               )
             })}
+          </div>
           </div>
         </div>
       )}
