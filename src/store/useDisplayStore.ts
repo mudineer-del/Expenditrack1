@@ -138,6 +138,11 @@ const CHART_DESIGN_VERSION = 3
  *  chartDesignVersion, which is a local migration marker for this browser's own old saved
  *  data and has no meaning carried into another account/device. */
 /** Expenditure Analysis period on the dashboard (empty string = open-ended). */
+export type ContractorCardFill = "solid" | "diagonal" | "vertical" | "radial"
+export function normalizeCardFill(value: unknown): ContractorCardFill {
+  return value === "solid" || value === "vertical" || value === "radial" ? value : "diagonal"
+}
+
 export interface DashboardPeriod {
   from: string
   to: string
@@ -160,6 +165,13 @@ interface DisplayPrefs {
   contractorSectionZoom: number
   analysisSectionZoom: number
   dashboardPeriod: DashboardPeriod
+  kpiSectionZoom: number
+  /** Contractor overview card colour: "theme" (the active primary) or a hex colour. */
+  contractorCardColor: string
+  /** How strongly the card colour is toned — 100 is the pure colour, lower is darker. */
+  contractorCardIntensity: number
+  /** Overview card fill: a flat colour or a gradient across the card. */
+  contractorCardFill: ContractorCardFill
   recentInvoicesZoom: number
   radius: Radius
   borderWidth: BorderWidth
@@ -213,7 +225,9 @@ interface DisplayState extends DisplayPrefs {
   setCustomColor: (key: keyof PaletteVars, value: string) => void
   setCardScale: (scale: CardScale) => void
   setAppZoom: (zoom: number) => void
-  setSectionZoom: (section: "contractor" | "analysis" | "recent", zoom: number) => void
+  setSectionZoom: (section: "kpi" | "contractor" | "analysis" | "recent", zoom: number) => void
+  setContractorCardStyle: (color: string, intensity: number) => void
+  setContractorCardFill: (fill: ContractorCardFill) => void
   setDashboardPeriod: (period: DashboardPeriod) => void
   setRadius: (radius: Radius) => void
   setBorderWidth: (w: BorderWidth) => void
@@ -340,6 +354,10 @@ function loadPrefs(): DisplayPrefs {
     contractorSectionZoom: Math.max(0.55, Math.min(1.5, saved?.contractorSectionZoom ?? 1)),
     analysisSectionZoom: Math.max(0.55, Math.min(1.5, saved?.analysisSectionZoom ?? 1)),
     dashboardPeriod: { from: saved?.dashboardPeriod?.from ?? "", to: saved?.dashboardPeriod?.to ?? "" },
+    kpiSectionZoom: Math.max(0.55, Math.min(1.5, saved?.kpiSectionZoom ?? 1)),
+    contractorCardColor: saved?.contractorCardColor || "theme",
+    contractorCardIntensity: Math.max(40, Math.min(100, saved?.contractorCardIntensity ?? 70)),
+    contractorCardFill: normalizeCardFill(saved?.contractorCardFill),
     recentInvoicesZoom: Math.max(0.55, Math.min(1.5, saved?.recentInvoicesZoom ?? 1)),
     radius: saved?.radius || "md",
     borderWidth: saved?.borderWidth || "thin",
@@ -429,6 +447,10 @@ function persist(state: DisplayPrefs): void {
     tableHeaderShaded,
     tableGridLines,
     dashboardPeriod,
+    kpiSectionZoom,
+    contractorCardColor,
+    contractorCardIntensity,
+    contractorCardFill,
   } = state
   storeSet(PREFS_KEY, {
     chartDesignVersion,
@@ -465,6 +487,10 @@ function persist(state: DisplayPrefs): void {
     tableHeaderShaded,
     tableGridLines,
     dashboardPeriod,
+    kpiSectionZoom,
+    contractorCardColor,
+    contractorCardIntensity,
+    contractorCardFill,
   })
 }
 
@@ -500,8 +526,18 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
 
   setSectionZoom: (section, zoom) => {
     const next = Math.max(0.55, Math.min(1.5, Number(zoom.toFixed(2))))
-    const key = section === "contractor" ? "contractorSectionZoom" : section === "analysis" ? "analysisSectionZoom" : "recentInvoicesZoom"
+    const key = section === "kpi" ? "kpiSectionZoom" : section === "contractor" ? "contractorSectionZoom" : section === "analysis" ? "analysisSectionZoom" : "recentInvoicesZoom"
     set({ [key]: next } as Pick<DisplayState, typeof key>)
+    persist(get())
+  },
+
+  setContractorCardStyle: (color, intensity) => {
+    set({ contractorCardColor: color, contractorCardIntensity: Math.max(40, Math.min(100, intensity)) })
+    persist(get())
+  },
+
+  setContractorCardFill: (contractorCardFill) => {
+    set({ contractorCardFill })
     persist(get())
   },
 
@@ -675,6 +711,10 @@ export const useDisplayStore = create<DisplayState>((set, get) => ({
       contractorSectionZoom: Math.max(0.55, Math.min(1.5, prefs.contractorSectionZoom ?? 1)),
       analysisSectionZoom: Math.max(0.55, Math.min(1.5, prefs.analysisSectionZoom ?? 1)),
       dashboardPeriod: { from: prefs.dashboardPeriod?.from ?? "", to: prefs.dashboardPeriod?.to ?? "" },
+      kpiSectionZoom: Math.max(0.55, Math.min(1.5, prefs.kpiSectionZoom ?? 1)),
+      contractorCardColor: prefs.contractorCardColor || "theme",
+      contractorCardIntensity: Math.max(40, Math.min(100, prefs.contractorCardIntensity ?? 70)),
+      contractorCardFill: normalizeCardFill(prefs.contractorCardFill),
       recentInvoicesZoom: Math.max(0.55, Math.min(1.5, prefs.recentInvoicesZoom ?? 1)),
     }
     applyPalette(next.colorTheme, next.customColors ?? undefined)

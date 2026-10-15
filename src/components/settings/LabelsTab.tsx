@@ -152,6 +152,8 @@ function SidebarCustomizationSection() {
   const setDensity = useSidebarPrefsStore((s) => s.setDensity)
   const sidebarZoom = useSidebarPrefsStore((s) => s.sidebarZoom)
   const setSidebarZoom = useSidebarPrefsStore((s) => s.setSidebarZoom)
+  const iconSize = useSidebarPrefsStore((s) => s.iconSize)
+  const setIconSize = useSidebarPrefsStore((s) => s.setIconSize)
   const hiddenItems = useSidebarPrefsStore((s) => s.hiddenItems)
   const toggleItem = useSidebarPrefsStore((s) => s.toggleItem)
   const iconOverrides = useSidebarPrefsStore((s) => s.iconOverrides)
@@ -231,6 +233,25 @@ function SidebarCustomizationSection() {
             { value: "120", label: "120%", hint: "Larger sidebar controls." },
           ]}
         />
+        <div className="grid gap-2 rounded-lg border p-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="sidebar-icon-size" className="text-sm font-medium">
+              Icon size
+            </Label>
+            <span className="text-xs tabular-nums text-muted-foreground">{iconSize}px</span>
+          </div>
+          <input
+            id="sidebar-icon-size"
+            type="range"
+            min={12}
+            max={36}
+            step={1}
+            value={iconSize}
+            onChange={(e) => setIconSize(Number(e.target.value))}
+            className="w-full accent-primary"
+          />
+          <p className="text-xs text-muted-foreground">Size of the icons in each sidebar pill. The chip around each icon grows with it.</p>
+        </div>
       </div>
 
       <div className="mt-5 border-t pt-4">

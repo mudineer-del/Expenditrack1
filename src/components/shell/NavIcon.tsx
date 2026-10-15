@@ -1,5 +1,6 @@
 import type { CSSProperties, ComponentType } from "react"
-import { NavIconChip } from "@/components/shell/NavIconChip"
+import { NavIconChip, sidebarGlyphSize } from "@/components/shell/NavIconChip"
+import { useSidebarPrefsStore } from "@/store/useSidebarPrefsStore"
 import type { ChipColor } from "@/lib/navColors"
 
 /** Wraps a static image (the 3D icon PNGs in src/assets) into the same
@@ -29,10 +30,9 @@ export function NavIcon({
   compact?: boolean
   active?: boolean
 }) {
-  // The `!` important-modifier matches NavIconChip's own convention — SidebarMenuSubButton
-  // and friends ship their own `[&_svg]:size-4` defaults at equal specificity, so an
-  // unmodified size utility here isn't guaranteed to win the cascade.
-  return <Icon className={compact ? "size-4! shrink-0" : "size-[18px]! shrink-0"} style={active ? undefined : { color: color.to }} />
+  const iconSize = useSidebarPrefsStore((s) => s.iconSize)
+  const glyph = sidebarGlyphSize(iconSize, compact)
+  return <Icon className="shrink-0" style={{ width: glyph, height: glyph, ...(active ? {} : { color: color.to }) }} />
 }
 
 /** Renders either NavIconChip's gradient badge or NavIcon's flat glyph depending on

@@ -18,10 +18,15 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  Palette,
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -199,10 +204,18 @@ export default function DashboardPage() {
 
   const contractorDeckZoom = useDisplayStore((s) => s.contractorSectionZoom)
   const analysisZoom = useDisplayStore((s) => s.analysisSectionZoom)
+  const kpiZoom = useDisplayStore((s) => s.kpiSectionZoom)
+  const cardColor = useDisplayStore((s) => s.contractorCardColor)
+  const cardIntensity = useDisplayStore((s) => s.contractorCardIntensity)
+  const setContractorCardStyle = useDisplayStore((s) => s.setContractorCardStyle)
+  const cardFill = useDisplayStore((s) => s.contractorCardFill)
+  const setContractorCardFill = useDisplayStore((s) => s.setContractorCardFill)
   const recentZoom = useDisplayStore((s) => s.recentInvoicesZoom)
   const setSectionZoom = useDisplayStore((s) => s.setSectionZoom)
   const contractorDeckRef = useRef<HTMLDivElement>(null)
   const [contractorRowHeight, setContractorRowHeight] = useState(0)
+  // Fixed square size per contractor card, so cards pack from the left instead of stretching.
+  const cardSize = Math.round(176 * contractorDeckZoom)
   const dateFromFilter = useDisplayStore((s) => s.dashboardPeriod.from)
   const dateToFilter = useDisplayStore((s) => s.dashboardPeriod.to)
   const setDashboardPeriod = useDisplayStore((s) => s.setDashboardPeriod)
@@ -423,7 +436,7 @@ export default function DashboardPage() {
             <span className="hidden h-4 w-1 rounded-full bg-primary md:inline-block" />
             {activeDept === "ALL" ? "Contractors" : `Contractors — ${activeDept}`}
           </h3>
-          <SectionZoomBar value={contractorDeckZoom} onChange={(value) => setSectionZoom("contractor", value)} />
+          <SectionZoomBar value={kpiZoom} onChange={(value) => setSectionZoom("kpi", value)} />
         </div>
         <div className="grid grid-cols-3 gap-3 md:hidden">
           <PickerCard
@@ -467,6 +480,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <div className="min-w-0" style={{ zoom: kpiZoom, width: sectionZoomWidth(kpiZoom) } as React.CSSProperties}>
       <div className="min-w-0 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <KpiTile
           hero
@@ -601,6 +615,7 @@ export default function DashboardPage() {
           onClick={() => navigate("/vendors")}
         />
       </div>
+      </div>
 
       {dataVendors.length > 0 && (
         <div className="rounded-2xl border bg-card p-4 shadow-sm md:rounded-lg md:shadow-none overflow-visible">
@@ -613,6 +628,45 @@ export default function DashboardPage() {
               </span>
             </h3>
             <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Card colour and intensity" aria-label="Card colour and intensity">
+                    <Palette className="size-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="grid w-64 gap-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="card-theme" className="text-sm font-normal">Follow the theme colour</Label>
+                    <Switch id="card-theme" checked={cardColor === "theme"} onCheckedChange={(on) => setContractorCardStyle(on ? "theme" : "#147A4A", cardIntensity)} />
+                  </div>
+                  {cardColor !== "theme" && (
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="card-color" className="text-sm font-normal">Custom colour</Label>
+                      <input id="card-color" type="color" value={cardColor} onChange={(e) => setContractorCardStyle(e.target.value, cardIntensity)} className="h-8 w-14 cursor-pointer rounded border bg-background p-0.5" />
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="card-fill" className="text-sm font-normal">Fill</Label>
+                    <Select value={cardFill} onValueChange={(v) => setContractorCardFill(v as "solid" | "diagonal" | "vertical" | "radial")}>
+                      <SelectTrigger id="card-fill" className="h-8 w-36 text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="solid">Solid</SelectItem>
+                        <SelectItem value="diagonal">Diagonal gradient</SelectItem>
+                        <SelectItem value="vertical">Vertical gradient</SelectItem>
+                        <SelectItem value="radial">Radial gradient</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="card-intensity" className="text-sm font-normal">Colour intensity</Label>
+                      <span className="text-xs tabular-nums text-muted-foreground">{cardIntensity}%</span>
+                    </div>
+                    <input id="card-intensity" type="range" min={40} max={100} step={5} value={cardIntensity} onChange={(e) => setContractorCardStyle(cardColor, Number(e.target.value))} className="w-full accent-primary" />
+                    <p className="text-xs text-muted-foreground">Lowest setting is no colour.</p>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <SectionZoomBar value={contractorDeckZoom} onChange={(value) => setSectionZoom("contractor", value)} />
               <Button size="sm" variant="ghost" asChild>
                 <Link to="/vendors">Manage contracts</Link>
@@ -627,7 +681,7 @@ export default function DashboardPage() {
             ref={contractorDeckRef}
             className="contractor-deck grid gap-3"
             style={{
-              gridTemplateColumns: `repeat(auto-fit, minmax(${Math.max(120, 200 * contractorDeckZoom)}px, 1fr))`,
+              gridTemplateColumns: `repeat(auto-fill, minmax(${cardSize}px, 1fr))`,
               gap: `${Math.max(8, 12 * contractorDeckZoom)}px`,
             }}
           >
@@ -635,30 +689,43 @@ export default function DashboardPage() {
               const vRows = deptInvoices.filter((r) => r.vendor === v)
               const total = vRows.reduce((s, r) => s + (Number(r.amountInclTax) || 0), 0)
               const lead = avgLeadTime(vRows)
-              // Each contractor's own identity color (already used for its logo/ticker dot
-              // elsewhere) drives the whole card now — a shared var(--primary) here made
-              // every contractor's money figure read as visually identical.
-              const logoColor = vendorColor(v)
-              const accent = logoColor
+              // Theme primary by default, or the chosen custom colour, toned by the intensity setting.
+              // Intensity is the colour strength: at the minimum the card is almost colourless, at the maximum it is the full colour.
+              const cardBase = cardColor === "theme" ? "var(--primary)" : cardColor
+              const colourShare = Math.round(((cardIntensity - 40) / 60) * 100)
+              const accent = `color-mix(in oklch, ${cardBase} ${colourShare}%, var(--card))`
+              const tint = `color-mix(in oklch, ${cardBase} ${Math.round(colourShare * 0.4)}%, var(--card))`
+              const valueColor = `color-mix(in oklch, ${cardBase} 85%, black)`
+              const cardFillImage =
+                cardFill === "diagonal" ? `linear-gradient(145deg, ${tint} 0%, var(--card) 70%)`
+                : cardFill === "vertical" ? `linear-gradient(180deg, ${tint} 0%, var(--card) 75%)`
+                : cardFill === "radial" ? `radial-gradient(circle at 15% 10%, ${tint} 0%, var(--card) 70%)`
+                : `linear-gradient(${tint}, ${tint})`
+              const logoColor = accent
               return (
                 <button
                   key={v}
                   className={cn(
-                    "contractor-card group relative overflow-hidden rounded-2xl border p-0 text-left flex flex-col shadow-[0_5px_0_var(--contractor-shadow),0_12px_20px_-16px_var(--contractor-glow)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] active:translate-y-1 active:scale-[0.985] active:shadow-[0_2px_0_var(--contractor-shadow),0_7px_12px_-10px_var(--contractor-glow)] active:duration-100 md:rounded-2xl md:p-0 md:hover:-translate-y-1 md:hover:shadow-[0_7px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] md:active:translate-y-1",
+                    "contractor-card group relative overflow-hidden rounded-2xl border p-0 text-left flex flex-col  shadow-[0_5px_0_var(--contractor-shadow),0_12px_20px_-16px_var(--contractor-glow)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_8px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] active:translate-y-1 active:scale-[0.985] active:shadow-[0_2px_0_var(--contractor-shadow),0_7px_12px_-10px_var(--contractor-glow)] active:duration-100 md:rounded-2xl md:p-0 md:hover:-translate-y-1 md:hover:shadow-[0_7px_0_var(--contractor-shadow),0_22px_30px_-16px_var(--contractor-glow)] md:active:translate-y-1",
                     dashVendor === v && "ring-2 ring-primary ring-offset-2 ring-offset-background"
                   )}
                   style={
                     {
                       borderColor: `color-mix(in oklch, ${accent} 28%, var(--border))`,
-                      backgroundImage: `linear-gradient(145deg, color-mix(in oklch, ${accent} 7%, var(--card)) 0%, var(--card) 64%, color-mix(in oklch, ${accent} 3%, var(--card)) 100%)`,
+                      backgroundImage: cardFillImage,
                       "--contractor-shadow": `color-mix(in oklch, ${accent} 25%, var(--border))`,
                       "--contractor-glow": `color-mix(in oklch, ${accent} 42%, transparent)`,
                       "--shuffle-index": Math.max(0, contractorIndex - 5),
                       "--shuffle-rotate": `${contractorIndex % 2 === 0 ? -1.5 : 1.5}deg`,
+                      maxWidth: `${cardSize}px`,
                     } as React.CSSProperties
                   }
                   onClick={() => setDashVendor(v)}
                 >
+                  <span
+                    className="pointer-events-none absolute inset-0"
+                    style={{ background: "linear-gradient(160deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.08) 38%, rgba(255,255,255,0) 60%)" }}
+                  />
                   <span
                     className="absolute top-0 left-0 h-1 w-full opacity-80 transition-opacity duration-300 group-hover:opacity-100"
                     style={{ backgroundColor: accent }}
@@ -670,7 +737,7 @@ export default function DashboardPage() {
                           "shrink-0 p-1.5 shadow-[0_5px_10px_-5px_var(--contractor-glow)] ring-1 ring-black/5 transition-transform duration-300 group-hover:scale-105 group-hover:[transform:rotateY(8deg)]",
                           contractorLogoShape === "square" ? "rounded-xl" : "rounded-full"
                         )}
-                        style={{ backgroundColor: `color-mix(in oklch, ${accent} 10%, var(--card))` }}
+                        style={{ backgroundColor: "rgba(255,255,255,0.92)" }}
                       >
                         <ContractorLogo vendor={v} logo={getContractorLogo(contractorLogosQuery.data ?? {}, v)} color={logoColor} size="lg" />
                       </div>
@@ -681,7 +748,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="border-t" style={{ borderColor: `color-mix(in oklch, ${accent} 16%, var(--border))`, paddingTop: "4cqw" }}>
                       <div className="font-semibold uppercase tracking-[0.14em] text-muted-foreground" style={{ fontSize: "4.5cqw" }}>Expenditure incl. tax</div>
-                      <div className="truncate font-extrabold tracking-tight tabular-nums" style={{ color: accent, fontSize: "9.5cqw", marginTop: "1cqw", lineHeight: 1.15 }}>
+                      <div className="truncate font-extrabold tracking-tight tabular-nums" style={{ color: valueColor, fontSize: "9.5cqw", marginTop: "1cqw", lineHeight: 1.15 }}>
                         {fmtMoney(total)}
                       </div>
                     </div>

@@ -21,6 +21,8 @@ interface SidebarPrefs {
   activeColorMode: SidebarActiveColorMode
   density: SidebarDensity
   sidebarZoom: SidebarZoom
+  /** Glyph size in px for sidebar pill icons; the chip around it scales with it. */
+  iconSize: number
   /** Nav item `to` paths hidden from the sidebar — Dashboard is excluded from the
    *  hideable set in the UI so the nav can never be emptied out entirely. */
   hiddenItems: string[]
@@ -37,6 +39,7 @@ const DEFAULT_PREFS: SidebarPrefs = {
   activeColorMode: "theme",
   density: "comfortable",
   sidebarZoom: "100",
+  iconSize: 19,
   hiddenItems: [],
   iconOverrides: {},
 }
@@ -48,6 +51,7 @@ interface SidebarPrefsState extends SidebarPrefs {
   setActiveColorMode: (v: SidebarActiveColorMode) => void
   setDensity: (v: SidebarDensity) => void
   setSidebarZoom: (v: SidebarZoom) => void
+  setIconSize: (px: number) => void
   toggleItem: (to: string) => void
   /** Pass null to clear back to that slot's default icon. */
   setIconOverride: (key: string, ref: IconRef | null) => void
@@ -60,8 +64,8 @@ function loadPrefs(): SidebarPrefs {
 }
 
 function persist(state: SidebarPrefs): void {
-  const { design, showIconBar, iconStyle, activeColorMode, density, sidebarZoom, hiddenItems, iconOverrides } = state
-  storeSet(PREFS_KEY, { design, showIconBar, iconStyle, activeColorMode, density, sidebarZoom, hiddenItems, iconOverrides })
+  const { design, showIconBar, iconStyle, activeColorMode, density, sidebarZoom, iconSize, hiddenItems, iconOverrides } = state
+  storeSet(PREFS_KEY, { design, showIconBar, iconStyle, activeColorMode, density, sidebarZoom, iconSize, hiddenItems, iconOverrides })
 }
 
 /**
@@ -87,6 +91,7 @@ export const useSidebarPrefsStore = create<SidebarPrefsState>((set, get) => ({
     persist(get())
   },
   setSidebarZoom: (sidebarZoom) => { set({ sidebarZoom }); persist(get()) },
+  setIconSize: (px) => { set({ iconSize: Math.max(12, Math.min(36, Math.round(px))) }); persist(get()) },
   toggleItem: (to) => {
     const current = get().hiddenItems
     const hiddenItems = current.includes(to) ? current.filter((x) => x !== to) : [...current, to]
