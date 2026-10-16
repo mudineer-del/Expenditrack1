@@ -305,7 +305,7 @@ export function DmrImportDialog({
                       value={mapping[c] || SKIP}
                       onValueChange={(v) => setMapping((prev) => ({ ...prev, [c]: v === SKIP ? "" : v }))}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full min-w-0 [&>span]:truncate">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
