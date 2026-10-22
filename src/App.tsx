@@ -18,6 +18,7 @@ const WellDashboardPage = lazy(() => import("@/pages/WellDashboardPage"))
 const ManageWellsPage = lazy(() => import("@/pages/ManageWellsPage"))
 const WellCostStructurePage = lazy(() => import("@/pages/WellCostStructurePage"))
 const WellCostDailyLogPage = lazy(() => import("@/pages/WellCostDailyLogPage"))
+const WellFieldEntryPage = lazy(() => import("@/pages/WellFieldEntryPage"))
 const ReportsPage = lazy(() => import("@/pages/ReportsPage"))
 const ActivityLogPage = lazy(() => import("@/pages/ActivityLogPage"))
 const MessageCentrePage = lazy(() => import("@/pages/MessageCentrePage"))
@@ -70,6 +71,7 @@ function App() {
               <Route element={<RequireArea area="/well-cost/structure" />}>
                 <Route path="well-cost/structure" element={<WellCostStructurePage />} />
                 <Route path="well-cost/log/:costCentreId" element={<WellCostDailyLogPage />} />
+                <Route path="well-cost/field-entry" element={<WellFieldEntryPage />} />
               </Route>
               <Route element={<RequireArea area="/reports" />}>
                 <Route path="reports" element={<ReportsPage />} />

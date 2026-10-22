@@ -127,3 +127,79 @@ test('spud date is found under any spud-like milestone label, using actual befor
   assert.equal(spudDateForWell('w1', milestones), '2026-09-15')
   assert.equal(spudDateForWell('w3', milestones), null)
 })
+
+test('projection: burn rate, forecast and status use calendar days with no entry counted as zero', async () => {
+  const { dailyActualSpend, burnRate, forecastAtCompletion, projectionStatus, cumulativeWithForecast, activityCells } = await import('../src/lib/projection.ts')
+  const tx = [
+    { costCentreId: 'c1', kind: 'actual', entryDate: '2026-09-01', amount: 100 },
+    { costCentreId: 'c1', kind: 'actual', entryDate: '2026-09-03', amount: 70 },
+    { costCentreId: 'c1', kind: 'commitment', entryDate: '2026-09-03', amount: 999 },
+    { costCentreId: 'other', kind: 'actual', entryDate: '2026-09-03', amount: 5 },
+  ]
+  const daily = dailyActualSpend(tx, new Set(['c1']))
+  assert.deepEqual(daily, [{ date: '2026-09-01', amount: 100 }, { date: '2026-09-03', amount: 70 }])
+  // 7-day window ending 3-Sep covers 28-Aug..3-Sep: 170 over 7 calendar days.
+  assert.equal(burnRate(daily, 7), 24.29)
+  assert.equal(forecastAtCompletion(170, 24.29, 10), 412.9)
+  assert.equal(projectionStatus(412.9, 500), 'At risk')
+  assert.equal(projectionStatus(600, 500), 'Over budget')
+  assert.equal(projectionStatus(100, 500), 'On track')
+  assert.equal(projectionStatus(100, 0), 'No budget')
+  const points = cumulativeWithForecast(daily, 10, 2)
+  assert.deepEqual(points.at(-1), { date: '2026-09-05', forecast: 190 })
+  assert.equal(points.find(p => p.date === '2026-09-03').forecast, 170)
+  assert.equal(activityCells(daily, 4).length, 4)
+})
+
+test('DMR flags a report whose cumulative movement disagrees with its daily figure', async () => {
+  const day1 = report('1-Sep-26', { name: 'a.xlsx', daily: 10, cumulative: 100 })
+  const day2ok = report('2-Sep-26', { name: 'b.xlsx', daily: 10, cumulative: 110 })
+  const day2bad = report('2-Sep-26', { name: 'c.xlsx', daily: 10, cumulative: 130 })
+  const ok = await parseDmrFiles([day1, day2ok])
+  assert.equal(ok.cumulativeChecks.filter(c => c.contractor === 'MUD_CONTRACTOR').length, 0)
+  const bad = await parseDmrFiles([day1, day2bad])
+  const flagged = bad.cumulativeChecks.find(c => c.contractor === 'MUD_CONTRACTOR')
+  assert.equal(flagged.entryDate, '2026-09-02')
+  assert.equal(flagged.difference, 20)
+})
+
+test('projection: cost at milestones uses cumulative actual spend up to each milestone date', async () => {
+  const { costAtMilestones, dailyActualSpend, importedDates, activityCells } = await import('../src/lib/projection.ts')
+  const tx = [
+    { costCentreId: 'c1', kind: 'actual', entryDate: '2026-09-01', amount: 100, notes: 'Imported from DMR#1.xlsx' },
+    { costCentreId: 'c1', kind: 'actual', entryDate: '2026-09-03', amount: 50, notes: 'Typed in' },
+  ]
+  const daily = dailyActualSpend(tx, new Set(['c1']))
+  const pts = costAtMilestones([
+    { label: 'TD', actualDate: '2026-09-03', actualDepth: 2000 },
+    { label: 'Surface', actualDate: '2026-09-01', actualDepth: 500 },
+    { label: 'No depth', actualDate: '2026-09-02', actualDepth: '' },
+  ], daily)
+  assert.deepEqual(pts.map(p => [p.label, p.cumulativeCost]), [['Surface', 100], ['TD', 150]])
+  const imported = importedDates(tx, new Set(['c1']))
+  assert.deepEqual([...imported], ['2026-09-01'])
+  const cells = activityCells(daily, 3, imported)
+  assert.deepEqual(cells.map(c => c.date), ['2026-09-01', '2026-09-02', '2026-09-03'])
+  assert.deepEqual(cells.map(c => c.imported), [true, false, false])
+})
+
+test('projection: cost against depth uses each day with a measured depth', async () => {
+  const { costAtDepthDays, dailyActualSpend } = await import('../src/lib/projection.ts')
+  const daily = dailyActualSpend([
+    { costCentreId: 'c1', kind: 'actual', entryDate: '2026-09-01', amount: 100 },
+    { costCentreId: 'c1', kind: 'actual', entryDate: '2026-09-02', amount: 40 },
+  ], new Set(['c1']))
+  const pts = costAtDepthDays([
+    { entryDate: '2026-09-02', depthMd: 800 },
+    { entryDate: '2026-09-01', depthMd: 500 },
+    { entryDate: '2026-09-03', depthMd: '' },
+  ], daily)
+  assert.deepEqual(pts.map(p => [p.date, p.depth, p.cumulativeCost]), [['2026-09-01', 500, 100], ['2026-09-02', 800, 140]])
+})
+
+test('field queue treats connectivity failures as retryable and rejections as final', async () => {
+  const { isNetworkError } = await import('../src/lib/fieldQueue.ts')
+  assert.equal(isNetworkError(new TypeError('Failed to fetch')), true)
+  assert.equal(isNetworkError({ message: 'TypeError: Failed to fetch' }), true)
+  assert.equal(isNetworkError({ message: 'new row violates row-level security policy' }), false)
+})

@@ -22,11 +22,14 @@ import {
   type DmrGap,
   type DmrImportError,
   type DmrImportRow,
+  type DmrCumulativeCheck,
+  type DmrDepth,
   type DmrReconciliation,
 } from "@/lib/dmrImport"
 import { fmtCurrency } from "@/lib/wellCost"
-import { errorMessage } from "@/lib/utils"
+import { cn, errorMessage } from "@/lib/utils"
 import type { WellCostCentre, WellCostTransaction } from "@/types/wellCost"
+import type { WellDailyDepth } from "@/types/wellDailyDepth"
 
 const CONTRACTOR_LABELS: Record<DmrContractor, string> = {
   MUD_CONTRACTOR: "Mud Contractor",
@@ -34,6 +37,8 @@ const CONTRACTOR_LABELS: Record<DmrContractor, string> = {
   SECOND_CONTRACTOR: "Second Contractor",
 }
 const CONTRACTORS: DmrContractor[] = ["OGDCL", "MUD_CONTRACTOR", "SECOND_CONTRACTOR"]
+
+const IMPORT_STEPS = ["Choose files", "Review issues", "Map and confirm"]
 const SKIP = "__skip__"
 
 
@@ -86,6 +91,7 @@ export function DmrImportDialog({
   existingEntries,
   createdByName,
   onImport,
+  onImportDepths,
   submitting = false,
 }: {
   open: boolean
@@ -103,13 +109,18 @@ export function DmrImportDialog({
   existingEntries: WellCostTransaction[]
   createdByName: string
   onImport: (rows: WellCostTransaction[]) => void
-  /** True while the bulk import request is in flight — blocks a second submit. */
+  /** Saves the day's measured depth read from each report's Depth/TVD line. Optional so the
+   *  dialog still works where depth isn't wired up. */
+  onImportDepths?: (rows: WellDailyDepth[]) => void
+    /** True while the bulk import request is in flight — blocks a second submit. */
   submitting?: boolean
 }) {
   const [parsedRows, setParsedRows] = useState<DmrImportRow[]>([])
   const [gaps, setGaps] = useState<DmrGap[]>([])
   const [errors, setErrors] = useState<DmrImportError[]>([])
   const [reconciliations, setReconciliations] = useState<DmrReconciliation[]>([])
+  const [cumulativeChecks, setCumulativeChecks] = useState<DmrCumulativeCheck[]>([])
+  const [parsedDepths, setParsedDepths] = useState<DmrDepth[]>([])
   const [acceptedReconciliations, setAcceptedReconciliations] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [fileCount, setFileCount] = useState(0)
@@ -180,11 +191,32 @@ export function DmrImportDialog({
     (r) => !r.alreadyLogged && acceptedReconciliations.has(reconciliationKey(r))
   )
 
+  // Latest report cumulative per mapped contractor, beside what the app already holds for
+  // that cost centre. The gap is what this import would still need to account for.
+  const reconciliationSummary = useMemo(
+    () =>
+      CONTRACTORS.filter((c) => mapping[c]).flatMap((c) => {
+        const latest = parsedRows
+          .filter((r) => r.contractor === c && r.cumulative !== null)
+          .sort((a, b) => a.entryDate.localeCompare(b.entryDate))
+          .at(-1)
+        if (!latest) return []
+        const appTotal = existingEntries
+          .filter((e) => e.kind === "actual" && e.costCentreId === mapping[c])
+          .reduce((s, e) => s + (Number(e.amount) || 0), 0)
+        const reportCumulative = latest.cumulative as number
+        return [{ contractor: c, latestDate: latest.entryDate, reportCumulative, appTotal: +appTotal.toFixed(2), difference: +(reportCumulative - appTotal).toFixed(2) }]
+      }),
+    [parsedRows, mapping, existingEntries]
+  )
+
   function reset() {
     setParsedRows([])
     setGaps([])
     setErrors([])
     setReconciliations([])
+    setCumulativeChecks([])
+    setParsedDepths([])
     setAcceptedReconciliations(new Set())
     setFileCount(0)
     setMapping({ OGDCL: "", MUD_CONTRACTOR: "", SECOND_CONTRACTOR: "" })
@@ -194,11 +226,20 @@ export function DmrImportDialog({
     setBusy(true)
     setFileCount(files.length)
     try {
-      const { rows, gaps: parsedGaps, errors: parseErrors, reconciliations: parsedReconciliations } = await parseDmrFiles(files)
+      const {
+        rows,
+        gaps: parsedGaps,
+        errors: parseErrors,
+        reconciliations: parsedReconciliations,
+        cumulativeChecks: parsedChecks,
+        depths: parsedDepthRows,
+      } = await parseDmrFiles(files)
       setParsedRows(rows)
       setGaps(parsedGaps)
       setErrors(parseErrors)
       setReconciliations(parsedReconciliations)
+      setCumulativeChecks(parsedChecks)
+      setParsedDepths(parsedDepthRows)
     } catch (e) {
       setErrors([{ fileName: "", error: errorMessage(e, "Could not read the selected files.") }])
     } finally {
@@ -247,6 +288,16 @@ export function DmrImportDialog({
         createdByName,
       })
     }
+    // Depth belongs to the well, not the cost centre: one row per report date, from whichever
+    // mapped cost centre this dialog was opened for.
+    const wellId = costCentres.find((c) => c.id === Object.values(mapping).find(Boolean))?.wellId ?? costCentres[0]?.wellId
+    if (wellId && parsedDepths.length && onImportDepths) {
+      const byDate = new Map<string, WellDailyDepth>()
+      for (const d of parsedDepths) {
+        if (!byDate.has(d.entryDate)) byDate.set(d.entryDate, { wellId, entryDate: d.entryDate, depthMd: d.depthMd, depthTvd: d.depthTvd, source: "import" })
+      }
+      onImportDepths(Array.from(byDate.values()))
+    }
     onImport(toImport)
     reset()
   }
@@ -259,6 +310,8 @@ export function DmrImportDialog({
     return true
   })
   const mappedCount = CONTRACTORS.filter((c) => mapping[c]).length
+  // Step 1 choose files, 2 review what was read, 3 map and confirm.
+  const currentStep = !parsedRows.length && !errors.length ? 0 : mappedCount === 0 || !importable.length ? 1 : 2
   const newCount = plan.filter((r) => r.status === "new").length
   const remarksUpdateCount = plan.filter((r) => r.status === "remarks-update").length
 
@@ -281,6 +334,29 @@ export function DmrImportDialog({
             entries against whichever cost centre you map each one to below.
           </DialogDescription>
         </DialogHeader>
+
+        <ol className="flex items-center gap-2 text-xs" aria-label="Import steps">
+          {IMPORT_STEPS.map((label, i) => {
+            const done = i < currentStep
+            const active = i === currentStep
+            return (
+              <li key={label} className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "flex size-5 items-center justify-center rounded-full border text-[11px] font-semibold",
+                    done && "border-status-cleared bg-status-cleared text-white",
+                    active && "border-primary bg-primary text-primary-foreground",
+                    !done && !active && "text-muted-foreground"
+                  )}
+                >
+                  {i + 1}
+                </span>
+                <span className={cn(active ? "font-medium text-foreground" : "text-muted-foreground")}>{label}</span>
+                {i < IMPORT_STEPS.length - 1 && <span className="mx-1 h-px w-6 bg-border" />}
+              </li>
+            )
+          })}
+        </ol>
 
         {!parsedRows.length && !errors.length ? (
           <div className="grid gap-3">
@@ -381,6 +457,47 @@ export function DmrImportDialog({
                         </li>
                       ))}
                   </ul>
+                </div>
+              </div>
+            )}
+
+            {cumulativeChecks.length > 0 && (
+              <div className="rounded-lg border border-status-under/30 bg-status-under/5 p-3">
+                <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-status-under">
+                  <AlertTriangle className="size-3.5" /> {cumulativeChecks.length} day{cumulativeChecks.length !== 1 ? "s" : ""} where the
+                  report's Cumulative change doesn't match its Daily figure — the import posts the Daily figure, so check the source sheet:
+                </p>
+                <div className="max-h-32 overflow-y-auto">
+                  <ul className="grid gap-0.5 text-xs text-muted-foreground">
+                    {cumulativeChecks.map((c) => (
+                      <li key={`${c.fileName}-${c.contractor}`}>
+                        {c.entryDate} — {CONTRACTOR_LABELS[c.contractor]}: daily {fmtCurrency(c.dailyAmount, "USD")}, cumulative moved{" "}
+                        {fmtCurrency(c.cumulativeChange, "USD")} (difference {fmtCurrency(c.difference, "USD")}) · {c.fileName}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {reconciliationSummary.length > 0 && (
+              <div className="rounded-lg border p-3">
+                <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Reports vs app totals (before this import)
+                </p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {reconciliationSummary.map((s) => (
+                    <div key={s.contractor} className="rounded-md border bg-background p-2.5 text-xs">
+                      <div className="font-medium">{CONTRACTOR_LABELS[s.contractor]}</div>
+                      <div className="mt-1 text-muted-foreground">Latest report ({s.latestDate})</div>
+                      <div className="font-semibold tabular-nums">{fmtCurrency(s.reportCumulative, "USD")}</div>
+                      <div className="mt-1 text-muted-foreground">App total</div>
+                      <div className="font-semibold tabular-nums">{fmtCurrency(s.appTotal, "USD")}</div>
+                      <div className={cn("mt-1 font-medium tabular-nums", Math.abs(s.difference) > 0.05 ? "text-status-under" : "text-status-cleared")}>
+                        {Math.abs(s.difference) > 0.05 ? `Difference ${fmtCurrency(s.difference, "USD")}` : "Matches"}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

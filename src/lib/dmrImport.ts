@@ -530,7 +530,26 @@ function extractMonthlyChemicalCosts(
   return { wellLabel, contractorLabel, year, monthNum, monthLabel: monthMatch[1], days }
 }
 
-async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: DmrGap[] } | DmrImportError> {
+/** One day's measured depth and TVD for the well, read from the report's "Depth/TVD" line
+ *  (OBM sheet: "400 m/400 m"; a bare "2450" is taken as both MD and TVD). */
+export interface DmrDepth {
+  fileName: string
+  entryDate: string
+  wellName: string
+  depthMd: number
+  depthTvd: number
+}
+
+/** Pulls the MD and TVD numbers from the "Depth" value on a WBM or OBM sheet. */
+function extractDepth(rows: unknown[][]): { md: number; tvd: number } | null {
+  const text = findLabelValue(rows, /^depth\s*(\/\s*tvd)?\s*:?$/i)
+  if (!text) return null
+  const numbers = (text.replace(/,/g, "").match(/\d+(\.\d+)?/g) ?? []).map(Number)
+  if (!numbers.length) return null
+  return { md: numbers[0], tvd: numbers[1] ?? numbers[0] }
+}
+
+async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: DmrGap[]; depths: DmrDepth[] } | DmrImportError> {
   try {
     const XLSX = await import("xlsx")
     const buf = await file.arrayBuffer()
@@ -558,7 +577,13 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
       const baseRemarks = extractRemarks(rows)
       const remarks = [obmTag, baseRemarks].filter(Boolean).join("\n\n")
 
+      const depth = extractDepth(rows)
+      const depths: DmrDepth[] = depth
+        ? [{ fileName: file.name, entryDate, wellName, depthMd: depth.md, depthTvd: depth.tvd }]
+        : []
+
       return {
+        depths,
         rows: extracted.rows.map((r) => ({
           fileName: file.name,
           entryDate,
@@ -634,7 +659,7 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
           })
         }
       }
-      return { rows: outRows, gaps: [] }
+      return { rows: outRows, gaps: [], depths: [] }
     }
 
     return { fileName: file.name, error: 'No "WBM", "OBM" or "DATE WISE CONSUMPTION" sheet found in this workbook.' }
@@ -731,19 +756,71 @@ function computeReconciliations(rows: DmrImportRow[]): DmrReconciliation[] {
   return results
 }
 
+/** A report whose own Cumulative Cost moved by a different amount than its Daily Cost
+ *  figure (between it and the previous report on the day before). The import posts the
+ *  Daily figure, so when they disagree one of the two cells in the source file is wrong —
+ *  the import shows these for a human to check rather than deciding which is right. */
+export interface DmrCumulativeCheck {
+  contractor: DmrContractor
+  entryDate: string
+  fileName: string
+  dailyAmount: number
+  cumulativeChange: number
+  difference: number
+}
+
+/** Only consecutive calendar days are compared: across a missing report the cumulative
+ *  change also contains the missing day's spend, so that case is left to the reconciliation
+ *  suggestions instead of being reported as a mismatch. */
+function computeCumulativeChecks(rows: DmrImportRow[]): DmrCumulativeCheck[] {
+  if (new Set(rows.map((r) => r.wellName.trim().toLowerCase())).size > 1) return []
+  const byContractor = new Map<DmrContractor, DmrImportRow[]>()
+  for (const r of rows) {
+    if (r.cumulative === null) continue
+    const list = byContractor.get(r.contractor) ?? []
+    list.push(r)
+    byContractor.set(r.contractor, list)
+  }
+  const checks: DmrCumulativeCheck[] = []
+  for (const [contractor, list] of byContractor) {
+    const byDate = new Map<string, DmrImportRow>()
+    for (const r of list) if (!byDate.has(r.entryDate)) byDate.set(r.entryDate, r)
+    const sorted = Array.from(byDate.values()).sort((a, b) => a.entryDate.localeCompare(b.entryDate))
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1]
+      const next = sorted[i]
+      if (daysBetween(prev.entryDate, next.entryDate) !== 1) continue
+      const cumulativeChange = +((next.cumulative as number) - (prev.cumulative as number)).toFixed(2)
+      const difference = +(cumulativeChange - next.amount).toFixed(2)
+      if (Math.abs(difference) <= 0.05) continue
+      checks.push({ contractor, entryDate: next.entryDate, fileName: next.fileName, dailyAmount: next.amount, cumulativeChange, difference })
+    }
+  }
+  return checks.sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.contractor.localeCompare(b.contractor))
+}
+
 export async function parseDmrFiles(
   files: File[]
-): Promise<{ rows: DmrImportRow[]; gaps: DmrGap[]; errors: DmrImportError[]; reconciliations: DmrReconciliation[] }> {
+): Promise<{
+  rows: DmrImportRow[]
+  gaps: DmrGap[]
+  errors: DmrImportError[]
+  reconciliations: DmrReconciliation[]
+  cumulativeChecks: DmrCumulativeCheck[]
+  depths: DmrDepth[]
+}> {
   const results = await Promise.all(files.map(parseOneFile))
   const rows: DmrImportRow[] = []
   const gaps: DmrGap[] = []
   const errors: DmrImportError[] = []
+  const depths: DmrDepth[] = []
   for (const r of results) {
     if ("error" in r) errors.push(r)
     else {
       rows.push(...r.rows)
       gaps.push(...r.gaps)
+      depths.push(...r.depths)
     }
   }
-  return { rows, gaps, errors, reconciliations: computeReconciliations(rows) }
+  return { rows, gaps, errors, reconciliations: computeReconciliations(rows), cumulativeChecks: computeCumulativeChecks(rows), depths }
 }

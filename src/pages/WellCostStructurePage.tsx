@@ -20,7 +20,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HoverPreview } from "@/components/shared/HoverPreview"
 import { CostCentrePreview } from "@/components/wells/WellHoverPreviews"
 import { CopyWellCostDialog } from "@/components/wells/CopyWellCostDialog"
-import { CostSummaryCards, UtilizationBar } from "@/components/wells/CostSummary"
+import { CostSummaryCards, MiniBudgetBar, UtilizationBar } from "@/components/wells/CostSummary"
+import { WellCostProjection } from "@/components/wells/WellCostProjection"
 import { DmrImportDialog } from "@/components/wells/DmrImportDialog"
 import { NameDialog } from "@/components/wells/NameDialog"
 import { WellCostCentreDrawer } from "@/components/wells/WellCostCentreDrawer"
@@ -50,6 +51,7 @@ import {
 import { useCopyWellCostStructure, useDeleteWellCostCentre, useUpsertWellCostCentre, useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
 import { useBulkUpsertWellCostTransactions, useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
 import { useDeleteWellMilestone, useUpsertWellMilestone, useWellMilestonesQuery } from "@/hooks/useWellMilestones"
+import { useUpsertWellDailyDepths, useWellDailyDepthsQuery } from "@/hooks/useWellDailyDepths"
 import { useUpsertWell, useWellsQuery } from "@/hooks/useWells"
 import type { Well } from "@/types/well"
 import type { WellCostCentre, WellCostTransaction } from "@/types/wellCost"
@@ -79,6 +81,8 @@ export default function WellCostStructurePage() {
   const wellDepartmentsQuery = useWellDepartmentsQuery()
   const transactionsQuery = useWellCostTransactionsQuery()
   const milestonesQuery = useWellMilestonesQuery()
+  const depthsQuery = useWellDailyDepthsQuery()
+  const upsertDepths = useUpsertWellDailyDepths()
 
   const upsertWell = useUpsertWell()
   const upsertCostCentre = useUpsertWellCostCentre()
@@ -134,6 +138,7 @@ export default function WellCostStructurePage() {
     [costCentres, selectedWell]
   )
   const wellRollup = useMemo(() => rollup(wellCostCentres, costCentreTotals), [wellCostCentres, costCentreTotals])
+  const wellCostCentreIds = useMemo(() => new Set(wellCostCentres.map((c) => c.id)), [wellCostCentres])
 
   /** Candidate wells to copy FROM, scoped to one service category's own cost centres —
    *  each section's own "Copy from Well" button only offers wells that actually have
@@ -359,6 +364,17 @@ export default function WellCostStructurePage() {
             </div>
           </div>
 
+          {/* Forecasts are for Editors and Admins only; Viewers see the figures but not the projection. */}
+          {canLogEntry && (
+            <WellCostProjection
+              transactions={transactions}
+              costCentreIds={wellCostCentreIds}
+              milestones={milestones.filter((m) => m.wellId === selectedWell.id)}
+              depths={(depthsQuery.data ?? []).filter((d) => d.wellId === selectedWell.id)}
+              budget={wellRollup.budget}
+            />
+          )}
+
           {tabs.length ? (
             <Tabs value={activeDeptId || tabs[0].id} onValueChange={setActiveDeptId}>
               <TabsList>
@@ -465,6 +481,12 @@ export default function WellCostStructurePage() {
                                 existingEntries={transactions.filter((t) => allItems.some((c) => c.id === t.costCentreId))}
                                 createdByName={user?.name || ""}
                                 onImport={handleImportTransactions}
+                                onImportDepths={(rows) =>
+                                  upsertDepths.mutate(rows, {
+                                    onSuccess: () => toast.success(`Saved depth for ${rows.length} day${rows.length !== 1 ? "s" : ""}.`),
+                                    onError: (e) => toast.error(errorMessage(e, "Could not save daily depth.")),
+                                  })
+                                }
                                 submitting={bulkImportTransactions.isPending}
                               />
                             )}
@@ -478,6 +500,7 @@ export default function WellCostStructurePage() {
                                     <TableHead className="text-right">Budget</TableHead>
                                     <TableHead className="text-right">Actual</TableHead>
                                     <TableHead className="text-right">Commitment</TableHead>
+                                    <TableHead>Used</TableHead>
                                     <TableHead className="text-right">Available</TableHead>
                                     <TableHead></TableHead>
                                   </TableRow>
@@ -499,6 +522,9 @@ export default function WellCostStructurePage() {
                                         <TableCell className="text-right tabular-nums">{fmtCurrency(item.plannedBudget, item.currency)}</TableCell>
                                         <TableCell className="text-right tabular-nums">{fmtCurrency(totals.actual, item.currency)}</TableCell>
                                         <TableCell className="text-right tabular-nums">{fmtCurrency(displayedCommitment, item.currency)}</TableCell>
+                                        <TableCell>
+                                          <MiniBudgetBar spent={totals.actual + totals.commitment} budget={budget} currency={item.currency} />
+                                        </TableCell>
                                         <TableCell className="text-right tabular-nums">{fmtCurrency(available, item.currency)}</TableCell>
                                         <TableCell>
                                           <div className="flex justify-end gap-1">

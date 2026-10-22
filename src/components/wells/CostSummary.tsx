@@ -41,3 +41,22 @@ export function UtilizationBar({ pct }: { pct: number }) {
     </div>
   )
 }
+
+/** Compact spend-against-budget bar for one table row: actual plus commitments over the
+ *  budget, coloured by utilisation. Shows a plain label when there is no budget. */
+export function MiniBudgetBar({ spent, budget, currency = "USD" }: { spent: number; budget: number; currency?: string }) {
+  if (budget <= 0) {
+    return <span className="text-xs text-muted-foreground">{spent > 0 ? "Spend without budget" : "No budget"}</span>
+  }
+  const pct = (spent / budget) * 100
+  return (
+    <div className="flex min-w-32 items-center gap-2">
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct).toFixed(1)}%`, backgroundColor: utilizationColor(pct) }} />
+      </div>
+      <span className="w-12 shrink-0 text-right text-xs font-medium tabular-nums" title={fmtCurrency(spent, currency)}>
+        {pct.toFixed(0)}%
+      </span>
+    </div>
+  )
+}

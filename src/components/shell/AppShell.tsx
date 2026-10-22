@@ -48,6 +48,7 @@ const TITLES: Record<string, string> = {
 function pageTitle(pathname: string): string {
   if (pathname.startsWith("/well-cost/log/")) return "Daily Cost Log"
   if (pathname === "/well-cost/structure") return "Cost Structure"
+  if (pathname === "/well-cost/field-entry") return "Field Entry"
   if (pathname === "/well-cost/wells") return "Well Registry"
   if (pathname === "/well-cost") return "Well Cost Dashboard"
   if (pathname === "/messages") return "Message Centre"
