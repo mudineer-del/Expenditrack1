@@ -203,3 +203,10 @@ test('field queue treats connectivity failures as retryable and rejections as fi
   assert.equal(isNetworkError({ message: 'TypeError: Failed to fetch' }), true)
   assert.equal(isNetworkError({ message: 'new row violates row-level security policy' }), false)
 })
+
+test('well names match across spelling, punctuation and leading zeros', async () => {
+  const { normalizeWellName } = await import('../src/lib/wellNames.ts')
+  assert.equal(normalizeWellName('Uch WDW-01'), normalizeWellName('UCH WDW-1'))
+  assert.equal(normalizeWellName('Gurgalot X-1'), normalizeWellName('gurgalot x 1'))
+  assert.notEqual(normalizeWellName('Kal-04'), normalizeWellName('Kal-14'))
+})

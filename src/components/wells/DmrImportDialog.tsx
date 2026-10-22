@@ -29,7 +29,6 @@ import {
 import { fmtCurrency } from "@/lib/wellCost"
 import { cn, errorMessage } from "@/lib/utils"
 import type { WellCostCentre, WellCostTransaction } from "@/types/wellCost"
-import type { WellDailyDepth } from "@/types/wellDailyDepth"
 
 const CONTRACTOR_LABELS: Record<DmrContractor, string> = {
   MUD_CONTRACTOR: "Mud Contractor",
@@ -109,9 +108,10 @@ export function DmrImportDialog({
   existingEntries: WellCostTransaction[]
   createdByName: string
   onImport: (rows: WellCostTransaction[]) => void
-  /** Saves the day's measured depth read from each report's Depth/TVD line. Optional so the
-   *  dialog still works where depth isn't wired up. */
-  onImportDepths?: (rows: WellDailyDepth[]) => void
+  /** Each report's Depth/TVD reading, with the Well Name written in that report. The page
+   *  decides which well each one belongs to, so depth follows the report, not the cost
+   *  centre this dialog was opened for. */
+  onImportDepths?: (rows: DmrDepth[]) => void
     /** True while the bulk import request is in flight — blocks a second submit. */
   submitting?: boolean
 }) {
@@ -288,16 +288,7 @@ export function DmrImportDialog({
         createdByName,
       })
     }
-    // Depth belongs to the well, not the cost centre: one row per report date, from whichever
-    // mapped cost centre this dialog was opened for.
-    const wellId = costCentres.find((c) => c.id === Object.values(mapping).find(Boolean))?.wellId ?? costCentres[0]?.wellId
-    if (wellId && parsedDepths.length && onImportDepths) {
-      const byDate = new Map<string, WellDailyDepth>()
-      for (const d of parsedDepths) {
-        if (!byDate.has(d.entryDate)) byDate.set(d.entryDate, { wellId, entryDate: d.entryDate, depthMd: d.depthMd, depthTvd: d.depthTvd, source: "import" })
-      }
-      onImportDepths(Array.from(byDate.values()))
-    }
+    if (parsedDepths.length && onImportDepths) onImportDepths(parsedDepths)
     onImport(toImport)
     reset()
   }

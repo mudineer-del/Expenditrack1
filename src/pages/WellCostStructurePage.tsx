@@ -52,6 +52,9 @@ import { useCopyWellCostStructure, useDeleteWellCostCentre, useUpsertWellCostCen
 import { useBulkUpsertWellCostTransactions, useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
 import { useDeleteWellMilestone, useUpsertWellMilestone, useWellMilestonesQuery } from "@/hooks/useWellMilestones"
 import { useUpsertWellDailyDepths, useWellDailyDepthsQuery } from "@/hooks/useWellDailyDepths"
+import { normalizeWellName } from "@/lib/wellNames"
+import type { DmrDepth } from "@/lib/dmrImport"
+import type { WellDailyDepth } from "@/types/wellDailyDepth"
 import { useUpsertWell, useWellsQuery } from "@/hooks/useWells"
 import type { Well } from "@/types/well"
 import type { WellCostCentre, WellCostTransaction } from "@/types/wellCost"
@@ -262,6 +265,37 @@ export default function WellCostStructurePage() {
         setImportServiceCategoryId(null)
       },
       onError: (e) => toast.error(errorMessage(e, "Could not import entries.")),
+    })
+  }
+
+  // Depth follows the well named in each report. Names and codes are matched to the Well Registry
+  // by normalised form. A report whose well isn't registered is skipped and listed, not saved
+  // against the wrong well.
+  function handleImportDepths(reports: DmrDepth[]) {
+    // A report can name its well by the registry name or by its code (e.g. "Uch WDW-1" is code
+    // "Uch WDW-01"), so both are accepted.
+    const wellByName = new Map<string, string>()
+    for (const w of wells) {
+      wellByName.set(normalizeWellName(w.name), w.id)
+      if (w.code) wellByName.set(normalizeWellName(w.code), w.id)
+    }
+    const byWellDate = new Map<string, WellDailyDepth>()
+    const unmatched = new Set<string>()
+    for (const r of reports) {
+      const wellId = wellByName.get(normalizeWellName(r.wellName))
+      if (!wellId) {
+        unmatched.add(r.wellName || "(no well name)")
+        continue
+      }
+      const key = `${wellId}|${r.entryDate}`
+      if (!byWellDate.has(key)) byWellDate.set(key, { wellId, entryDate: r.entryDate, depthMd: r.depthMd, depthTvd: r.depthTvd, source: "import" })
+    }
+    if (unmatched.size) toast.warning(`Depth not saved for well name(s) not in the Wells list: ${Array.from(unmatched).join(", ")}`)
+    const rows = Array.from(byWellDate.values())
+    if (!rows.length) return
+    upsertDepths.mutate(rows, {
+      onSuccess: () => toast.success(`Saved depth for ${rows.length} day${rows.length !== 1 ? "s" : ""}.`),
+      onError: (e) => toast.error(errorMessage(e, "Could not save daily depth.")),
     })
   }
 
@@ -481,12 +515,7 @@ export default function WellCostStructurePage() {
                                 existingEntries={transactions.filter((t) => allItems.some((c) => c.id === t.costCentreId))}
                                 createdByName={user?.name || ""}
                                 onImport={handleImportTransactions}
-                                onImportDepths={(rows) =>
-                                  upsertDepths.mutate(rows, {
-                                    onSuccess: () => toast.success(`Saved depth for ${rows.length} day${rows.length !== 1 ? "s" : ""}.`),
-                                    onError: (e) => toast.error(errorMessage(e, "Could not save daily depth.")),
-                                  })
-                                }
+                                onImportDepths={handleImportDepths}
                                 submitting={bulkImportTransactions.isPending}
                               />
                             )}
