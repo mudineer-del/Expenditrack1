@@ -16,11 +16,27 @@ import { useAuth } from "@/hooks/useAuth"
 
 export const WELL_COST_TRANSACTIONS_QUERY_KEY = ["wellCostTransactions"] as const
 
+const PAGE_SIZE = 1000
+
+/** PostgREST returns at most 1000 rows per request, so a single unpaged select silently
+ *  dropped everything past the first 1000 entries — the Well Cost totals for the contractors
+ *  came out short, and the same wrong totals came back on every reload. Pages are ordered by
+ *  id (unique) so no row lands on two pages or gets skipped at a boundary. */
 async function fetchAllWellCostTransactions(): Promise<WellCostTransaction[]> {
   const supabase = getSupabaseClient()
-  const { data, error } = await supabase.from("well_cost_transactions").select("*")
-  if (error) throw error
-  return ((data ?? []) as WellCostTransactionRow[]).map(fromWellCostTransactionRow)
+  const all: WellCostTransactionRow[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("well_cost_transactions")
+      .select("*")
+      .order("id", { ascending: true })
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    const batch = (data ?? []) as WellCostTransactionRow[]
+    all.push(...batch)
+    if (batch.length < PAGE_SIZE) break
+  }
+  return all.map(fromWellCostTransactionRow)
 }
 
 /** Stored entries plus the generated mud engineering day-rate / override entries (see

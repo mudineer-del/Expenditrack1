@@ -40,7 +40,22 @@ import type { WellCostTransaction } from "@/types/wellCost"
 
 export type DmrRowStatus = "new" | "duplicate-in-batch" | "already-logged" | "remarks-update" | "unmapped"
 
-export function buildDmrImportPlan(rows: DmrImportRow[], mapping: Record<DmrContractor, string>, existingByKey: Map<string, WellCostTransaction>) {
+/** Key for "this exact amount is already logged on this date under some cost centre" —
+ *  see loggedAmountKeys(). Amounts are compared to the cent. */
+export function loggedAmountKey(entryDate: string, amount: number): string {
+  return `${entryDate}|${amount.toFixed(2)}`
+}
+
+/** `loggedAmounts` holds every date+amount already logged across all the well's cost
+ *  centres (see loggedAmountKey). A row whose target cost centre has no entry for that date
+ *  is still treated as already logged when the same amount is on file under another cost
+ *  centre — that's how a re-import under a different mapping used to double-post. */
+export function buildDmrImportPlan(
+  rows: DmrImportRow[],
+  mapping: Record<DmrContractor, string>,
+  existingByKey: Map<string, WellCostTransaction>,
+  loggedAmounts: Set<string> = new Set()
+) {
   const seen = new Set<string>()
   return rows.filter((r) => r.amount > 0)
     .slice().sort((a, b) => a.entryDate.localeCompare(b.entryDate) || a.contractor.localeCompare(b.contractor))
@@ -49,7 +64,8 @@ export function buildDmrImportPlan(rows: DmrImportRow[], mapping: Record<DmrCont
       const target = mapping[r.contractor]
       const existing = existingByKey.get(`${target}|${r.entryDate}`)
       const status: DmrRowStatus = seen.has(key) ? "duplicate-in-batch" : !target ? "unmapped" :
-        !existing ? "new" : !existing.remarks && r.remarks ? "remarks-update" : "already-logged"
+        !existing ? (loggedAmounts.has(loggedAmountKey(r.entryDate, r.amount)) ? "already-logged" : "new") :
+        !existing.remarks && r.remarks ? "remarks-update" : "already-logged"
       seen.add(key)
       return { ...r, status }
     })

@@ -57,6 +57,14 @@ test('re-import skips duplicate costs while allowing missing remarks to be fille
   assert.equal(existing.get('c1|2026-09-01').amount, 99)
 })
 
+test('DMR re-import does not repost a day already logged under another cost centre', () => {
+  const row = { fileName: 'DMR#459.xlsx', entryDate: '2026-09-30', contractor: 'OGDCL', sourceLabel: 'OGDCL', amount: 1015, wellName: 'Gurgalot X-1', remarks: '', cumulative: null }
+  const mapping = { OGDCL: 'c2', MUD_CONTRACTOR: '', SECOND_CONTRACTOR: '' }
+  const loggedAmounts = new Set([`2026-09-30|${(1015).toFixed(2)}`])
+  assert.equal(buildDmrImportPlan([row], mapping, new Map(), loggedAmounts)[0].status, 'already-logged')
+  assert.equal(buildDmrImportPlan([row], mapping, new Map())[0].status, 'new')
+})
+
 test('budget states distinguish exact use, overrun, and missing budget at cent precision', () => {
   assert.equal(budgetStatus(100, 100), 'At budget')
   assert.equal(budgetStatus(100, 100.01), 'Over budget')

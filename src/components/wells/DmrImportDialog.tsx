@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   parseDmrFiles,
   buildDmrImportPlan,
+  loggedAmountKey,
   type DmrContractor,
   type DmrGap,
   type DmrImportError,
@@ -85,6 +86,7 @@ export function DmrImportDialog({
   existingEntries,
   createdByName,
   onImport,
+  submitting = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -101,6 +103,8 @@ export function DmrImportDialog({
   existingEntries: WellCostTransaction[]
   createdByName: string
   onImport: (rows: WellCostTransaction[]) => void
+  /** True while the bulk import request is in flight — blocks a second submit. */
+  submitting?: boolean
 }) {
   const [parsedRows, setParsedRows] = useState<DmrImportRow[]>([])
   const [gaps, setGaps] = useState<DmrGap[]>([])
@@ -140,7 +144,17 @@ export function DmrImportDialog({
 
   const nonZeroRows = useMemo(() => parsedRows.filter((r) => r.amount > 0), [parsedRows])
 
-  const plan = useMemo(() => buildDmrImportPlan(nonZeroRows, mapping, existingByKey), [nonZeroRows, mapping, existingByKey])
+  // Every date+amount already logged under any of the well's cost centres, so a row isn't
+  // re-posted just because it's being mapped to a different one this time.
+  const loggedAmounts = useMemo(
+    () => new Set(existingEntries.filter((e) => e.kind === "actual").map((e) => loggedAmountKey(e.entryDate, Number(e.amount) || 0))),
+    [existingEntries]
+  )
+
+  const plan = useMemo(
+    () => buildDmrImportPlan(nonZeroRows, mapping, existingByKey, loggedAmounts),
+    [nonZeroRows, mapping, existingByKey, loggedAmounts]
+  )
 
   const importable = plan.filter((r) => r.status === "new" || r.status === "remarks-update")
 
@@ -202,6 +216,7 @@ export function DmrImportDialog({
   }
 
   function handleConfirm() {
+    if (submitting) return
     const toImport: WellCostTransaction[] = importable.map((r) => {
       if (r.status === "remarks-update") {
         // Same id/amount/notes/creator as the entry already on file — only remarks changes,
@@ -480,7 +495,10 @@ export function DmrImportDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!importable.length && !acceptedReconciliationRows.length}>
+          <Button
+            onClick={handleConfirm}
+            disabled={submitting || (!importable.length && !acceptedReconciliationRows.length)}
+          >
             <Upload />{" "}
             {importable.length + acceptedReconciliationRows.length
               ? `Import ${importable.length + acceptedReconciliationRows.length} entr${

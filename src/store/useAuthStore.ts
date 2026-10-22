@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js"
 import { getSupabaseClient } from "@/lib/supabase"
+import { queryClient, queryPersister } from "@/lib/queryClient"
 import { uploadAvatarFile } from "@/lib/avatars"
 import { fromProfileRow, type ProfileRow } from "@/lib/profiles"
 import type { AppUser, Role } from "@/types/user"
@@ -177,6 +178,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     const supabase = getSupabaseClient()
     await supabase.auth.signOut()
+    // Drop cached data too, so the next user (or a later 401) never sees the previous
+    // session's numbers.
+    queryClient.clear()
+    void queryPersister.removeClient()
     set({ session: null, user: null, status: "unauthenticated" })
   },
 

@@ -465,6 +465,7 @@ export default function WellCostStructurePage() {
                                 existingEntries={transactions.filter((t) => allItems.some((c) => c.id === t.costCentreId))}
                                 createdByName={user?.name || ""}
                                 onImport={handleImportTransactions}
+                                submitting={bulkImportTransactions.isPending}
                               />
                             )}
                             {items.length ? (
