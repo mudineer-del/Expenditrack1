@@ -31,10 +31,25 @@ export default function WellAfePage() {
   const [pickedWellId, setPickedWellId] = useState<string | null>(null)
   const [pickedAfeId, setPickedAfeId] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [wellSearch, setWellSearch] = useState("")
+  const [wellOpen, setWellOpen] = useState(false)
 
   // Arriving from the Cost Structure page opens that well and AFE straight away.
   const requested = location.state as { wellId?: string; afeId?: string } | null
   const well = wells.find((w) => w.id === (pickedWellId ?? requested?.wellId)) ?? wells.find((w) => !w.archived) ?? null
+
+  const visibleWells = useMemo(() => {
+    const q = wellSearch.trim().toLowerCase()
+    if (!q) return wells
+    return wells.filter((w) => [w.name, w.code, w.field].some((v) => (v || "").toLowerCase().includes(q)))
+  }, [wells, wellSearch])
+
+  function pickWell(id: string) {
+    setPickedWellId(id)
+    setPickedAfeId(null)
+    setWellSearch("")
+    setWellOpen(false)
+  }
 
   const wellAfes = useMemo(() => afes.filter((a) => a.wellId === well?.id), [afes, well?.id])
   const afe: WellAfe | null =
@@ -74,22 +89,63 @@ export default function WellAfePage() {
     <div className="afe-page">
       <main>
         <div className="toolbar">
-          <label>
-            Well
-            <select
-              value={well?.id ?? ""}
-              onChange={(e) => {
-                setPickedWellId(e.target.value)
-                setPickedAfeId(null)
-              }}
-            >
-              {wells.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="afe-well-picker">
+            <label>
+              Well
+              <div className="well-combo">
+                <input
+                  type="search"
+                  role="combobox"
+                  aria-label="Search wells"
+                  aria-expanded={wellOpen}
+                  autoComplete="off"
+                  className="well-search"
+                  placeholder="Type a well name, code or field…"
+                  value={wellOpen || wellSearch ? wellSearch : well ? `${well.name}${well.code ? ` · ${well.code}` : ""}` : ""}
+                  onChange={(e) => {
+                    setWellSearch(e.target.value)
+                    setWellOpen(true)
+                  }}
+                  onFocus={() => setWellOpen(true)}
+                  onBlur={() => setWellOpen(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setWellOpen(false)
+                    if (e.key === "Enter" && visibleWells[0]) {
+                      e.preventDefault()
+                      pickWell(visibleWells[0].id)
+                    }
+                  }}
+                />
+                {wellOpen && (
+                  <ul className="well-options" role="listbox">
+                    {visibleWells.length ? (
+                      visibleWells.map((w) => (
+                        <li key={w.id}>
+                          {/* mousedown, not click: the input's blur would close the list before a click lands. */}
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={w.id === well?.id}
+                            className={w.id === well?.id ? "selected" : undefined}
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              pickWell(w.id)
+                            }}
+                          >
+                            <span className="mono">{w.name}</span>
+                            {w.code && <span className="muted">{w.code}</span>}
+                            {w.field && <span className="muted">{w.field}</span>}
+                          </button>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="empty">No wells match “{wellSearch}”</li>
+                    )}
+                  </ul>
+                )}
+              </div>
+            </label>
+          </div>
           {wellAfes.length > 0 && (
             <label>
               AFE
