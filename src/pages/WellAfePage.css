@@ -1,0 +1,78 @@
+/* AFE page: the Well AFE Form Templates artifact's styling, scoped to .afe-page so it
+   does not leak into the rest of the app. Light tokens are the default; the app's
+   .dark class switches to the dark set. */
+.afe-page {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --ink: #1b2421;
+  --muted: #5d6b66;
+  --line: #d9dfdb;
+  --accent: #0f766e;
+  --accent-soft: #e3f2ef;
+  --warn: #b45309;
+  --warn-soft: #fdf1e3;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans, "Inter", system-ui, sans-serif);
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100%;
+}
+.dark .afe-page {
+  --bg: #111715;
+  --surface: #18201d;
+  --ink: #e6ece9;
+  --muted: #9aa8a2;
+  --line: #2b3732;
+  --accent: #5fd0c3;
+  --accent-soft: #15302c;
+  --warn: #f0a35e;
+  --warn-soft: #3a2a18;
+}
+
+.afe-page main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 56px; display: grid; gap: 28px; }
+.afe-page h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.afe-page h2 { font-size: 17px; margin: 0 0 12px; text-wrap: balance; }
+.afe-page h4 { font-size: 14px; margin: 0; font-weight: 600; }
+.afe-page p { margin: 0; color: var(--muted); max-width: 65ch; }
+.afe-page .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.afe-page .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+.afe-page .head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
+.afe-page .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.afe-page .tag.warn { background: var(--warn-soft); color: var(--warn); }
+.afe-page .grid-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.afe-page .field { padding: 10px 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); min-width: 0; }
+.afe-page .label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.afe-page .value { display: block; font-size: 15px; font-weight: 500; margin-top: 2px; overflow-wrap: anywhere; }
+.afe-page .mono { font-family: var(--mono); }
+.afe-page .value.mono { font-size: 14px; }
+.afe-page .wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.afe-page table { width: 100%; border-collapse: collapse; min-width: 640px; font-variant-numeric: tabular-nums; }
+.afe-page th, .afe-page td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.afe-page th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; background: var(--bg); }
+.afe-page td.num, .afe-page th.num { text-align: right; font-family: var(--mono); }
+.afe-page td.desc { white-space: normal; }
+.afe-page tr.total td { font-weight: 700; border-top: 2px solid var(--ink); }
+.afe-page .note { font-size: 13px; color: var(--muted); margin-top: 10px; }
+.afe-page .summary { font-size: 15px; margin-top: 12px; }
+.afe-page .sign { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.afe-page .sign div { border: 1px dashed var(--line); border-radius: 8px; padding: 12px; min-height: 96px; display: flex; flex-direction: column; justify-content: space-between; }
+.afe-page .sign small { color: var(--muted); font-size: 12px; }
+.afe-page .empty { border: 1px dashed var(--line); border-radius: 8px; padding: 32px; text-align: center; color: var(--muted); }
+.afe-page .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.afe-page .toolbar label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); min-width: 220px; }
+.afe-page select, .afe-page .link-btn {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 10px;
+}
+.afe-page .link-btn { cursor: pointer; font-weight: 600; color: var(--accent); }
+@media print {
+  .afe-page .toolbar { display: none; }
+  .afe-page .card { border: 1px solid #999; }
+}

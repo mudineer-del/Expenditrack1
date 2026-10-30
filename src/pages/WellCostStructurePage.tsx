@@ -1,4 +1,4 @@
-import { Copy, Drill, Eye, History, Pencil, Plus, Search, Trash2, Upload, LayoutList } from "lucide-react"
+import { Copy, Drill, Eye, FileText, History, Pencil, Plus, Search, Trash2, Upload, LayoutList } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -24,6 +24,7 @@ import { CostSummaryCards, MiniBudgetBar, UtilizationBar } from "@/components/we
 import { WellCostProjection } from "@/components/wells/WellCostProjection"
 import { DmrImportDialog } from "@/components/wells/DmrImportDialog"
 import { NameDialog } from "@/components/wells/NameDialog"
+import { WellAfeDialog } from "@/components/wells/WellAfeDialog"
 import { WellCostCentreDrawer } from "@/components/wells/WellCostCentreDrawer"
 import { WellDataDialog } from "@/components/wells/WellDataDialog"
 import { WellDrawer } from "@/components/wells/WellDrawer"
@@ -51,6 +52,8 @@ import {
 import { useCopyWellCostStructure, useDeleteWellCostCentre, useUpsertWellCostCentre, useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
 import { useBulkUpsertWellCostTransactions, useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
 import { useDeleteWellMilestone, useUpsertWellMilestone, useWellMilestonesQuery } from "@/hooks/useWellMilestones"
+import { useDeleteWellAfe, useUpsertWellAfe, useWellAfesQuery } from "@/hooks/useWellAfes"
+import type { WellAfe } from "@/types/wellAfe"
 import { useUpsertWellDailyDepths, useWellDailyDepthsQuery } from "@/hooks/useWellDailyDepths"
 import { normalizeWellName } from "@/lib/wellNames"
 import type { DmrDepth } from "@/lib/dmrImport"
@@ -84,6 +87,7 @@ export default function WellCostStructurePage() {
   const wellDepartmentsQuery = useWellDepartmentsQuery()
   const transactionsQuery = useWellCostTransactionsQuery()
   const milestonesQuery = useWellMilestonesQuery()
+  const afesQuery = useWellAfesQuery()
   const depthsQuery = useWellDailyDepthsQuery()
   const upsertDepths = useUpsertWellDailyDepths()
 
@@ -96,6 +100,8 @@ export default function WellCostStructurePage() {
   const copyWellCostStructure = useCopyWellCostStructure()
   const upsertMilestone = useUpsertWellMilestone()
   const deleteMilestone = useDeleteWellMilestone()
+  const upsertAfe = useUpsertWellAfe()
+  const deleteAfe = useDeleteWellAfe()
 
   const [selectedWellId, setSelectedWellId] = useState<string | null>(
     () => (location.state as { wellId?: string } | null)?.wellId ?? null
@@ -110,6 +116,7 @@ export default function WellCostStructurePage() {
   const [importServiceCategoryId, setImportServiceCategoryId] = useState<string | null>(null)
   const [copyServiceCategoryId, setCopyServiceCategoryId] = useState<string | null>(null)
   const [wellDataDialogOpen, setWellDataDialogOpen] = useState(false)
+  const [afeDialogOpen, setAfeDialogOpen] = useState(false)
 
   const wells = wellsQuery.data ?? []
   const costCentres = costCentresQuery.data ?? []
@@ -118,6 +125,7 @@ export default function WellCostStructurePage() {
   const wellDepartments = wellDepartmentsQuery.data ?? []
   const transactions = transactionsQuery.data ?? []
   const milestones = milestonesQuery.data ?? []
+  const afes = afesQuery.data ?? []
   const costCentreTotals = useMemo(() => buildCostCentreTotals(transactions), [transactions])
 
   useEffect(() => {
@@ -313,6 +321,26 @@ export default function WellCostStructurePage() {
     })
   }
 
+  // Rethrows on failure so the AFE dialog keeps the draft open for another try.
+  async function handleSaveAfe(afe: WellAfe) {
+    try {
+      await upsertAfe.mutateAsync(afe)
+      toast.success(`AFE ${afe.afeNo} saved.`)
+    } catch (e) {
+      toast.error(errorMessage(e, "Could not save AFE."))
+      throw e
+    }
+  }
+
+  async function handleDeleteAfe(afe: WellAfe) {
+    try {
+      await deleteAfe.mutateAsync(afe)
+      toast.success(`AFE ${afe.afeNo} deleted.`)
+    } catch (e) {
+      toast.error(errorMessage(e, "Could not delete AFE."))
+    }
+  }
+
   const anyLoading =
     wellsQuery.isLoading ||
     costCentresQuery.isLoading ||
@@ -365,15 +393,20 @@ export default function WellCostStructurePage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <WellSelector wells={wells} selectedWellId={selectedWellId} onSelect={setSelectedWellId} onAddNew={openAddWell} />
         {selectedWell && (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!canAdd}
-            title={canAdd ? "Add department" : "Only Admins can add departments"}
-            onClick={() => setDeptDialogOpen(true)}
-          >
-            <Plus /> Add Department
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" title="Authorization for Expenditure for this well" onClick={() => setAfeDialogOpen(true)}>
+              <FileText /> AFE
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!canAdd}
+              title={canAdd ? "Add department" : "Only Admins can add departments"}
+              onClick={() => setDeptDialogOpen(true)}
+            >
+              <Plus /> Add Department
+            </Button>
+          </div>
         )}
       </div>
 
@@ -633,6 +666,25 @@ export default function WellCostStructurePage() {
       ) : null}
 
       <WellDrawer open={wellDrawerOpen} well={null} onOpenChange={setWellDrawerOpen} onSubmit={handleSaveWell} />
+
+      {afeDialogOpen && selectedWell && (
+        <WellAfeDialog
+          open={afeDialogOpen}
+          onOpenChange={setAfeDialogOpen}
+          wellId={selectedWell.id}
+          wellName={selectedWell.name}
+          afes={afes.filter((a) => a.wellId === selectedWell.id)}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          saving={upsertAfe.isPending}
+          onSave={handleSaveAfe}
+          onDelete={handleDeleteAfe}
+          onViewAfe={(afe) => {
+            setAfeDialogOpen(false)
+            navigate("/well-cost/afe", { state: { wellId: afe.wellId, afeId: afe.id } })
+          }}
+        />
+      )}
 
       {wellDataDialogOpen && selectedWell && (
         <WellDataDialog

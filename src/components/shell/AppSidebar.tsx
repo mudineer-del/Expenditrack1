@@ -14,6 +14,7 @@ import {
   PanelLeftOpen,
   List,
   Settings,
+  FileText,
   Smartphone,
   Users,
 } from "lucide-react"
@@ -92,6 +93,7 @@ export const NAV_GROUPS = [
           { to: "/well-cost/wells", label: "Well Registry", icon: WellRegistryIcon, colorKey: "/well-cost/wells" },
           { to: "/well-cost/structure", label: "Cost Structure", icon: CostStructureIcon, colorKey: "/well-cost/structure" },
           { to: "/well-cost/field-entry", label: "Field Entry", icon: Smartphone, colorKey: "/well-cost/structure" },
+          { to: "/well-cost/afe", label: "AFE", icon: FileText, colorKey: "/well-cost/structure" },
         ],
       },
       { to: "/reports", label: "Financial Reports", icon: BarChart3 },
