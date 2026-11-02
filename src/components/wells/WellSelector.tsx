@@ -19,7 +19,8 @@ export function WellSelector({
   wells: Well[]
   selectedWellId: string | null
   onSelect: (wellId: string) => void
-  onAddNew: () => void
+  /** Omit where the picker is only for choosing a well, so the "Add New Well" footer is hidden. */
+  onAddNew?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
@@ -83,18 +84,20 @@ export function WellSelector({
             <div className="p-4 text-center text-sm text-muted-foreground">No wells match "{query}".</div>
           )}
         </div>
-        <div className="border-t p-1">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-2"
-            onClick={() => {
-              setOpen(false)
-              onAddNew()
-            }}
-          >
-            <Plus className="size-4" /> Add New Well
-          </Button>
-        </div>
+        {onAddNew && (
+          <div className="border-t p-1">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2"
+              onClick={() => {
+                setOpen(false)
+                onAddNew()
+              }}
+            >
+              <Plus className="size-4" /> Add New Well
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   )

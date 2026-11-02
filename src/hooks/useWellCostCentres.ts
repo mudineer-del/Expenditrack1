@@ -1,9 +1,12 @@
+import { useMemo } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { getSupabaseClient } from "@/lib/supabase"
 import { fromWellCostCentreRow, toWellCostCentreRow, type WellCostCentre, type WellCostCentreRow } from "@/types/wellCost"
 import { useActivityStore } from "@/store/useActivityStore"
 import { logActivity } from "@/hooks/useActivityLog"
 import { useAuth } from "@/hooks/useAuth"
+import { useWellAfesQuery } from "@/hooks/useWellAfes"
+import { applyAfeBudgets } from "@/lib/wellCostBudgets"
 
 export const WELL_COST_CENTRES_QUERY_KEY = ["wellCostCentres"] as const
 
@@ -16,6 +19,19 @@ async function fetchAllWellCostCentres(): Promise<WellCostCentre[]> {
 
 export function useWellCostCentresQuery() {
   return useQuery({ queryKey: WELL_COST_CENTRES_QUERY_KEY, queryFn: fetchAllWellCostCentres })
+}
+
+/** Cost centres with their budgets worked out from the well's AFE (see applyAfeBudgets).
+ *  Pages that show or total budgets use this; the edit dialog reads manualBudget and
+ *  budgetOverride from the same objects. */
+export function useBudgetedWellCostCentres() {
+  const centres = useWellCostCentresQuery()
+  const afes = useWellAfesQuery()
+  const data = useMemo(
+    () => (centres.data ? applyAfeBudgets(centres.data, afes.data ?? []) : undefined),
+    [centres.data, afes.data]
+  )
+  return { ...centres, data, isLoading: centres.isLoading || afes.isLoading, isError: centres.isError || afes.isError }
 }
 
 export function useUpsertWellCostCentre() {
@@ -81,7 +97,7 @@ export function useCopyWellCostStructure() {
         .getState()
         .pushUndo(`Copy of ${sourceItems.length} cost centre(s) into well`, { wellCostCentres: current })
 
-      const newItems: WellCostCentre[] = sourceItems.map((c) => ({ ...c, id: crypto.randomUUID(), wellId: targetWellId, overrideAmount: "" }))
+      const newItems: WellCostCentre[] = sourceItems.map((c) => ({ ...c, id: crypto.randomUUID(), wellId: targetWellId, overrideAmount: "", budgetOverride: "", descriptionOverride: "" }))
       const { error } = await supabase.from("well_cost_centres").insert(newItems.map(toWellCostCentreRow))
       if (error) throw error
 

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/hooks/useAuth"
 import { useUpsertWellCostTransaction } from "@/hooks/useWellCostTransactions"
-import { useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
+import { useBudgetedWellCostCentres } from "@/hooks/useWellCostCentres"
 import { useUpsertWellDailyDepths } from "@/hooks/useWellDailyDepths"
 import { useWellsQuery } from "@/hooks/useWells"
 import { isNetworkError, loadFieldQueue, saveFieldQueue, type QueuedFieldEntry } from "@/lib/fieldQueue"
@@ -28,7 +28,7 @@ export default function WellFieldEntryPage() {
   const { can, user } = useAuth()
   const canEnter = can("add", "wellCostEntry")
   const wellsQuery = useWellsQuery()
-  const centresQuery = useWellCostCentresQuery()
+  const centresQuery = useBudgetedWellCostCentres()
   const saveTransaction = useUpsertWellCostTransaction()
   const saveDepth = useUpsertWellDailyDepths()
 

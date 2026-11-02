@@ -23,7 +23,12 @@ const schema = z.object({
   costCentre: z.string().min(1, "Required"),
   fundCentre: z.string().optional(),
   description: z.string().optional(),
+  descriptionOverride: z.string().optional(),
   plannedBudget: z.coerce.number().min(0).optional(),
+  budgetOverride: z
+    .string()
+    .refine((v) => !v.trim() || (Number.isFinite(Number(v)) && Number(v) >= 0), "Enter a valid amount")
+    .optional(),
   currency: z.string().min(1, "Required"),
   overrideAmount: z
     .string()
@@ -45,8 +50,10 @@ function toValues(item: WellCostCentre, wellDates: Record<string, string>): Form
   return {
     costCentre: item.costCentre,
     fundCentre: item.fundCentre,
-    description: item.description,
-    plannedBudget: item.plannedBudget === "" ? undefined : Number(item.plannedBudget),
+    description: item.manualDescription,
+    descriptionOverride: item.descriptionOverride,
+    plannedBudget: item.manualBudget === "" ? undefined : Number(item.manualBudget),
+    budgetOverride: item.budgetOverride === "" ? "" : String(item.budgetOverride),
     currency: item.currency || "USD",
     overrideAmount: item.overrideAmount === "" ? "" : String(item.overrideAmount),
     startDate: schedule ? (wellDates[schedule.start.label] ?? "") : "",
@@ -125,7 +132,11 @@ export function WellCostCentreDrawer({
       costCentre: values.costCentre,
       fundCentre: values.fundCentre || "",
       description: values.description || "",
+      manualDescription: values.description || "",
+      descriptionOverride: values.descriptionOverride?.trim() || "",
       plannedBudget: values.plannedBudget ?? "",
+      manualBudget: values.plannedBudget ?? "",
+      budgetOverride: values.budgetOverride?.trim() ? Number(values.budgetOverride) : "",
       overrideAmount: values.overrideAmount?.trim() ? Number(values.overrideAmount) : "",
       currency: values.currency,
       vendor: values.vendor || "",
@@ -172,7 +183,7 @@ export function WellCostCentreDrawer({
                   name="fundCentre"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fund Centre</FormLabel>
+                      <FormLabel>WBS Code</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="e.g. FC-1001" />
                       </FormControl>
@@ -180,6 +191,20 @@ export function WellCostCentreDrawer({
                   )}
                 />
               </div>
+              <FormField
+                control={form.control}
+                name="descriptionOverride"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description Override</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Blank = use the AFE's WBS description" {...field} value={field.value ?? ""} disabled={readOnly} />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">Typing a value here replaces the AFE's WBS description for this centre.</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="description"
@@ -198,10 +223,24 @@ export function WellCostCentreDrawer({
                   name="plannedBudget"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Budget / Planned Cost</FormLabel>
+                      <FormLabel>Planned Budget (used when no AFE)</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" {...field} value={(field.value as number | undefined) ?? ""} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="budgetOverride"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Budget Override</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="Blank = use AFE share" {...field} value={field.value ?? ""} disabled={readOnly} />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">Typing a value here replaces this centre's AFE share. Clear it to go back to the AFE.</p>
                       <FormMessage />
                     </FormItem>
                   )}

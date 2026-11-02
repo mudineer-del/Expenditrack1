@@ -60,7 +60,17 @@ export interface WellCostCentre {
   costCentre: string
   fundCentre: string
   description: string
+  /** The budget the app uses: the override if set, else the AFE share, else the planned
+   *  budget below. Computed by applyAfeBudgets; never saved directly. */
   plannedBudget: number | ""
+  /** The planned budget as entered by hand. Used when the well has no matching AFE line. */
+  manualBudget: number | ""
+  /** A budget typed into this centre's own dialog. Blank means no override. */
+  budgetOverride: number | ""
+  /** The description as entered by hand. Used when the WBS code has no AFE line description. */
+  manualDescription: string
+  /** A description typed into this centre's own dialog. Blank means no override. */
+  descriptionOverride: string
   /** Mud engineering centres (DRFD02/DRFC02) only: a manually entered cost that replaces the
    *  automatic day-rate accrual. Blank means "use the day rate". */
   overrideAmount: number | ""
@@ -73,6 +83,15 @@ export interface WellCostCentre {
 
 export type WellCostCentreRow = Record<string, unknown> & { id: string }
 
+/** What gets saved as planned_budget: the hand-entered value, not the computed budget. */
+function manualDescriptionOrCurrent(item: WellCostCentre): string {
+  return item.manualDescription ?? item.description
+}
+
+function manualOrPlanned(item: WellCostCentre): number | "" {
+  return item.manualBudget ?? item.plannedBudget
+}
+
 export function toWellCostCentreRow(item: WellCostCentre): WellCostCentreRow {
   return {
     id: String(item.id),
@@ -81,8 +100,10 @@ export function toWellCostCentreRow(item: WellCostCentre): WellCostCentreRow {
     service_category_id: item.serviceCategoryId,
     cost_centre: item.costCentre || null,
     fund_centre: item.fundCentre || null,
-    description: item.description || null,
-    planned_budget: item.plannedBudget === "" ? 0 : Number(item.plannedBudget) || 0,
+    description: manualDescriptionOrCurrent(item) || null,
+    description_override: item.descriptionOverride || null,
+    planned_budget: manualOrPlanned(item) === "" ? 0 : Number(manualOrPlanned(item)) || 0,
+    budget_override: item.budgetOverride === "" ? null : Number(item.budgetOverride),
     override_amount: item.overrideAmount === "" ? null : Number(item.overrideAmount),
     currency: item.currency || "USD",
     vendor: item.vendor || null,
@@ -99,7 +120,11 @@ export function fromWellCostCentreRow(row: WellCostCentreRow): WellCostCentre {
     costCentre: (row.cost_centre as string) || "",
     fundCentre: (row.fund_centre as string) || "",
     description: (row.description as string) || "",
+    manualDescription: (row.description as string) || "",
+    descriptionOverride: (row.description_override as string) || "",
     plannedBudget: row.planned_budget === null || row.planned_budget === undefined ? "" : Number(row.planned_budget),
+    manualBudget: row.planned_budget === null || row.planned_budget === undefined ? "" : Number(row.planned_budget),
+    budgetOverride: row.budget_override === null || row.budget_override === undefined ? "" : Number(row.budget_override),
     overrideAmount: row.override_amount === null || row.override_amount === undefined ? "" : Number(row.override_amount),
     currency: (row.currency as string) || "USD",
     vendor: (row.vendor as string) || "",
@@ -118,6 +143,10 @@ export function blankWellCostCentre(wellId: string, departmentId: string, servic
     fundCentre: "",
     description: "",
     plannedBudget: "",
+    manualBudget: "",
+    budgetOverride: "",
+    manualDescription: "",
+    descriptionOverride: "",
     overrideAmount: "",
     currency: "USD",
     vendor: "",

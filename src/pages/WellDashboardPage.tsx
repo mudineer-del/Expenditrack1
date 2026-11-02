@@ -39,7 +39,7 @@ import {
   WELL_STATUS_TONE_CLASSES,
 } from "@/lib/wellCost"
 import { useWellCostDepartmentsQuery, useWellCostServiceCategoriesQuery } from "@/hooks/useWellCostCatalog"
-import { useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
+import { useBudgetedWellCostCentres } from "@/hooks/useWellCostCentres"
 import { useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
 import { useWellMilestonesQuery } from "@/hooks/useWellMilestones"
 import { useWellsQuery } from "@/hooks/useWells"
@@ -73,7 +73,7 @@ export default function WellDashboardPage() {
   const wellCostServiceChartType = useDisplayStore((s) => s.wellCostServiceChartType)
   const setChartType = useDisplayStore((s) => s.setChartType)
   const wellsQuery = useWellsQuery()
-  const costCentresQuery = useWellCostCentresQuery()
+  const costCentresQuery = useBudgetedWellCostCentres()
   const transactionsQuery = useWellCostTransactionsQuery()
   const departmentsQuery = useWellCostDepartmentsQuery()
   const serviceCategoriesQuery = useWellCostServiceCategoriesQuery()

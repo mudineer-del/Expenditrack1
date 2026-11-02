@@ -1,5 +1,5 @@
 import { Copy, Drill, Eye, FileText, History, Pencil, Plus, Search, Trash2, Upload, LayoutList } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import {
@@ -49,13 +49,14 @@ import {
   useWellCostServiceCategoriesQuery,
   useWellDepartmentsQuery,
 } from "@/hooks/useWellCostCatalog"
-import { useCopyWellCostStructure, useDeleteWellCostCentre, useUpsertWellCostCentre, useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
+import { useCopyWellCostStructure, useDeleteWellCostCentre, useUpsertWellCostCentre, useBudgetedWellCostCentres } from "@/hooks/useWellCostCentres"
 import { useBulkUpsertWellCostTransactions, useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
 import { useDeleteWellMilestone, useUpsertWellMilestone, useWellMilestonesQuery } from "@/hooks/useWellMilestones"
 import { useDeleteWellAfe, useUpsertWellAfe, useWellAfesQuery } from "@/hooks/useWellAfes"
 import type { WellAfe } from "@/types/wellAfe"
 import { useUpsertWellDailyDepths, useWellDailyDepthsQuery } from "@/hooks/useWellDailyDepths"
 import { normalizeWellName } from "@/lib/wellNames"
+import { groupCostCentres } from "@/lib/wellCostBudgets"
 import type { DmrDepth } from "@/lib/dmrImport"
 import type { WellDailyDepth } from "@/types/wellDailyDepth"
 import { useUpsertWell, useWellsQuery } from "@/hooks/useWells"
@@ -81,7 +82,7 @@ export default function WellCostStructurePage() {
   const location = useLocation()
   const navigate = useNavigate()
   const wellsQuery = useWellsQuery()
-  const costCentresQuery = useWellCostCentresQuery()
+  const costCentresQuery = useBudgetedWellCostCentres()
   const departmentsQuery = useWellCostDepartmentsQuery()
   const serviceCategoriesQuery = useWellCostServiceCategoriesQuery()
   const wellDepartmentsQuery = useWellDepartmentsQuery()
@@ -383,6 +384,51 @@ export default function WellCostStructurePage() {
     )
   }
 
+  /** One row's money figures, the same way the row itself shows them. */
+  function figuresFor(item: WellCostCentre) {
+    const totals = costCentreTotals[item.id] ?? ZERO_TOTALS
+    const budget = Number(item.plannedBudget) || 0
+    const difference = budget - totals.actual
+    return {
+      budget,
+      actual: totals.actual,
+      commitment: totals.commitment + Math.max(0, -difference),
+      available: Math.max(0, difference),
+    }
+  }
+
+  /** Bottom line under a WBS group (DRFD01, DRFD01/01, DRFD01/02 ...). */
+  function renderGroupSubtotal(key: string, groupItems: WellCostCentre[]) {
+    const sum = groupItems.reduce(
+      (acc, item) => {
+        const f = figuresFor(item)
+        return {
+          budget: acc.budget + f.budget,
+          actual: acc.actual + f.actual,
+          commitment: acc.commitment + f.commitment,
+          available: acc.available + f.available,
+        }
+      },
+      { budget: 0, actual: 0, commitment: 0, available: 0 }
+    )
+    const currency = groupItems[0].currency
+    return (
+      <TableRow className="bg-muted/50 font-semibold">
+        <TableCell>{key} subtotal</TableCell>
+        <TableCell className="text-muted-foreground">{groupItems.length} centres</TableCell>
+        <TableCell />
+        <TableCell className="text-right tabular-nums">{fmtCurrency(sum.budget, currency)}</TableCell>
+        <TableCell className="text-right tabular-nums">{fmtCurrency(sum.actual, currency)}</TableCell>
+        <TableCell className="text-right tabular-nums">{fmtCurrency(sum.commitment, currency)}</TableCell>
+        <TableCell>
+          <MiniBudgetBar spent={sum.actual + sum.commitment} budget={sum.budget} currency={currency} />
+        </TableCell>
+        <TableCell className="text-right tabular-nums">{fmtCurrency(sum.available, currency)}</TableCell>
+        <TableCell />
+      </TableRow>
+    )
+  }
+
   const canAdd = can("add", "well")
   const canEdit = can("edit", "well")
   const canDelete = can("delete", "well")
@@ -468,7 +514,7 @@ export default function WellCostStructurePage() {
                       <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         className="pl-8"
-                        placeholder="Search cost centre, fund centre, description…"
+                        placeholder="Search cost centre, WBS code, description…"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                       />
@@ -557,7 +603,7 @@ export default function WellCostStructurePage() {
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead>Cost Centre</TableHead>
-                                    <TableHead>Fund Centre</TableHead>
+                                    <TableHead>WBS Code</TableHead>
                                     <TableHead>Description</TableHead>
                                     <TableHead className="text-right">Budget</TableHead>
                                     <TableHead className="text-right">Actual</TableHead>
@@ -568,7 +614,9 @@ export default function WellCostStructurePage() {
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {items.map((item) => {
+                                  {groupCostCentres(items).map((group) => (
+                                    <Fragment key={group.key}>
+                                  {group.items.map((item) => {
                                     const totals = costCentreTotals[item.id] ?? ZERO_TOTALS
                                     const budget = Number(item.plannedBudget) || 0
                                     const difference = budget - totals.actual
@@ -630,6 +678,9 @@ export default function WellCostStructurePage() {
                                       </HoverPreview>
                                     )
                                   })}
+                                  {group.items.length > 1 && renderGroupSubtotal(group.key, group.items)}
+                                    </Fragment>
+                                  ))}
                                 </TableBody>
                               </Table>
                             ) : (

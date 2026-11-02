@@ -24,7 +24,7 @@ import { WellCostTransactionDrawer } from "@/components/wells/WellCostTransactio
 import { fmtCurrency, isAutoEntry } from "@/lib/wellCost"
 import { cn, errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
-import { useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
+import { useBudgetedWellCostCentres } from "@/hooks/useWellCostCentres"
 import {
   useBulkDeleteWellCostTransactions,
   useDeleteWellCostTransaction,
@@ -55,7 +55,7 @@ export default function WellCostDailyLogPage() {
   const { can, user } = useAuth()
 
   const wellsQuery = useWellsQuery()
-  const costCentresQuery = useWellCostCentresQuery()
+  const costCentresQuery = useBudgetedWellCostCentres()
   const transactionsQuery = useWellCostTransactionsQuery()
   const upsertTransaction = useUpsertWellCostTransaction()
   const deleteTransaction = useDeleteWellCostTransaction()
