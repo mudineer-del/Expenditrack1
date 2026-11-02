@@ -1,4 +1,13 @@
-export const AFE_TYPES = ["Initial", "Supplementary", "Final"] as const
+/** Revision types, in order. Older AFEs saved as "Initial" or "Supplementary" still load. */
+export const AFE_TYPES = [
+  "Original",
+  "1st Supplementary",
+  "2nd Supplementary",
+  "3rd Supplementary",
+  "4th Supplementary",
+  "5th Supplementary",
+  "Final",
+] as const
 export const AFE_STATUSES = ["Draft", "Pending", "Approved", "Closed"] as const
 /** Currencies an AFE can be written in, and that its totals can be converted into. */
 export const AFE_CURRENCIES = ["PKR", "USD", "EUR", "GBP", "AED", "SAR"] as const
@@ -98,7 +107,7 @@ export function blankWellAfe(wellId: string): WellAfe {
     id: crypto.randomUUID(),
     wellId,
     afeNo: "",
-    afeType: "Initial",
+    afeType: "Original",
     status: "Draft",
     preparedOn: "",
     approvedOn: "",

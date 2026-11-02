@@ -87,3 +87,64 @@
 .afe-page .well-options button:hover, .afe-page .well-options button:focus-visible, .afe-page .well-options button.selected { background: var(--line); outline: none; }
 .afe-page .well-options .muted { color: var(--muted, #6b7280); font-size: 12px; }
 .afe-page .well-options .empty { padding: 8px; font-size: 13px; color: var(--muted, #6b7280); }
+
+/* Grid children may shrink, so a wide table scrolls inside its card instead of pushing the page. */
+.afe-page main > * { min-width: 0; }
+
+/* Cost structure breakup: a wide, landscape-style table centred on the page. The page widens
+   for this tab, codes and figures stay on one line, and descriptions wrap. */
+.afe-page main.is-wide { max-width: none; width: 100%; padding-left: 16px; padding-right: 16px; }
+.afe-page main.is-wide .card { width: 100%; box-sizing: border-box; overflow: hidden; }
+.afe-page .afe-breakup { width: 100%; max-width: 100%; margin: 0 auto; }
+/* Show the whole table: no inner scrolling, headers wrap to save width. */
+.afe-page .afe-breakup .overflow-x-auto { overflow-x: visible; }
+.afe-page .afe-breakup table { min-width: 0; width: 100%; table-layout: auto; }
+.afe-page .afe-breakup thead th { white-space: normal; line-height: 1.3; }
+.afe-page .afe-breakup th,
+.afe-page .afe-breakup td { white-space: nowrap; padding: 9px 12px; font-size: 13px; }
+.afe-page .afe-breakup th:nth-child(2),
+.afe-page .afe-breakup td:nth-child(2) { white-space: normal; min-width: 240px; }
+.afe-page .afe-breakup td.actual-cell { font-size: 14px; font-weight: 700; }
+/* The page's default cell alignment would otherwise override the alignment classes. */
+.afe-page .afe-breakup .text-center { text-align: center !important; }
+.afe-page .afe-breakup .text-right { text-align: right !important; }
+.afe-page .afe-breakup th.actual-head { font-weight: 600; color: var(--muted); }
+.afe-page .afe-breakup td.num,
+.afe-page .afe-breakup th.num { font-variant-numeric: tabular-nums; }
+
+@media print {
+  @page { size: landscape; margin: 12mm; }
+  .afe-page .toolbar,
+  .afe-page .afe-tabs { display: none; }
+  .afe-page main.is-wide { max-width: none; padding: 0; }
+}
+
+/* Tabs at the top of the AFE page: the Original AFE and the cost structure breakup. */
+/* AFE view tabs: light grey, raised 3D buttons. The selected one sits higher and lighter. */
+.afe-page .afe-tabs { display: flex; gap: 6px; align-items: flex-end; margin-top: 8px; border-bottom: 1px solid #c9cec9; }
+.afe-page .afe-tab {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5651;
+  background: linear-gradient(180deg, #eef0ee 0%, #d9dcd9 100%);
+  border: 1px solid #c2c8c3;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  padding: 9px 18px 8px;
+  margin-bottom: -1px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 #ffffff, 0 -2px 3px rgba(0, 0, 0, 0.06), 0 2px 0 #aeb5b0;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.afe-page .afe-tab:hover { background: linear-gradient(180deg, #f4f5f4 0%, #e2e5e2 100%); }
+.afe-page .afe-tab:active { transform: translateY(1px); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15); }
+.afe-page .afe-tab.is-active {
+  color: var(--ink);
+  background: linear-gradient(180deg, #ffffff 0%, #f1f3f1 100%);
+  box-shadow: inset 0 1px 0 #ffffff, 0 -3px 6px rgba(0, 0, 0, 0.08), 0 3px 0 #ffffff;
+  transform: translateY(1px);
+  z-index: 1;
+}
+.dark .afe-page .afe-tab { color: #c4cec9; background: linear-gradient(180deg, #2a332f 0%, #212925 100%); border-color: #3a4641; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 0 #151b18; }
+.dark .afe-page .afe-tab.is-active { color: var(--ink); background: linear-gradient(180deg, #34403b 0%, #2a342f 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 3px 0 #34403b; }

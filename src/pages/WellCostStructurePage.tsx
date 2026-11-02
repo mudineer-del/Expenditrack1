@@ -56,7 +56,7 @@ import { useDeleteWellAfe, useUpsertWellAfe, useWellAfesQuery } from "@/hooks/us
 import type { WellAfe } from "@/types/wellAfe"
 import { useUpsertWellDailyDepths, useWellDailyDepthsQuery } from "@/hooks/useWellDailyDepths"
 import { normalizeWellName } from "@/lib/wellNames"
-import { groupCostCentres } from "@/lib/wellCostBudgets"
+import { baseCostCentreCode, groupCostCentres, wbsBreakupRows, wellAfesOrdered } from "@/lib/wellCostBudgets"
 import type { DmrDepth } from "@/lib/dmrImport"
 import type { WellDailyDepth } from "@/types/wellDailyDepth"
 import { useUpsertWell, useWellsQuery } from "@/hooks/useWells"
@@ -149,7 +149,24 @@ export default function WellCostStructurePage() {
     () => (selectedWell ? costCentres.filter((c) => c.wellId === selectedWell.id) : []),
     [costCentres, selectedWell]
   )
-  const wellRollup = useMemo(() => rollup(wellCostCentres, costCentreTotals), [wellCostCentres, costCentreTotals])
+  const wellCurrency = wellCostCentres[0]?.currency || "USD"
+  // The well's budget is the total of its AFEs (the WBS table's total) when it has any. Otherwise
+  // it falls back to the cost centres' budgets. Actuals and commitments are unchanged.
+  const wellRollup = useMemo(() => {
+    const base = rollup(wellCostCentres, costCentreTotals)
+    if (!selectedWell) return base
+    const afeBudget = wbsBreakupRows(afes, selectedWell.id, wellCurrency).reduce((s, r) => s + r.total, 0)
+    if (afeBudget <= 0) return base
+    const overspendBefore = Math.max(0, base.actual - base.budget)
+    const commitments = base.commitments - overspendBefore + Math.max(0, base.actual - afeBudget)
+    return {
+      budget: afeBudget,
+      actual: base.actual,
+      commitments,
+      available: Math.max(0, afeBudget - base.actual),
+      utilizationPct: ((base.actual + commitments) / afeBudget) * 100,
+    }
+  }, [wellCostCentres, costCentreTotals, selectedWell, afes, wellCurrency])
   const wellCostCentreIds = useMemo(() => new Set(wellCostCentres.map((c) => c.id)), [wellCostCentres])
 
   /** Candidate wells to copy FROM, scoped to one service category's own cost centres —
@@ -225,7 +242,22 @@ export default function WellCostStructurePage() {
     )
   }
 
-  function handleSaveCostCentre(record: WellCostCentre, edit: MudEngineeringEdit | null) {
+  function handleSaveCostCentre(input: WellCostCentre, edit: MudEngineeringEdit | null) {
+    // A new centre with no fund centre takes the WBS code from the well's AFE when one matches
+    // its cost code (e.g. DRFC01 -> ...-DRFC01). The budget and description then follow from the AFE.
+    let record = input
+    if (!centreDrawer.item && !input.fundCentre) {
+      const base = baseCostCentreCode(input.costCentre)
+      const line = base
+        ? wellAfesOrdered(afes, input.wellId)
+            .flatMap((a) => a.lines)
+            .find((l) => l.code.trim().endsWith(`-${base}`))
+        : undefined
+      if (line) {
+        record = { ...input, fundCentre: line.code.trim() }
+        toast.info(`WBS code ${line.code.trim()} picked up from the AFE.`)
+      }
+    }
     const dupe = wellCostCentres.some(
       (c) => c.id !== record.id && c.costCentre.trim().toLowerCase() === record.costCentre.trim().toLowerCase()
     )
@@ -476,6 +508,7 @@ export default function WellCostStructurePage() {
               <UtilizationBar pct={wellRollup.utilizationPct} />
             </div>
           </div>
+
 
           {/* Forecasts are for Editors and Admins only; Viewers see the figures but not the projection. */}
           {canLogEntry && (

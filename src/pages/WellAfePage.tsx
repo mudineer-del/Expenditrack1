@@ -7,7 +7,11 @@ import { useAuth } from "@/hooks/useAuth"
 import { useDeleteWellAfe, useUpsertWellAfe, useWellAfesQuery } from "@/hooks/useWellAfes"
 import { useWellsQuery } from "@/hooks/useWells"
 import { errorMessage } from "@/lib/utils"
-import { fmtCurrency } from "@/lib/wellCost"
+import { buildCostCentreTotals, fmtCurrency } from "@/lib/wellCost"
+import { wbsCodeOf } from "@/lib/wellCostBudgets"
+import { WbsBudgetTable } from "@/components/wells/WbsBudgetTable"
+import { useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
+import { useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
 import { wellAfeRate, wellAfeTotal, type WellAfe } from "@/types/wellAfe"
 import { toast } from "sonner"
 import "./WellAfePage.css"
@@ -33,6 +37,11 @@ export default function WellAfePage() {
   const [editOpen, setEditOpen] = useState(false)
   const [wellSearch, setWellSearch] = useState("")
   const [wellOpen, setWellOpen] = useState(false)
+  const [tab, setTab] = useState<"afe" | "breakup">("afe")
+  const centresQuery = useWellCostCentresQuery()
+  const transactionsQuery = useWellCostTransactionsQuery()
+  const centres = centresQuery.data ?? []
+  const transactions = transactionsQuery.data ?? []
 
   // Arriving from the Cost Structure page opens that well and AFE straight away.
   const requested = location.state as { wellId?: string; afeId?: string } | null
@@ -62,6 +71,21 @@ export default function WellAfePage() {
   /** Converted values show whenever the AFE has them switched on, until someone reverts. */
   const showConverted = !!afe && afe.converted && rate > 0
 
+  // Breakup tab: amounts in the currency the well's cost centres are kept in, and actual spend
+  // per WBS code from the cost centres that roll up to it.
+  const wellCentres = useMemo(() => centres.filter((c) => c.wellId === well?.id), [centres, well?.id])
+  const wellCurrency = wellCentres[0]?.currency || "USD"
+  const actualByCode = useMemo(() => {
+    const costTotals = buildCostCentreTotals(transactions)
+    const totals = new Map<string, number>()
+    for (const c of wellCentres) {
+      const code = wbsCodeOf(c.fundCentre)
+      if (!code) continue
+      totals.set(code, (totals.get(code) ?? 0) + (costTotals[c.id]?.actual ?? 0))
+    }
+    return totals
+  }, [wellCentres, transactions])
+
   async function handleSaveAfe(next: WellAfe) {
     try {
       await upsertAfe.mutateAsync(next)
@@ -87,7 +111,7 @@ export default function WellAfePage() {
 
   return (
     <div className="afe-page">
-      <main>
+      <main className={tab === "breakup" ? "is-wide" : undefined}>
         <div className="toolbar">
           <div className="afe-well-picker">
             <label>
@@ -170,6 +194,17 @@ export default function WellAfePage() {
           )}
         </div>
 
+        {well && (
+          <nav className="afe-tabs" aria-label="AFE views">
+            <button type="button" className={tab === "afe" ? "afe-tab is-active" : "afe-tab"} aria-pressed={tab === "afe"} onClick={() => setTab("afe")}>
+              Original AFE
+            </button>
+            <button type="button" className={tab === "breakup" ? "afe-tab is-active" : "afe-tab"} aria-pressed={tab === "breakup"} onClick={() => setTab("breakup")}>
+              Cost structure breakup
+            </button>
+          </nav>
+        )}
+
         <header>
           <div className="eyebrow">Well Cost · AFE</div>
           <h1 style={{ marginTop: 6 }}>Authorization for Expenditure (AFE)</h1>
@@ -182,7 +217,27 @@ export default function WellAfePage() {
 
         {well && !afe && <div className="empty">No AFEs raised for {well.name} yet. Create one from the Cost Structure page.</div>}
 
-        {well && afe && (
+        {well && tab === "breakup" && (
+          <section className="card" aria-labelledby="breakup-title">
+            <div className="head" style={{ marginBottom: 12 }}>
+              <div>
+                <span className="tag">Cost structure breakup</span>
+                <h2 id="breakup-title" style={{ marginTop: 8 }}>
+                  Budget by WBS code, {well.name}
+                </h2>
+              </div>
+            </div>
+            {wellAfes.length === 0 ? (
+              <div className="empty">No AFEs raised for {well.name} yet.</div>
+            ) : (
+              <div className="afe-breakup">
+                <WbsBudgetTable wellId={well.id} afes={afes} currency={wellCurrency} actualByCode={actualByCode} />
+              </div>
+            )}
+          </section>
+        )}
+
+        {well && afe && tab === "afe" && (
           <section className="card" aria-labelledby="afe-title">
             <div className="head">
               <div>
