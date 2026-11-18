@@ -1,5 +1,5 @@
-import { wellAfeRate, type WellAfe, type WellAfeLine } from "@/types/wellAfe"
-import type { WellCostCentre } from "@/types/wellCost"
+import { wellAfeRate, type WellAfe, type WellAfeLine } from "../types/wellAfe.ts"
+import type { WellCostCentre } from "../types/wellCost.ts"
 
 /** The base code of a cost centre: "DRFD01/02" and "DRFD01" both give "DRFD01". Centres with
  *  the same base code belong to one WBS group. */
@@ -96,6 +96,23 @@ export function wbsBudgetFor(afes: WellAfe[], wellId: string, code: string, curr
   return matched ? { total, description } : null
 }
 
+/** The AFE WBS code a cost centre rolls up to, for drilling and completion alike.
+ *  1. The fund centre's own code, when that exact code is on one of the well's AFE lines.
+ *  2. Otherwise the AFE line whose code ends in the centre's cost code ("-DRFC01", "-DRFD02"...),
+ *     so a blank fund centre, or one with a different well prefix, still picks up the AFE.
+ *  Returns "" when no AFE line fits. */
+export function afeCodeFor(afes: WellAfe[], wellId: string, costCentre: string, fundCentre: string): string {
+  const codes = wellAfesOrdered(afes, wellId)
+    .flatMap((a) => a.lines.map((l) => l.code.trim()))
+    .filter(Boolean)
+  const own = wbsCodeOf(fundCentre)
+  if (own && codes.includes(own)) return own
+  const base = baseCostCentreCode(costCentre)
+  if (!base) return ""
+  const suffix = `-${base}`
+  return codes.find((c) => c.endsWith(suffix)) ?? ""
+}
+
 /** Every WBS code on a well's AFEs, with the amount each AFE gives it and the total across them.
  *  Rows keep the order the codes first appear in, Original first. */
 export function wbsBreakupRows(
@@ -119,12 +136,14 @@ export function wbsBreakupRows(
   return Array.from(rows.values())
 }
 
-/** Works out each cost centre's budget. Precedence, per centre:
- *  1. A budget override typed into the centre's own dialog.
- *  2. Its WBS group's share of the well's AFE budget for that WBS code, summed across all of the
- *     well's AFEs (original plus supplementaries), split equally across the group
- *     (e.g. DRFD01, DRFD01/01 and DRFD01/02 share the DRFD01 code).
- *  3. The planned budget entered by hand, when the well has no matching AFE line.
+/** Works out each cost centre's WBS code and budget from the well's AFEs, for drilling and
+ *  completion alike. Precedence, per centre:
+ *  - WBS code: the AFE code (see afeCodeFor) when one fits; otherwise the fund centre as entered.
+ *  - Budget: 1. a budget override typed into the centre's own dialog.
+ *    2. Its WBS group's share of the well's AFE budget for that code, summed across all of the
+ *       well's AFEs (original plus supplementaries), split equally across the group
+ *       (e.g. DRFD01, DRFD01/01 and DRFD01/02 share the DRFD01 code).
+ *    3. The planned budget entered by hand, when no AFE line fits.
  *  Descriptions follow the same order: a description override, then the AFE WBS description,
  *  then the hand-entered one. Hand-entered values stay in manualBudget and manualDescription. */
 export function applyAfeBudgets(centres: WellCostCentre[], afes: WellAfe[]): WellCostCentre[] {
@@ -134,11 +153,15 @@ export function applyAfeBudgets(centres: WellCostCentre[], afes: WellAfe[]): Wel
     groups.set(key, [...(groups.get(key) ?? []), c])
   }
 
+  const codeById = new Map<string, string>()
   const shareById = new Map<string, number>()
   const descriptionById = new Map<string, string>()
   for (const members of groups.values()) {
-    const { wellId, fundCentre } = members.find((m) => m.fundCentre) ?? members[0]
-    const found = wbsBudgetFor(afes, wellId, wbsCodeOf(fundCentre), members[0].currency)
+    const code =
+      members.map((m) => afeCodeFor(afes, m.wellId, m.costCentre, m.fundCentre)).find(Boolean) ?? ""
+    if (!code) continue
+    members.forEach((m) => codeById.set(m.id, code))
+    const found = wbsBudgetFor(afes, members[0].wellId, code, members[0].currency)
     if (!found) continue
     if (found.description) members.forEach((m) => descriptionById.set(m.id, found.description))
     members.forEach((m) => shareById.set(m.id, found.total / members.length))
@@ -150,6 +173,7 @@ export function applyAfeBudgets(centres: WellCostCentre[], afes: WellAfe[]): Wel
     const budget = c.budgetOverride !== "" ? Number(c.budgetOverride) : share ?? manual
     const afeDescription = descriptionById.get(c.id)
     const description = c.descriptionOverride || afeDescription || c.description
-    return { ...c, manualBudget: manual, plannedBudget: budget, manualDescription: c.description, description }
+    const fundCentre = codeById.get(c.id) ?? c.fundCentre
+    return { ...c, fundCentre, manualBudget: manual, plannedBudget: budget, manualDescription: c.description, description }
   })
 }

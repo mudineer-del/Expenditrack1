@@ -56,7 +56,7 @@ import { useDeleteWellAfe, useUpsertWellAfe, useWellAfesQuery } from "@/hooks/us
 import type { WellAfe } from "@/types/wellAfe"
 import { useUpsertWellDailyDepths, useWellDailyDepthsQuery } from "@/hooks/useWellDailyDepths"
 import { normalizeWellName } from "@/lib/wellNames"
-import { baseCostCentreCode, groupCostCentres, wbsBreakupRows, wellAfesOrdered } from "@/lib/wellCostBudgets"
+import { afeCodeFor, groupCostCentres, wbsBreakupRows } from "@/lib/wellCostBudgets"
 import type { DmrDepth } from "@/lib/dmrImport"
 import type { WellDailyDepth } from "@/types/wellDailyDepth"
 import { useUpsertWell, useWellsQuery } from "@/hooks/useWells"
@@ -243,19 +243,15 @@ export default function WellCostStructurePage() {
   }
 
   function handleSaveCostCentre(input: WellCostCentre, edit: MudEngineeringEdit | null) {
-    // A new centre with no fund centre takes the WBS code from the well's AFE when one matches
-    // its cost code (e.g. DRFC01 -> ...-DRFC01). The budget and description then follow from the AFE.
+    // A centre with no fund centre takes the WBS code from the well's AFE when one fits its cost
+    // code (e.g. DRFC01 -> ...-DRFC01), for drilling and completion alike. The budget and
+    // description then follow from the AFE unless overridden.
     let record = input
-    if (!centreDrawer.item && !input.fundCentre) {
-      const base = baseCostCentreCode(input.costCentre)
-      const line = base
-        ? wellAfesOrdered(afes, input.wellId)
-            .flatMap((a) => a.lines)
-            .find((l) => l.code.trim().endsWith(`-${base}`))
-        : undefined
-      if (line) {
-        record = { ...input, fundCentre: line.code.trim() }
-        toast.info(`WBS code ${line.code.trim()} picked up from the AFE.`)
+    if (!input.fundCentre) {
+      const code = afeCodeFor(afes, input.wellId, input.costCentre, "")
+      if (code) {
+        record = { ...input, fundCentre: code }
+        toast.info(`WBS code ${code} picked up from the AFE.`)
       }
     }
     const dupe = wellCostCentres.some(

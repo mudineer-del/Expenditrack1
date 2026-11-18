@@ -210,3 +210,37 @@ test('well names match across spelling, punctuation and leading zeros', async ()
   assert.equal(normalizeWellName('Gurgalot X-1'), normalizeWellName('gurgalot x 1'))
   assert.notEqual(normalizeWellName('Kal-04'), normalizeWellName('Kal-14'))
 })
+
+test('AFE WBS code and budget are imported for drilling and completion centres unless overridden', async () => {
+  const { afeCodeFor, applyAfeBudgets } = await import('../src/lib/wellCostBudgets.ts')
+  const afes = [{
+    id: 'a1', wellId: 'w1', afeType: 'Original', currency: 'USD', preferredCurrency: 'USD', conversionRate: '', converted: false,
+    lines: [
+      { id: 'l1', code: '21014AW004D2601-DRFD01', description: 'Drilling fluid', estimate: 1000, contingency: 0 },
+      { id: 'l2', code: '21014AW004D2601-DRFC01', description: 'Completion fluid', estimate: 500, contingency: 100 },
+    ],
+  }]
+  const centre = (over) => ({
+    id: 'c', wellId: 'w1', departmentId: 'd', serviceCategoryId: 's', costCentre: 'DRFC01', fundCentre: '',
+    description: '', plannedBudget: 0, budgetOverride: '', descriptionOverride: '', currency: 'USD', ...over,
+  })
+
+  // Blank fund centre picks up the completion code from the AFE.
+  assert.equal(afeCodeFor(afes, 'w1', 'DRFC01', ''), '21014AW004D2601-DRFC01')
+  // A fund centre with a different well prefix still follows the AFE line for its cost code.
+  assert.equal(afeCodeFor(afes, 'w1', 'DRFC01', '22040AW001E2603-DRFC01'), '21014AW004D2601-DRFC01')
+  assert.equal(afeCodeFor(afes, 'w1', 'DRFC09', ''), '')
+
+  const [applied] = applyAfeBudgets([centre({})], afes)
+  assert.equal(applied.fundCentre, '21014AW004D2601-DRFC01')
+  assert.equal(applied.plannedBudget, 600)
+
+  // A budget typed on the centre still wins over the AFE.
+  const [overridden] = applyAfeBudgets([centre({ budgetOverride: 250 })], afes)
+  assert.equal(overridden.plannedBudget, 250)
+
+  // Drilling works the same way.
+  const [drilling] = applyAfeBudgets([centre({ costCentre: 'DRFD01' })], afes)
+  assert.equal(drilling.fundCentre, '21014AW004D2601-DRFD01')
+  assert.equal(drilling.plannedBudget, 1000)
+})

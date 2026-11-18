@@ -8,7 +8,7 @@ import { useDeleteWellAfe, useUpsertWellAfe, useWellAfesQuery } from "@/hooks/us
 import { useWellsQuery } from "@/hooks/useWells"
 import { errorMessage } from "@/lib/utils"
 import { buildCostCentreTotals, fmtCurrency } from "@/lib/wellCost"
-import { wbsCodeOf } from "@/lib/wellCostBudgets"
+import { afeCodeFor } from "@/lib/wellCostBudgets"
 import { WbsBudgetTable } from "@/components/wells/WbsBudgetTable"
 import { useWellCostCentresQuery } from "@/hooks/useWellCostCentres"
 import { useWellCostTransactionsQuery } from "@/hooks/useWellCostTransactions"
@@ -79,12 +79,12 @@ export default function WellAfePage() {
     const costTotals = buildCostCentreTotals(transactions)
     const totals = new Map<string, number>()
     for (const c of wellCentres) {
-      const code = wbsCodeOf(c.fundCentre)
+      const code = afeCodeFor(afes, c.wellId, c.costCentre, c.fundCentre)
       if (!code) continue
       totals.set(code, (totals.get(code) ?? 0) + (costTotals[c.id]?.actual ?? 0))
     }
     return totals
-  }, [wellCentres, transactions])
+  }, [wellCentres, transactions, afes])
 
   async function handleSaveAfe(next: WellAfe) {
     try {
