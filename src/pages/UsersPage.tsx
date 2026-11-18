@@ -1,4 +1,4 @@
-import { Camera, KeyRound, Mail, Send, ShieldCheck, ShieldOff, SlidersHorizontal, Trash2, UserPlus } from "lucide-react"
+import { Camera, Download, KeyRound, Mail, Send, ShieldCheck, ShieldOff, SlidersHorizontal, Trash2, UserPlus } from "lucide-react"
 import { Fragment, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -22,6 +22,7 @@ import { EditUserDialog } from "@/components/users/EditUserDialog"
 import { SendEmailDialog } from "@/components/users/SendEmailDialog"
 import { SetPasswordDialog } from "@/components/users/SetPasswordDialog"
 import { AVATAR_ACCEPT, uploadAvatarFile } from "@/lib/avatars"
+import { exportUsersCsv } from "@/lib/userExport"
 import { cn, errorMessage } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useDeleteAccount } from "@/hooks/useAdminAccounts"
@@ -217,6 +218,17 @@ export default function UsersPage() {
           </div>
           {isAdmin && (
             <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={profiles.length === 0}
+                onClick={() => {
+                  exportUsersCsv(profiles)
+                  toast.success(`Exported ${profiles.length} user${profiles.length === 1 ? "" : "s"}.`)
+                }}
+              >
+                <Download /> Export Users
+              </Button>
               <Button size="sm" variant="outline" onClick={() => setEmailDialog({ mode: "compose" })}>
                 <Mail /> Compose Email
               </Button>
