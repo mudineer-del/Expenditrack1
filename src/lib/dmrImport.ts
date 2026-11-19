@@ -37,6 +37,7 @@
 export type DmrContractor = "OGDCL" | "MUD_CONTRACTOR" | "SECOND_CONTRACTOR"
 
 import type { WellCostTransaction } from "@/types/wellCost"
+import { normalizeWellName } from "./wellNames.ts"
 
 export type DmrRowStatus = "new" | "duplicate-in-batch" | "already-logged" | "remarks-update" | "unmapped"
 
@@ -423,6 +424,133 @@ function extractVerticalCost(rows: unknown[][]): { rows: ExtractedRow[]; gaps: E
   }
 }
 
+/** The DMR sheet's "Eng / Prod cost" block carries an "Ogdcl Cost" line: its daily figure sits in
+ *  the column under "Eng / Prod cost" and its cumulative under "Daily/Cum Cost". Reports whose OBM
+ *  sheet has no OGDCL line for the day still show the day's OGDCL figure here, so this is the
+ *  fallback source for OGDCL. Returns null when the line has no daily figure (cumulative only). */
+function extractDmrSheetOgdcl(rows: unknown[][]): { amount: number; cumulative: number | null } | null {
+  for (const row of rows) {
+    const idx = row.findIndex((c) => /^ogdcl\s*cost$/i.test(String(c ?? "").trim()))
+    if (idx < 0) continue
+    const amount = parseAmount(String(row[idx + 1] ?? "").trim())
+    if (amount === null || String(row[idx + 1] ?? "").trim() === "") return null
+    const cumText = String(row[idx + 3] ?? "").trim()
+    return { amount, cumulative: cumText ? parseAmount(cumText) : null }
+  }
+  return null
+}
+
+/** The DMR sheet's cost block for reports that have no WBM/OBM sheet: the "Eng / Prod cost"
+ *  (daily) and "Daily/Cum Cost" (cumulative) columns, with the mud (SLB) figure on the engineer
+ *  rows, then an "Ogdcl Cost" line and a "Midgard Cost" line (cumulative only in these reports). */
+interface DmrSheetCost {
+  mud: { amount: number; cumulative: number | null } | null
+  ogdcl: { amount: number | null; cumulative: number | null } | null
+  midgardCumulative: string | null
+}
+
+function extractDmrSheetCostBlock(rows: unknown[][]): DmrSheetCost | null {
+  const isEngHeader = (c: unknown) => /^eng\s*\/\s*prod\s*cost$/i.test(String(c ?? "").trim())
+  const headerRow = rows.findIndex((row) => row.some(isEngHeader))
+  if (headerRow < 0) return null
+  const engCol = rows[headerRow].findIndex(isEngHeader)
+  const cumCol = rows[headerRow].findIndex((c, i) => i > engCol && /cum/i.test(String(c ?? "")))
+  if (cumCol < 0) return null
+  const cell = (r: number, c: number) => String(rows[r]?.[c] ?? "").trim()
+  const lineRow = (re: RegExp) => rows.findIndex((row, r) => r > headerRow && row.some((c) => re.test(String(c ?? "").trim())))
+
+  const endOfEngineers = (() => {
+    const ogdclLine = lineRow(/^(ogdcl|midgard)\s*cost$|^total\s*cost$/i)
+    return ogdclLine > 0 ? ogdclLine : Math.min(rows.length, headerRow + 6)
+  })()
+  let daily = 0
+  let cumulative: number | null = null
+  let engineers = 0
+  for (let r = headerRow + 1; r < endOfEngineers; r++) {
+    if (!rows[r].some((c) => String(c ?? "").trim() !== "")) continue
+    engineers++
+    daily += parseAmount(cell(r, engCol)) ?? 0
+    const cum = parseAmount(cell(r, cumCol))
+    if (cum !== null && cum !== 0) cumulative = Math.max(cumulative ?? 0, cum)
+  }
+  const mud = engineers > 0 ? { amount: Math.round(daily * 100) / 100, cumulative } : null
+
+  let ogdcl: DmrSheetCost["ogdcl"] = null
+  const ogdclRow = lineRow(/^ogdcl\s*cost$/i)
+  if (ogdclRow >= 0) {
+    const d = cell(ogdclRow, engCol)
+    const c = cell(ogdclRow, cumCol)
+    if (d || c) ogdcl = { amount: d ? parseAmount(d) : null, cumulative: c ? parseAmount(c) : null }
+  }
+  const midgardRow = lineRow(/^midgard\s*cost$/i)
+  const midgardCumulative = midgardRow >= 0 ? cell(midgardRow, cumCol) || null : null
+  return { mud, ogdcl, midgardCumulative }
+}
+
+/** Day to day for the cumulative-carrying series (SLB and OGDCL). Each report's amount is the change
+ *  in its cumulative since the previous kept report of the same well and contractor. The first kept
+ *  report is the opening balance: its cumulative is posted on its own date, so the series adds up to
+ *  the latest cumulative. A report whose cumulative goes back, or that shares a date with a different
+ *  cumulative, is left out and reported, so one bad file cannot distort the chain. Re-importing a
+ *  later report on its own would repost the opening balance, so import a well's reports from its
+ *  first report onward. */
+function applyDayToDay(rows: DmrImportRow[]): { rows: DmrImportRow[]; skipped: DmrImportError[] } {
+  const skipped: DmrImportError[] = []
+  const groups = new Map<string, DmrImportRow[]>()
+  for (const r of rows) {
+    const key = normalizeWellName(r.wellName)
+    groups.set(key, [...(groups.get(key) ?? []), r])
+  }
+  const isSeries = (r: DmrImportRow) => (r.contractor === "OGDCL" || r.contractor === "MUD_CONTRACTOR") && r.cumulative !== null
+  const out: DmrImportRow[] = []
+  for (const group of groups.values()) {
+    const others = group.filter((r) => !isSeries(r))
+    const series = new Map<DmrContractor, DmrImportRow[]>()
+    for (const r of group.filter(isSeries)) series.set(r.contractor, [...(series.get(r.contractor) ?? []), r])
+    for (const [contractor, reports] of series) {
+      const label = contractor === "OGDCL" ? "OGDCL" : "SLB"
+      const sorted = [...reports].sort((a, b) => a.entryDate.localeCompare(b.entryDate) || (a.cumulative as number) - (b.cumulative as number))
+      const chain: DmrImportRow[] = []
+      for (const r of sorted) {
+        const cum = r.cumulative as number
+        const prev = chain[chain.length - 1]
+        if (prev && prev.entryDate === r.entryDate) {
+          if (Math.abs(cum - (prev.cumulative as number)) > 0.005)
+            skipped.push({ fileName: r.fileName, error: `${label} cumulative for ${r.entryDate} differs from another report on the same date, so this report is left out of the day-to-day ${label} figures.` })
+          continue
+        }
+        if (prev && cum < (prev.cumulative as number) - 0.005) {
+          skipped.push({ fileName: r.fileName, error: `${label} cumulative (${cum}) is lower than the previous report's (${prev.cumulative}), so this report is left out of the day-to-day ${label} figures.` })
+          continue
+        }
+        // The start: the first report's cumulative is the opening balance, posted on its own date.
+        // Every later report posts the change in cumulative since the previous kept report.
+        const amount = prev ? Math.round((cum - (prev.cumulative as number)) * 100) / 100 : cum
+        chain.push({ ...r, amount })
+      }
+      out.push(...chain)
+    }
+    out.push(...others)
+  }
+  return { rows: out, skipped }
+}
+
+/** One-off catch-ups for wells whose early daily reports can't be read. Each is a cost the rig's
+ *  cumulative figures show but no daily report carries, posted as a single entry on the date given.
+ *  Keyed by the well name (matched with normalizeWellName, so spelling and leading zeros don't
+ *  matter). Posted only when that well is in the batch. OGDCL history no longer needs a catch-up:
+ *  the day-to-day OGDCL figures carry it (see applyDayToDay). */
+const CATCH_UP_ENTRIES: { well: string; entryDate: string; contractor: DmrContractor; sourceLabel: string; amount: number; note: string }[] = [
+  {
+    well: "CHAKAR DEEP-01",
+    entryDate: "2026-10-08",
+    contractor: "SECOND_CONTRACTOR",
+    sourceLabel: "Midgard catch-up",
+    amount: 11315.37,
+    note: "Midgard catch-up, posted on 8 Oct 2026. Midgard Cost cumulative on the DMR sheet has no daily figure (DMR#1-12 sheets could not be read).",
+  },
+]
+
 /** The WBM sheet carries two free-text narrative blocks, one row apart from their own
  *  labels in the same column ("REMARKS AND TREATMENT" — the mud engineer's chemical
  *  treatment log — and a separate "REMARKS" block — the rig's own operations/activity
@@ -565,11 +693,21 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
       const wellName = findLabelValue(rows, /well name/i) ?? ""
 
       const dateCell = findLabelValue(rows, /^date\s*:?$/i) ?? ""
-      const entryDate = parseDayMonthYear(dateCell) ?? dateFromFileName(file.name) ?? parseMonthDayYear(dateCell)
+      const entryDate = dateFromFileName(file.name) ?? parseDayMonthYear(dateCell) ?? parseMonthDayYear(dateCell)
       if (!entryDate) return { fileName: file.name, error: "Could not determine a report date from the sheet or the filename." }
 
       const extracted = extractThreeWayCost(rows)
       if ("error" in extracted) return { fileName: file.name, error: extracted.error }
+      // The mud cost line is always SLB, the first contractor, whatever text sits beside its amount.
+      for (const r of extracted.rows) if (r.contractor === "MUD_CONTRACTOR") r.sourceLabel = "SLB"
+      // The OBM sheet can leave OGDCL out for a day that the DMR sheet still reports; fall back to it.
+      const dmrSheetName = wb.SheetNames.find((s) => /^dmr$/i.test(s))
+      const extractedRows = [...extracted.rows]
+      if (!extractedRows.some((r) => r.contractor === "OGDCL") && dmrSheetName) {
+        const dmrRows = XLSX.utils.sheet_to_json(wb.Sheets[dmrSheetName], { header: 1, raw: false, defval: "" }) as unknown[][]
+        const ogdcl = extractDmrSheetOgdcl(dmrRows)
+        if (ogdcl) extractedRows.push({ contractor: "OGDCL", sourceLabel: "OGDCL", amount: ogdcl.amount, cumulative: ogdcl.cumulative })
+      }
       // Tag OBM-sourced rows so anyone who later needs the individual OBM cost can see where
       // it came from. The OBM sheet only carries contractor-level totals, not per-product
       // costs, so the product breakdown has to be read from the source file itself.
@@ -584,7 +722,7 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
 
       return {
         depths,
-        rows: extracted.rows.map((r) => ({
+        rows: extractedRows.map((r) => ({
           fileName: file.name,
           entryDate,
           contractor: r.contractor,
@@ -601,6 +739,31 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
           cumulativeOnFile: g.cumulativeOnFile,
         })),
       }
+    }
+
+    // DMR-sheet layout: a report with no WBM/OBM sheet keeps its cost block on the DMR sheet.
+    const dmrSheetName = wb.SheetNames.find((s) => /^dmr$/i.test(s))
+    const dmrRows = dmrSheetName
+      ? (XLSX.utils.sheet_to_json(wb.Sheets[dmrSheetName], { header: 1, raw: false, defval: "" }) as unknown[][])
+      : []
+    const dmrCost = dmrRows.length ? extractDmrSheetCostBlock(dmrRows) : null
+    if (dmrCost) {
+      const rows = dmrRows
+      const wellName = findLabelValue(rows, /well name/i) ?? ""
+      const dateCell = findLabelValue(rows, /^date\s*:?$/i) ?? ""
+      const entryDate = dateFromFileName(file.name) ?? parseDayMonthYear(dateCell) ?? parseMonthDayYear(dateCell)
+      if (!entryDate) return { fileName: file.name, error: "Could not determine a report date from the sheet or the filename." }
+      const base = { fileName: file.name, entryDate, wellName, remarks: "" }
+      const out: DmrImportRow[] = []
+      const gaps: DmrGap[] = []
+      if (dmrCost.mud) out.push({ ...base, contractor: "MUD_CONTRACTOR", sourceLabel: "SLB", amount: dmrCost.mud.amount, cumulative: dmrCost.mud.cumulative })
+      // OGDCL with a cumulative is kept even without a daily figure: the day-to-day pass sets its amount.
+      if (dmrCost.ogdcl && (dmrCost.ogdcl.amount !== null || dmrCost.ogdcl.cumulative !== null))
+        out.push({ ...base, contractor: "OGDCL", sourceLabel: "OGDCL", amount: dmrCost.ogdcl.amount ?? 0, cumulative: dmrCost.ogdcl.cumulative })
+      if (dmrCost.midgardCumulative) gaps.push({ fileName: file.name, entryDate, contractor: "SECOND_CONTRACTOR", cumulativeOnFile: dmrCost.midgardCumulative })
+      const depth = extractDepth(rows)
+      const depths: DmrDepth[] = depth ? [{ fileName: file.name, entryDate, wellName, depthMd: depth.md, depthTvd: depth.tvd }] : []
+      return { rows: out, gaps, depths }
     }
 
     const monthlySheetName = wb.SheetNames.find((s) => /date\s*wise\s*consumption/i.test(s))
@@ -732,7 +895,7 @@ function computeReconciliations(rows: DmrImportRow[]): DmrReconciliation[] {
       if (gapDays <= 1) continue // consecutive calendar days — no missing file between them
 
       const amount = (next.cumulative as number) - (prev.cumulative as number) - next.amount
-      if (!(amount > 0)) continue // inconsistent Cumulative across this gap — don't guess
+      if (!(amount >= 0.005)) continue // inconsistent Cumulative across this gap (or nothing to recover) — don't guess
 
       const missingDays = gapDays - 1
       const impliedDailyRate = amount / missingDays
@@ -821,6 +984,26 @@ export async function parseDmrFiles(
       gaps.push(...r.gaps)
       depths.push(...r.depths)
     }
+  }
+  // OGDCL and SLB are posted day to day from their cumulatives (see applyDayToDay).
+  const dayToDay = applyDayToDay(rows)
+  rows.splice(0, rows.length, ...dayToDay.rows)
+  errors.push(...dayToDay.skipped)
+  // Catch-up entries (see CATCH_UP_ENTRIES) join the batch when their well is in it. They carry no
+  // cumulative, so the reconciliation and cumulative checks below leave them out.
+  for (const entry of CATCH_UP_ENTRIES) {
+    const match = rows.find((r) => normalizeWellName(r.wellName) === normalizeWellName(entry.well))
+    if (!match) continue
+    rows.push({
+      fileName: "Catch-up (not a daily report)",
+      entryDate: entry.entryDate,
+      contractor: entry.contractor,
+      sourceLabel: entry.sourceLabel,
+      amount: entry.amount,
+      wellName: match.wellName,
+      remarks: entry.note,
+      cumulative: null,
+    })
   }
   return { rows, gaps, errors, reconciliations: computeReconciliations(rows), cumulativeChecks: computeCumulativeChecks(rows), depths }
 }

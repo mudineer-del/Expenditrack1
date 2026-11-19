@@ -15,12 +15,13 @@ function report(date, { name = 'report.xlsx', daily = 10, cumulative = 100, ogdc
   return new File([XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })], name)
 }
 
-test('DMR reads the sheet date before an incorrect filename and retains OGDCL sub-header cost', async () => {
+test('DMR reads the report date from the filename and retains OGDCL sub-header cost', async () => {
   const result = await parseDmrFiles([report('20-Aug-26', { name: '2026-08-21-report.xlsx' })])
   assert.deepEqual(result.errors, [])
   assert.equal(result.rows.length, 2)
-  assert.equal(result.rows.find(r => r.contractor === 'OGDCL').amount, 20)
-  assert.ok(result.rows.every(r => r.entryDate === '2026-08-20'))
+  // The first report is the opening balance, so OGDCL posts its cumulative.
+  assert.equal(result.rows.find(r => r.contractor === 'OGDCL').amount, 200)
+  assert.ok(result.rows.every(r => r.entryDate === '2026-08-21'))
 })
 
 test('DMR supports dates without filename prefixes and reports unreadable workbooks', async () => {
@@ -29,15 +30,17 @@ test('DMR supports dates without filename prefixes and reports unreadable workbo
   assert.equal(result.errors.length, 1)
 })
 
-test('DMR reconciliation subtracts the next reported daily cost and uses the first duplicate', async () => {
+test('DMR day to day: each SLB amount is the change in cumulative, and a conflicting duplicate date is reported', async () => {
   const result = await parseDmrFiles([
     report('1-Sep-26', { cumulative: 100 }),
     report('1-Sep-26', { cumulative: 110, name: 'duplicate.xlsx' }),
     report('4-Sep-26', { cumulative: 140 }),
   ])
-  const gap = result.reconciliations.find(r => r.contractor === 'MUD_CONTRACTOR')
-  assert.equal(gap.amount, 30)
-  assert.equal(gap.missingDays, 2)
+  const slb = result.rows.filter(r => r.contractor === 'MUD_CONTRACTOR').sort((a, b) => a.entryDate.localeCompare(b.entryDate))
+  assert.deepEqual(slb.map(r => [r.entryDate, r.amount]), [['2026-09-01', 100], ['2026-09-04', 40]])
+  assert.deepEqual(result.errors.map(e => e.fileName), ['duplicate.xlsx'])
+  // Day to day replaces the lump-sum reconciliation suggestion.
+  assert.deepEqual(result.reconciliations, [])
 })
 
 test('DMR does not reconcile between different wells or a decreasing cumulative reading', async () => {
@@ -157,10 +160,11 @@ test('DMR flags a report whose cumulative movement disagrees with its daily figu
   const day2bad = report('2-Sep-26', { name: 'c.xlsx', daily: 10, cumulative: 130 })
   const ok = await parseDmrFiles([day1, day2ok])
   assert.equal(ok.cumulativeChecks.filter(c => c.contractor === 'MUD_CONTRACTOR').length, 0)
+  // Day to day posts the change in cumulative (here 130 - 100 = 30 on 2 Sep), not the daily cell,
+  // so the mismatch check has nothing left to flag.
   const bad = await parseDmrFiles([day1, day2bad])
-  const flagged = bad.cumulativeChecks.find(c => c.contractor === 'MUD_CONTRACTOR')
-  assert.equal(flagged.entryDate, '2026-09-02')
-  assert.equal(flagged.difference, 20)
+  assert.equal(bad.rows.find(r => r.contractor === 'MUD_CONTRACTOR' && r.entryDate === '2026-09-02').amount, 30)
+  assert.deepEqual(bad.cumulativeChecks, [])
 })
 
 test('projection: cost at milestones uses cumulative actual spend up to each milestone date', async () => {
@@ -243,4 +247,84 @@ test('AFE WBS code and budget are imported for drilling and completion centres u
   const [drilling] = applyAfeBudgets([centre({ costCentre: 'DRFD01' })], afes)
   assert.equal(drilling.fundCentre, '21014AW004D2601-DRFD01')
   assert.equal(drilling.plannedBudget, 1000)
+})
+
+// Builds a DMR-sheet-only report (no WBM/OBM sheet) with the Eng / Prod cost block.
+function dmrSheetReport({ fileName, date, well = 'TEST WELL-1', slbDaily = 0, slbCum = '', ogdclDaily = '', ogdclCum = '', midgardCum = '' }) {
+  const rows = [
+    ['Well Name :', well],
+    [],
+    ['', '', '', '', '', '', '', 'Date :', date],
+    [],
+    ['M-I Engineer', 'Phone', 'email', '', 'Whse Phone', 'Rig Phone', 'Eng / Prod cost', '', 'Daily/Cum  Cost'],
+    ['Majid Hussain', '', '', '', '', '', '', '', ''],
+    ['Muhammad Haroon Khan', '', '', '', '', '', slbDaily, '', slbCum],
+    ['', '', '', '', '', 'Ogdcl Cost', ogdclDaily, '', ogdclCum],
+    ['', '', '', '', '', 'Midgard Cost', '', '', midgardCum],
+    ['', '', '', '', '', 'Total Cost', '', '', ''],
+  ]
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'DMR')
+  return new File([XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })], fileName)
+}
+
+test('DMR: OGDCL is read from the DMR sheet when the OBM sheet has no OGDCL line, and the first report starts the OGDCL series', async () => {
+  const { parseDmrFiles } = await import('../src/lib/dmrImport.ts')
+  const obm = [
+    ['Well Name :', 'CHAKAR DEEP-01', '', '', '', '', '', 'Date :', '10-Oct-26'],
+    ['', '', '', '', '', 'Daily cost', '', 'Cumulative Cost'],
+    ['Majid Hussain', '', '', '', '', '$2,437.10', '', '$133,243.15'],
+  ]
+  const dmr = [
+    ['Well Name :', 'CHAKAR DEEP-01'],
+    [],
+    ['', '', '', '', '', 'Ogdcl Cost', '3016.93', '', '63953.25'],
+  ]
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(obm), 'OBM')
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dmr), 'DMR')
+  const file = new File([XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })], 'DMR#14_Well CHAKAR DEEP-1 2026-10-10.xlsx')
+
+  const result = await parseDmrFiles([file])
+  assert.deepEqual(result.errors, [])
+  const ogdcl = result.rows.find((r) => r.contractor === 'OGDCL' && r.entryDate === '2026-10-10')
+  // A single report is its own opening balance, so its OGDCL amount is its cumulative.
+  assert.equal(ogdcl.amount, 63953.25)
+  assert.equal(ogdcl.cumulative, 63953.25)
+  // Opening balance: the SLB cumulative of the single report.
+  assert.equal(result.rows.find((r) => r.contractor === 'MUD_CONTRACTOR').amount, 133243.15)
+  assert.equal(result.rows.find((r) => r.sourceLabel === 'OGDCL catch-up'), undefined)
+  const midgard = result.rows.find((r) => r.sourceLabel === 'Midgard catch-up')
+  assert.equal(midgard.contractor, 'SECOND_CONTRACTOR')
+  assert.equal(midgard.entryDate, '2026-10-08')
+  assert.equal(midgard.amount, 11315.37)
+  assert.equal(midgard.cumulative, null)
+})
+
+test('DMR: a report with only the DMR sheet imports SLB from the engineer rows, OGDCL and a Midgard gap', async () => {
+  const { parseDmrFiles } = await import('../src/lib/dmrImport.ts')
+  const file = dmrSheetReport({ fileName: 'DMR#1_Well TEST WELL-1 2026-09-27.xlsx', date: '9/30/26', slbDaily: 31995.4, slbCum: '67507.95', ogdclDaily: '24723.39', ogdclCum: '24723.39', midgardCum: '11315.37' })
+  const result = await parseDmrFiles([file])
+  assert.deepEqual(result.errors, [])
+  assert.equal(result.rows.find((r) => r.contractor === 'MUD_CONTRACTOR').entryDate, '2026-09-27')
+  assert.equal(result.rows.find((r) => r.contractor === 'MUD_CONTRACTOR').amount, 67507.95)
+  assert.equal(result.rows.find((r) => r.contractor === 'MUD_CONTRACTOR').cumulative, 67507.95)
+  assert.equal(result.rows.find((r) => r.contractor === 'OGDCL').amount, 24723.39)
+  assert.ok(result.gaps.some((g) => g.contractor === 'SECOND_CONTRACTOR' && g.cumulativeOnFile === '11315.37'))
+})
+
+test('DMR: OGDCL day to day is the change in cumulative; a report that goes back is left out and reported', async () => {
+  const { parseDmrFiles } = await import('../src/lib/dmrImport.ts')
+  const files = [
+    dmrSheetReport({ fileName: 'a.xlsx', date: '10/1/26', ogdclDaily: '100', ogdclCum: '100' }),
+    dmrSheetReport({ fileName: 'b.xlsx', date: '10/2/26', ogdclDaily: '', ogdclCum: '150' }),
+    dmrSheetReport({ fileName: 'c.xlsx', date: '10/3/26', ogdclDaily: '5', ogdclCum: '120' }),
+    dmrSheetReport({ fileName: 'd.xlsx', date: '10/4/26', ogdclDaily: '', ogdclCum: '175' }),
+  ]
+  const result = await parseDmrFiles(files)
+  const ogdcl = result.rows.filter((r) => r.contractor === 'OGDCL').sort((a, b) => a.entryDate.localeCompare(b.entryDate))
+  assert.deepEqual(ogdcl.map((r) => [r.entryDate, r.amount]), [['2026-10-01', 100], ['2026-10-02', 50], ['2026-10-04', 25]])
+  // The chain adds up to the latest cumulative.
+  assert.equal(ogdcl.reduce((s, r) => s + r.amount, 0), 175)
+  assert.deepEqual(result.errors.map((e) => e.fileName), ['c.xlsx'])
 })
