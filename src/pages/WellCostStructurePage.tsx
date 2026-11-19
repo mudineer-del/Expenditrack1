@@ -56,7 +56,7 @@ import { useDeleteWellAfe, useUpsertWellAfe, useWellAfesQuery } from "@/hooks/us
 import type { WellAfe } from "@/types/wellAfe"
 import { useUpsertWellDailyDepths, useWellDailyDepthsQuery } from "@/hooks/useWellDailyDepths"
 import { normalizeWellName } from "@/lib/wellNames"
-import { afeCodeFor, groupCostCentres, wbsBreakupRows } from "@/lib/wellCostBudgets"
+import { afeCodeFor, groupCostCentres, wbsBreakupRows, wbsCodeOf } from "@/lib/wellCostBudgets"
 import type { DmrDepth } from "@/lib/dmrImport"
 import type { WellDailyDepth } from "@/types/wellDailyDepth"
 import { useUpsertWell, useWellsQuery } from "@/hooks/useWells"
@@ -167,6 +167,13 @@ export default function WellCostStructurePage() {
       utilizationPct: ((base.actual + commitments) / afeBudget) * 100,
     }
   }, [wellCostCentres, costCentreTotals, selectedWell, afes, wellCurrency])
+  // Each centre's WBS code (its fund centre, once the AFE has filled it in) and the AFE budget per
+  // WBS code, for the S-curves that compare budget with actual by code.
+  const wbsCentres = useMemo(() => new Map(wellCostCentres.map((c) => [c.id, wbsCodeOf(c.fundCentre)])), [wellCostCentres])
+  const wbsBudgets = useMemo(
+    () => Object.fromEntries(selectedWell ? wbsBreakupRows(afes, selectedWell.id, wellCurrency).map((r) => [r.code, r.total]) : []),
+    [afes, selectedWell, wellCurrency]
+  )
   const wellCostCentreIds = useMemo(() => new Set(wellCostCentres.map((c) => c.id)), [wellCostCentres])
 
   /** Candidate wells to copy FROM, scoped to one service category's own cost centres —
@@ -514,6 +521,8 @@ export default function WellCostStructurePage() {
               milestones={milestones.filter((m) => m.wellId === selectedWell.id)}
               depths={(depthsQuery.data ?? []).filter((d) => d.wellId === selectedWell.id)}
               budget={wellRollup.budget}
+              wbsCentres={wbsCentres}
+              wbsBudgets={wbsBudgets}
             />
           )}
 

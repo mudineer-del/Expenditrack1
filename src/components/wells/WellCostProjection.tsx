@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { CartesianGrid, Line, LineChart, ReferenceLine, Scatter, ScatterChart, XAxis, YAxis, ZAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Input } from "@/components/ui/input"
@@ -7,11 +7,13 @@ import { fmtCurrency } from "@/lib/wellCost"
 import {
   MAX_FORECAST_DAYS,
   activityCells,
+  actualCurvesByWbs,
   burnRate,
   costAtDepthDays,
   costAtMilestones,
   cumulativeWithForecast,
   dailyActualSpend,
+  wbsCurveValueAt,
   forecastAtCompletion,
   importedDates,
   projectionStatus,
@@ -47,6 +49,8 @@ export function WellCostProjection({
   milestones,
   depths,
   budget,
+  wbsCentres,
+  wbsBudgets,
   currency = "USD",
 }: {
   transactions: WellCostTransaction[]
@@ -55,6 +59,10 @@ export function WellCostProjection({
   /** Measured depth per report date for this well; falls back to milestones until any are captured. */
   depths: WellDailyDepth[]
   budget: number
+  /** Cost centre id to its WBS code, for the per-code S-curves. */
+  wbsCentres: Map<string, string>
+  /** AFE budget per WBS code. */
+  wbsBudgets: Record<string, number>
   currency?: string
 }) {
   const [remainingInput, setRemainingInput] = useState(String(DEFAULT_REMAINING_DAYS))
@@ -67,6 +75,21 @@ export function WellCostProjection({
   const forecast = forecastAtCompletion(actual, rate, remainingDays)
   const status = projectionStatus(forecast, budget)
   const points = useMemo(() => cumulativeWithForecast(daily, rate, remainingDays), [daily, rate, remainingDays])
+  // One actual line per WBS code that has spend, each with its AFE budget as a dashed line in the same colour.
+  const wbsCurves = useMemo(() => actualCurvesByWbs(transactions, wbsCentres), [transactions, wbsCentres])
+  const curveKey = (i: number) => `wbs${i}`
+  const curveColour = (i: number) => `var(--dataviz-${(i % 6) + 1})`
+  const chartData = useMemo(
+    () =>
+      points.map((p) => {
+        const row: Record<string, string | number | undefined> = { ...p }
+        wbsCurves.forEach((c, i) => {
+          row[curveKey(i)] = wbsCurveValueAt(c, p.date)
+        })
+        return row
+      }),
+    [points, wbsCurves]
+  )
   const cells = useMemo(() => activityCells(daily, 90, imported), [daily, imported])
   const maxCell = Math.max(0, ...cells.map((c) => c.amount))
   const depthDayPoints = useMemo(() => costAtDepthDays(depths, daily), [depths, daily])
@@ -129,7 +152,7 @@ export function WellCostProjection({
           <div className="mb-1.5 text-xs font-medium text-muted-foreground">Cumulative cost (S-curve)</div>
           {points.length ? (
             <ChartContainer config={chartConfig} className="h-64 w-full">
-              <LineChart data={points} margin={{ left: 4, right: 12 }}>
+              <LineChart data={chartData} margin={{ left: 4, right: 12 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} minTickGap={24} tickFormatter={(v: string) => v.slice(5)} />
                 <YAxis tickLine={false} axisLine={false} fontSize={11} width={72} tickFormatter={(v) => fmtCurrency(v, currency)} />
@@ -137,6 +160,12 @@ export function WellCostProjection({
                 {budget > 0 ? <ReferenceLine y={budget} stroke="var(--status-returned)" strokeDasharray="4 4" label={{ value: "Budget", fontSize: 11, fill: "var(--muted-foreground)" }} /> : null}
                 <Line type="monotone" dataKey="actual" name="Actual" stroke="var(--color-actual)" strokeWidth={2} dot={false} connectNulls={false} />
                 <Line type="monotone" dataKey="forecast" name="Forecast" stroke="var(--color-forecast)" strokeWidth={2} strokeDasharray="6 4" dot={false} connectNulls={false} />
+                {wbsCurves.map((c, i) => (
+                  <Fragment key={c.code}>
+                    <Line type="monotone" dataKey={curveKey(i)} name={`${c.code} actual`} stroke={curveColour(i)} strokeWidth={1.5} dot={false} connectNulls={false} />
+                    {(wbsBudgets[c.code] ?? 0) > 0 ? <ReferenceLine y={wbsBudgets[c.code]} stroke={curveColour(i)} strokeDasharray="4 4" /> : null}
+                  </Fragment>
+                ))}
               </LineChart>
             </ChartContainer>
           ) : (
@@ -180,6 +209,41 @@ export function WellCostProjection({
           )}
         </div>
       </div>
+
+      {wbsCurves.length ? (
+        <div className="mt-4 overflow-x-auto">
+          <div className="mb-1.5 text-xs font-medium text-muted-foreground">Budget against actual by WBS code (codes with actual spend)</div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-muted-foreground">
+                <th className="py-1 font-medium">WBS code</th>
+                <th className="py-1 text-right font-medium">Budget (AFE)</th>
+                <th className="py-1 text-right font-medium">Actual</th>
+                <th className="py-1 text-right font-medium">Used</th>
+              </tr>
+            </thead>
+            <tbody>
+              {wbsCurves.map((c, i) => {
+                const budgetFor = wbsBudgets[c.code] ?? 0
+                const used = budgetFor > 0 ? (c.total / budgetFor) * 100 : null
+                return (
+                  <tr key={c.code} className="border-t">
+                    <td className="py-1">
+                      <span className="mr-1.5 inline-block size-2 rounded-full align-middle" style={{ backgroundColor: curveColour(i) }} />
+                      {c.code}
+                    </td>
+                    <td className="py-1 text-right tabular-nums">{budgetFor > 0 ? fmtCurrency(budgetFor, currency) : "No budget"}</td>
+                    <td className="py-1 text-right tabular-nums">{fmtCurrency(c.total, currency)}</td>
+                    <td className={cn("py-1 text-right tabular-nums", used !== null && used > 100 && "text-destructive")}>
+                      {used === null ? "—" : `${used.toFixed(0)}%`}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
 
       {cells.length ? (
         <div className="mt-4">

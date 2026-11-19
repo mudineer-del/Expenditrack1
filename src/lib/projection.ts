@@ -149,3 +149,50 @@ export function costAtDepthDays(depths: { entryDate: string; depthMd: number | "
   }
   return points.sort((a, b) => a.date.localeCompare(b.date))
 }
+
+/** Cumulative actual spend for one WBS code, by entry date. `entries` is sorted by date. */
+export interface WbsCurve {
+  code: string
+  total: number
+  firstDate: string
+  lastDate: string
+  entries: { date: string; cumulative: number }[]
+}
+
+/** Actual (not commitment) spend per WBS code, as running totals by date. `centreWbs` maps each
+ *  cost centre id to its WBS code; centres without one are left out. Only codes with actual spend
+ *  come back, so the S-curve shows budget against actual just for codes that have actuals. */
+export function actualCurvesByWbs(transactions: WellCostTransaction[], centreWbs: Map<string, string>): WbsCurve[] {
+  const perCode = new Map<string, Map<string, number>>()
+  for (const t of transactions) {
+    if (t.kind !== "actual" || !t.entryDate) continue
+    const code = centreWbs.get(t.costCentreId)
+    if (!code) continue
+    const day = perCode.get(code) ?? new Map<string, number>()
+    day.set(t.entryDate, (day.get(t.entryDate) ?? 0) + (Number(t.amount) || 0))
+    perCode.set(code, day)
+  }
+  const curves: WbsCurve[] = []
+  for (const [code, day] of perCode) {
+    const dates = [...day.keys()].sort()
+    let run = 0
+    const entries = dates.map((date) => {
+      run = round2(run + (day.get(date) ?? 0))
+      return { date, cumulative: run }
+    })
+    if (run > 0) curves.push({ code, total: run, firstDate: dates[0], lastDate: dates[dates.length - 1], entries })
+  }
+  return curves.sort((a, b) => a.code.localeCompare(b.code))
+}
+
+/** A WBS curve's running total on a date: undefined before its first entry and after its last, so a
+ *  line stops at the last actual rather than running on flat. */
+export function wbsCurveValueAt(curve: WbsCurve, date: string): number | undefined {
+  if (date < curve.firstDate || date > curve.lastDate) return undefined
+  let value: number | undefined
+  for (const e of curve.entries) {
+    if (e.date > date) break
+    value = e.cumulative
+  }
+  return value
+}

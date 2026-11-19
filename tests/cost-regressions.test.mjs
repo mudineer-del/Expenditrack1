@@ -328,3 +328,23 @@ test('DMR: OGDCL day to day is the change in cumulative; a report that goes back
   assert.equal(ogdcl.reduce((s, r) => s + r.amount, 0), 175)
   assert.deepEqual(result.errors.map((e) => e.fileName), ['c.xlsx'])
 })
+
+test('S-curve by WBS: running actual per code, only codes with actual, line stops at last actual', async () => {
+  const { actualCurvesByWbs, wbsCurveValueAt } = await import('../src/lib/projection.ts')
+  const tx = [
+    { costCentreId: 'c1', kind: 'actual', entryDate: '2026-10-01', amount: 100 },
+    { costCentreId: 'c2', kind: 'actual', entryDate: '2026-10-01', amount: 50 },
+    { costCentreId: 'c1', kind: 'actual', entryDate: '2026-10-03', amount: 25 },
+    { costCentreId: 'c1', kind: 'commitment', entryDate: '2026-10-04', amount: 999 },
+    { costCentreId: 'c3', kind: 'actual', entryDate: '2026-10-02', amount: 10 },
+  ]
+  const curves = actualCurvesByWbs(tx, new Map([['c1', 'WBS-A'], ['c2', 'WBS-A'], ['c3', '']]))
+  assert.equal(curves.length, 1)
+  assert.equal(curves[0].code, 'WBS-A')
+  assert.equal(curves[0].total, 175)
+  assert.equal(wbsCurveValueAt(curves[0], '2026-10-01'), 150)
+  assert.equal(wbsCurveValueAt(curves[0], '2026-10-02'), 150)
+  assert.equal(wbsCurveValueAt(curves[0], '2026-10-03'), 175)
+  assert.equal(wbsCurveValueAt(curves[0], '2026-10-04'), undefined)
+  assert.equal(wbsCurveValueAt(curves[0], '2026-09-30'), undefined)
+})
