@@ -472,7 +472,10 @@ export function finalizeImportedRecord(rec: ImportedRecord, nextSrNo: () => numb
   const a = Number(rec.amountExclTax) || 0
   let g = rec.gstPst !== undefined && rec.gstPst !== "" ? Number(rec.gstPst) : 0.15
   if (g > 1) g = g / 100
-  const tax = rec.tax !== undefined && rec.tax !== "" ? Number(rec.tax) : a * g
+  // A non-zero Tax column wins. A zero or blank one falls back to the rate, so a 15% rate never
+  // ends up with no tax.
+  const fileTax = rec.tax !== undefined && rec.tax !== "" ? Number(rec.tax) : 0
+  const tax = fileTax !== 0 ? fileTax : a * g
   // Policy: inclusive tax is always derived from the authoritative components.
   // Ignore a supplied/imported inclusive value because legacy spreadsheets may
   // contain shifted or stale values (for example, inclusive tax below subtotal).

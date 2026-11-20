@@ -613,6 +613,16 @@ export function InvoiceDrawer({
                 )}
               />
             </div>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <span className="text-sm font-medium">Tax (USD)</span>
+                <Input readOnly tabIndex={-1} value={fmtMoney(tax)} className="tabular-nums" aria-label="Tax, calculated from the rate" />
+              </div>
+              <div className="grid gap-1.5">
+                <span className="text-sm font-medium">Amount Incl. Tax (USD)</span>
+                <Input readOnly tabIndex={-1} value={fmtMoney(total)} className="tabular-nums" aria-label="Amount including tax, calculated" />
+              </div>
+            </div>
             {design !== "summary" && financialSummary}
             </section>
             {paged && section === 2 && <section className="invoice-form-section invoice-review">

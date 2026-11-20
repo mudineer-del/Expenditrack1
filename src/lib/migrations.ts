@@ -108,6 +108,27 @@ const migrations: Migration[] = [
       return { invoices: resequenced, changed: true }
     },
   },
+  {
+    // Tax from the rate: a row with a GST/PST rate but no tax gets tax = excl x rate (imports used to
+    // take a zero Tax column as the tax), then the inclusive total is set to excl + tax wherever it differs.
+    key: "migration_taxFromRate2026",
+    run: (invoices) => {
+      let changed = false
+      const next = invoices.map((inv) => {
+        const excl = Number(inv.amountExclTax) || 0
+        const rate = Number(inv.gstPst) || 0
+        const storedTax = Number(inv.tax) || 0
+        const tax = storedTax === 0 && rate > 0 && excl > 0 ? Math.round(excl * rate * 100) / 100 : storedTax
+        const incl = Math.round((excl + tax) * 100) / 100
+        if (tax !== storedTax || Math.abs(incl - (Number(inv.amountInclTax) || 0)) > 0.005) {
+          changed = true
+          return { ...inv, tax, amountInclTax: incl }
+        }
+        return inv
+      })
+      return { invoices: next, changed }
+    },
+  },
 ]
 
 /** Runs any not-yet-applied migrations and pushes changed rows back to Supabase. */
@@ -117,6 +138,7 @@ export async function runInvoiceMigrations(invoices: Invoice[]): Promise<Invoice
     if (storeGet<boolean>(m.key)) continue
     const result = m.run(current)
     current = result.invoices
+    let persisted = true
     if (result.changed) {
       const changedRows = current.filter((inv, i) => inv !== invoices[i])
       if (changedRows.length > 0) {
@@ -129,12 +151,14 @@ export async function runInvoiceMigrations(invoices: Invoice[]): Promise<Invoice
             .upsert(rows.slice(i, i + chunk), { onConflict: "id" })
           if (error) {
             console.error(`Migration ${m.key} failed to persist:`, error)
+            persisted = false
             break
           }
         }
       }
     }
-    storeSet(m.key, true)
+    // Only mark a migration done once its rows are saved, so a failed write is retried on the next load.
+    if (persisted) storeSet(m.key, true)
   }
   return current
 }
