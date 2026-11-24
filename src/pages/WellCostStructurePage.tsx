@@ -1,4 +1,4 @@
-import { Copy, Drill, Eye, FileText, History, Pencil, Plus, Search, Trash2, Upload, LayoutList } from "lucide-react"
+import { Copy, Download, Drill, Eye, FileText, History, Pencil, Plus, Search, Trash2, Upload, LayoutList } from "lucide-react"
 import { Fragment, useEffect, useMemo, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -22,6 +22,7 @@ import { CostCentrePreview } from "@/components/wells/WellHoverPreviews"
 import { CopyWellCostDialog } from "@/components/wells/CopyWellCostDialog"
 import { CostSummaryCards, MiniBudgetBar, UtilizationBar } from "@/components/wells/CostSummary"
 import { WellCostProjection } from "@/components/wells/WellCostProjection"
+import { exportCostCentreCsv } from "@/lib/costCentreExport"
 import { DmrImportDialog } from "@/components/wells/DmrImportDialog"
 import { NameDialog } from "@/components/wells/NameDialog"
 import { WellAfeDialog } from "@/components/wells/WellAfeDialog"
@@ -683,6 +684,15 @@ export default function WellCostStructurePage() {
                                               onClick={() => navigate(`/well-cost/log/${item.id}`)}
                                             >
                                               <History className="size-4" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              className="rounded-full p-2 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                                              title={transactions.some((t) => t.costCentreId === item.id) ? "Export this cost centre's entries as CSV" : "No entries to export yet"}
+                                              disabled={!transactions.some((t) => t.costCentreId === item.id)}
+                                              onClick={() => exportCostCentreCsv(item, transactions.filter((t) => t.costCentreId === item.id))}
+                                            >
+                                              <Download className="size-4" />
                                             </button>
                                             <button
                                               type="button"

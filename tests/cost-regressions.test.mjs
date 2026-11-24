@@ -348,3 +348,20 @@ test('S-curve by WBS: running actual per code, only codes with actual, line stop
   assert.equal(wbsCurveValueAt(curves[0], '2026-10-04'), undefined)
   assert.equal(wbsCurveValueAt(curves[0], '2026-09-30'), undefined)
 })
+
+test('cost centre export: entries oldest first, quoted notes, totals per type', async () => {
+  const { buildCostCentreCsv } = await import('../src/lib/costCentreExport.ts')
+  const centre = { costCentre: 'DRFD01', fundCentre: '21014AW004D2601-DRFD01', currency: 'USD' }
+  const entries = [
+    { entryDate: '2026-10-02', kind: 'actual', amount: 200, notes: 'Mud, "barite"', remarks: 'line one\nline two', createdByName: 'Fazal' },
+    { entryDate: '2026-10-01', kind: 'actual', amount: 100.5, notes: '', remarks: '', createdByName: '' },
+    { entryDate: '2026-10-03', kind: 'commitment', amount: 50, notes: 'PO', remarks: '', createdByName: '' },
+  ]
+  const lines = buildCostCentreCsv(centre, entries).replace(/^\uFEFF/, '').split('\n')
+  assert.equal(lines[0], 'Cost Centre,Fund Centre,Date,Type,Amount,Currency,Notes,Remarks,Logged By')
+  assert.equal(lines[1], 'DRFD01,21014AW004D2601-DRFD01,2026-10-01,Actual,100.5,USD,,,')
+  assert.equal(lines[2], 'DRFD01,21014AW004D2601-DRFD01,2026-10-02,Actual,200,USD,"Mud, ""barite""",line one line two,Fazal')
+  assert.equal(lines[3], 'DRFD01,21014AW004D2601-DRFD01,2026-10-03,Commitment,50,USD,PO,,')
+  assert.ok(lines.includes('DRFD01,21014AW004D2601-DRFD01,,Total actual,300.5,USD,,,'))
+  assert.ok(lines.includes('DRFD01,21014AW004D2601-DRFD01,,Total commitment,50,USD,,,'))
+})

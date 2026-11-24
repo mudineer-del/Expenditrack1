@@ -1,4 +1,4 @@
-import { ArrowLeft, Eye, FileClock, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { ArrowLeft, Download, Eye, FileClock, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { exportCostCentreCsv } from "@/lib/costCentreExport"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -212,13 +213,23 @@ export default function WellCostDailyLogPage() {
             {costCentre.fundCentre ? ` · Fund Centre ${costCentre.fundCentre}` : ""}
           </p>
         </div>
-        <Button
-          disabled={!canAdd}
-          title={canAdd ? "Log a cost entry" : "Only Admins/Editors can log entries"}
-          onClick={() => openAdd()}
-        >
-          <Plus /> Add Entry
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            disabled={!costCentre || entries.length === 0}
+            title={entries.length ? "Download every entry on this cost centre as CSV" : "No entries to export yet"}
+            onClick={() => costCentre && exportCostCentreCsv(costCentre, entries)}
+          >
+            <Download /> Export CSV
+          </Button>
+          <Button
+            disabled={!canAdd}
+            title={canAdd ? "Log a cost entry" : "Only Admins/Editors can log entries"}
+            onClick={() => openAdd()}
+          >
+            <Plus /> Add Entry
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
