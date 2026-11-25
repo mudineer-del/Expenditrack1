@@ -686,10 +686,18 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
     // header and "OGDCL Cost" row), just a different sheet name in the OBM-template reports
     // (seen from 26-Jul onward on Gurgalot X-1).
     const wbmSheetName = wb.SheetNames.find((s) => /^(wbm|obm)$/i.test(s))
+    // From 19-Nov some reports drop the WBM sheet and keep the same "Daily cost / Cumulative Cost"
+    // block on the DMR sheet. Read that block with the WBM parser when the DMR sheet carries it.
+    const dmrSheetForCost = wb.SheetNames.find((s) => /^dmr$/i.test(s))
+    const dmrRowsForCost = !wbmSheetName && dmrSheetForCost
+      ? (XLSX.utils.sheet_to_json(wb.Sheets[dmrSheetForCost], { header: 1, raw: false, defval: "" }) as unknown[][])
+      : []
+    const dmrHasCostBlock = dmrRowsForCost.some((row) => row.some((c) => /^daily cost$/i.test(String(c ?? "").trim())))
+    const costSheetName = wbmSheetName ?? (dmrHasCostBlock ? dmrSheetForCost : undefined)
 
-    if (wbmSheetName) {
-      const isObm = /^obm$/i.test(wbmSheetName)
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wbmSheetName], { header: 1, raw: false, defval: "" }) as unknown[][]
+    if (costSheetName) {
+      const isObm = /^obm$/i.test(costSheetName)
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[costSheetName], { header: 1, raw: false, defval: "" }) as unknown[][]
       const wellName = findLabelValue(rows, /well name/i) ?? ""
 
       const dateCell = findLabelValue(rows, /^date\s*:?$/i) ?? ""
@@ -828,6 +836,27 @@ async function parseOneFile(file: File): Promise<{ rows: DmrImportRow[]; gaps: D
     return { fileName: file.name, error: 'No "WBM", "OBM" or "DATE WISE CONSUMPTION" sheet found in this workbook.' }
   } catch (e) {
     return { fileName: file.name, error: e instanceof Error ? e.message : "Could not read this file." }
+  }
+}
+
+/** Depth alone, for a report whose cost could not be read: the first sheet with a "Depth/TVD" line,
+ *  dated from the filename. Returns null when the file has no such line or no date in its name. */
+async function depthOnlyFromFile(file: File): Promise<DmrDepth | null> {
+  try {
+    const entryDate = dateFromFileName(file.name)
+    if (!entryDate) return null
+    const XLSX = await import("xlsx")
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array" })
+    for (const sheetName of wb.SheetNames) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: false, defval: "" }) as unknown[][]
+      const depth = extractDepth(rows)
+      if (!depth) continue
+      const wellName = findLabelValue(rows, /well name/i) ?? ""
+      return { fileName: file.name, entryDate, wellName, depthMd: depth.md, depthTvd: depth.tvd }
+    }
+    return null
+  } catch {
+    return null
   }
 }
 
@@ -972,14 +1001,18 @@ export async function parseDmrFiles(
   cumulativeChecks: DmrCumulativeCheck[]
   depths: DmrDepth[]
 }> {
-  const results = await Promise.all(files.map(parseOneFile))
+  const results = await Promise.all(files.map(async (file) => ({ file, result: await parseOneFile(file) })))
   const rows: DmrImportRow[] = []
   const gaps: DmrGap[] = []
   const errors: DmrImportError[] = []
   const depths: DmrDepth[] = []
-  for (const r of results) {
-    if ("error" in r) errors.push(r)
-    else {
+  for (const { file, result: r } of results) {
+    if ("error" in r) {
+      errors.push(r)
+      // A report whose cost can't be read still has its depth; keep that so the depth is not lost.
+      const depth = await depthOnlyFromFile(file)
+      if (depth) depths.push(depth)
+    } else {
       rows.push(...r.rows)
       gaps.push(...r.gaps)
       depths.push(...r.depths)
