@@ -313,21 +313,37 @@ export default function WellCostStructurePage() {
     })
   }
 
+  // A report can name its well by the registry name or by its code (e.g. "Uch WDW-1" is code
+  // "Uch WDW-01"), so both are accepted.
+  const wellIdByReportName = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const w of wells) {
+      m.set(normalizeWellName(w.name), w.id)
+      if (w.code) m.set(normalizeWellName(w.code), w.id)
+    }
+    return m
+  }, [wells])
+
+  // Whether the app already holds a depth for a report's well and date, so the import dialog can
+  // tell which reports still need their depth saved.
+  const depthsOnFile = useMemo(
+    () => new Set((depthsQuery.data ?? []).filter((d) => d.depthMd !== "").map((d) => `${d.wellId}|${d.entryDate}`)),
+    [depthsQuery.data]
+  )
+  function depthStatus(report: DmrDepth): "saved" | "missing" | "unmatched" {
+    const wellId = wellIdByReportName.get(normalizeWellName(report.wellName))
+    if (!wellId) return "unmatched"
+    return depthsOnFile.has(`${wellId}|${report.entryDate}`) ? "saved" : "missing"
+  }
+
   // Depth follows the well named in each report. Names and codes are matched to the Well Registry
   // by normalised form. A report whose well isn't registered is skipped and listed, not saved
   // against the wrong well.
   function handleImportDepths(reports: DmrDepth[]) {
-    // A report can name its well by the registry name or by its code (e.g. "Uch WDW-1" is code
-    // "Uch WDW-01"), so both are accepted.
-    const wellByName = new Map<string, string>()
-    for (const w of wells) {
-      wellByName.set(normalizeWellName(w.name), w.id)
-      if (w.code) wellByName.set(normalizeWellName(w.code), w.id)
-    }
     const byWellDate = new Map<string, WellDailyDepth>()
     const unmatched = new Set<string>()
     for (const r of reports) {
-      const wellId = wellByName.get(normalizeWellName(r.wellName))
+      const wellId = wellIdByReportName.get(normalizeWellName(r.wellName))
       if (!wellId) {
         unmatched.add(r.wellName || "(no well name)")
         continue
@@ -634,6 +650,7 @@ export default function WellCostStructurePage() {
                                 createdByName={user?.name || ""}
                                 onImport={handleImportTransactions}
                                 onImportDepths={handleImportDepths}
+                                depthStatus={depthStatus}
                                 submitting={bulkImportTransactions.isPending}
                               />
                             )}

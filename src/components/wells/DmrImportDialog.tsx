@@ -98,6 +98,7 @@ export function DmrImportDialog({
   createdByName,
   onImport,
   onImportDepths,
+  depthStatus,
   submitting = false,
 }: {
   open: boolean
@@ -119,7 +120,10 @@ export function DmrImportDialog({
    *  decides which well each one belongs to, so depth follows the report, not the cost
    *  centre this dialog was opened for. */
   onImportDepths?: (rows: DmrDepth[]) => void
-    /** True while the bulk import request is in flight — blocks a second submit. */
+    /** Whether the app already holds this report's depth for its well and date. "missing" depths
+   *  are offered for saving even when all of the costs are already logged. */
+  depthStatus?: (report: DmrDepth) => "saved" | "missing" | "unmatched"
+  /** True while the bulk import request is in flight — blocks a second submit. */
   submitting?: boolean
 }) {
   const [parsedRows, setParsedRows] = useState<DmrImportRow[]>([])
@@ -295,8 +299,10 @@ export function DmrImportDialog({
         createdByName,
       })
     }
-    if (parsedDepths.length && onImportDepths) onImportDepths(parsedDepths)
-    onImport(toImport)
+    if (depthsToSave.length && onImportDepths) onImportDepths(depthsToSave)
+    // Depth-only batch (costs already imported): nothing to post as cost, so just close.
+    if (toImport.length) onImport(toImport)
+    else onOpenChange(false)
     reset()
   }
 
@@ -317,6 +323,11 @@ export function DmrImportDialog({
   const planFileNames = new Set(plan.map((r) => r.fileName))
   const depthOnlyRows = parsedDepths.filter((d) => !planFileNames.has(d.fileName))
   const depthByFile = new Map(parsedDepths.map((d) => [d.fileName, d]))
+  // Depths not yet in the app go to onImportDepths. Unmatched wells are passed along too, so the
+  // page can say which well names it could not place.
+  const depthsToSave = onImportDepths ? parsedDepths.filter((d) => (depthStatus?.(d) ?? "missing") !== "saved") : []
+  const missingDepthCount = depthsToSave.filter((d) => (depthStatus?.(d) ?? "missing") === "missing").length
+  const costEntryCount = importable.length + acceptedReconciliationRows.length
   const reviewTableRows: ({ kind: "cost"; entryDate: string; key: string; row: (typeof plan)[number] } | { kind: "depth"; entryDate: string; key: string; depth: DmrDepth })[] = [
     ...plan.map((row) => ({ kind: "cost" as const, entryDate: row.entryDate, key: `${row.fileName}-${row.entryDate}-${row.contractor}`, row })),
     ...depthOnlyRows.map((depth) => ({ kind: "depth" as const, entryDate: depth.entryDate, key: `depth-${depth.fileName}`, depth })),
@@ -438,6 +449,11 @@ export function DmrImportDialog({
                 )}{" "}
                 will be logged.
               </p>
+              {missingDepthCount > 0 && (
+                <p className="mt-1.5">
+                  {missingDepthCount} depth reading{missingDepthCount !== 1 ? "s" : ""} not yet in the app will be saved.
+                </p>
+              )}
               {mismatchedFiles.length > 0 && (
                 <p className="mt-1.5 flex items-center gap-1.5 text-status-under">
                   <AlertTriangle className="size-3.5" /> {mismatchedFiles.length} file{mismatchedFiles.length !== 1 ? "s" : ""}{" "}
@@ -637,14 +653,16 @@ export function DmrImportDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={submitting || (!importable.length && !acceptedReconciliationRows.length)}
+            disabled={submitting || (!costEntryCount && !missingDepthCount)}
           >
             <Upload />{" "}
-            {importable.length + acceptedReconciliationRows.length
-              ? `Import ${importable.length + acceptedReconciliationRows.length} entr${
-                  importable.length + acceptedReconciliationRows.length !== 1 ? "ies" : "y"
+            {costEntryCount
+              ? `Import ${costEntryCount} entr${costEntryCount !== 1 ? "ies" : "y"}${
+                  missingDepthCount ? ` and save ${missingDepthCount} depth${missingDepthCount !== 1 ? "s" : ""}` : ""
                 }`
-              : "Nothing to import"}
+              : missingDepthCount
+                ? `Save ${missingDepthCount} depth${missingDepthCount !== 1 ? "s" : ""}`
+                : "Nothing to import"}
           </Button>
         </DialogFooter>
       </DialogContent>
