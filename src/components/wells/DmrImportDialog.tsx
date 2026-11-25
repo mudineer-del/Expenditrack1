@@ -68,6 +68,13 @@ function keywordsFrom(rows: DmrImportRow[], contractor: DmrContractor): string[]
   return Array.from(words)
 }
 
+/** "3437 / 3373.3" (MD / TVD, in metres), or "—" when the report had no Depth/TVD cell. */
+function fmtDepth(d: DmrDepth | undefined): string {
+  if (!d) return "—"
+  const f = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 })
+  return `${f(d.depthMd)} / ${f(d.depthTvd)}`
+}
+
 function guessCostCentreId(costCentres: WellCostCentre[], keywords: string[]): string {
   if (!keywords.length) return ""
   const match = costCentres.find((c) => {
@@ -305,6 +312,15 @@ export function DmrImportDialog({
   const currentStep = !parsedRows.length && !errors.length ? 0 : mappedCount === 0 || !importable.length ? 1 : 2
   const newCount = plan.filter((r) => r.status === "new").length
   const remarksUpdateCount = plan.filter((r) => r.status === "remarks-update").length
+  // Depth comes per report file. Reports whose cost couldn't be read have no cost rows, so they
+  // get their own depth-only rows here, otherwise their depth would be imported but never shown.
+  const planFileNames = new Set(plan.map((r) => r.fileName))
+  const depthOnlyRows = parsedDepths.filter((d) => !planFileNames.has(d.fileName))
+  const depthByFile = new Map(parsedDepths.map((d) => [d.fileName, d]))
+  const reviewTableRows: ({ kind: "cost"; entryDate: string; key: string; row: (typeof plan)[number] } | { kind: "depth"; entryDate: string; key: string; depth: DmrDepth })[] = [
+    ...plan.map((row) => ({ kind: "cost" as const, entryDate: row.entryDate, key: `${row.fileName}-${row.entryDate}-${row.contractor}`, row })),
+    ...depthOnlyRows.map((depth) => ({ kind: "depth" as const, entryDate: depth.entryDate, key: `depth-${depth.fileName}`, depth })),
+  ].sort((a, b) => a.entryDate.localeCompare(b.entryDate))
 
   return (
     <Dialog
@@ -556,23 +572,39 @@ export function DmrImportDialog({
               </div>
             )}
 
-            {plan.length > 0 && (
+            {reviewTableRows.length > 0 && (
               <div className="max-h-64 overflow-y-auto rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Depth/TVD (m)</TableHead>
                       <TableHead>Contractor</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {plan.map((r) => {
+                    {reviewTableRows.map((item) => {
+                      if (item.kind === "depth") {
+                        return (
+                          <TableRow key={item.key}>
+                            <TableCell>{item.entryDate}</TableCell>
+                            <TableCell className="text-right tabular-nums">{fmtDepth(item.depth)}</TableCell>
+                            <TableCell className="text-muted-foreground">—</TableCell>
+                            <TableCell className="text-right text-muted-foreground">—</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">Depth only — cost not read</Badge>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      }
+                      const r = item.row
                       const target = costCentres.find((c) => c.id === mapping[r.contractor])
                       return (
-                          <TableRow key={`${r.fileName}-${r.entryDate}-${r.contractor}`}>
+                        <TableRow key={item.key}>
                           <TableCell>{r.entryDate}</TableCell>
+                          <TableCell className="text-right tabular-nums">{fmtDepth(depthByFile.get(r.fileName))}</TableCell>
                           <TableCell>
                             {CONTRACTOR_LABELS[r.contractor]}
                             {target && <span className="text-muted-foreground"> → {target.costCentre}</span>}
